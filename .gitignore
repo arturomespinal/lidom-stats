@@ -1,0 +1,24 @@
+# Entorno virtual
+.venv/
+
+# Variables de entorno (NUNCA subir al repo)
+.env
+
+# Datos crudos (pueden ser muy pesados)
+data/raw/
+data/exports/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+
+# VS Code
+.vscode/
+
+# Jupyter checkpoints
+.ipynb_checkpoints/
+
+# Logs
+logs/

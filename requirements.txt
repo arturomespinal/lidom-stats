@@ -25,3 +25,7 @@ ipykernel==6.29.4
 
 # Scheduler
 apscheduler==3.10.4
+
+# API
+fastapi==0.111.0
+uvicorn==0.30.1

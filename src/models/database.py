@@ -108,10 +108,9 @@ def get_engine(db_url: str = "sqlite:///data/lidom_stats.db"):
 
 
 def init_db(db_url: str = "sqlite:///data/lidom_stats.db"):
-    """Recrea las tablas con el esquema correcto."""
     engine = get_engine(db_url)
-    Base.metadata.drop_all(engine)   # ← limpia el esquema viejo
-    Base.metadata.create_all(engine)
+    # ❌ Base.metadata.drop_all(engine)  ← ELIMINAR esta línea
+    Base.metadata.create_all(engine)     # Solo crea si no existen
     logger.info(f"✅ DB inicializada: {db_url}")
     return engine
 

@@ -261,6 +261,10 @@ class BaseballReferenceScraper(BaseScraper):
             time.sleep(5)
         combined.success = len(combined.errors) == 0
         return combined
+    
+    def _get_league_id(self, season: str) -> str:
+        """Retorna el league_id de BR para una temporada dada."""
+        return LIDOM_LEAGUE_IDS.get(season, "")
 
 
 __all__ = ["BaseballReferenceScraper", "LIDOM_LEAGUE_IDS"]

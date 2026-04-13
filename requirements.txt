@@ -22,3 +22,6 @@ loguru==0.7.2        # Logging profesional
 pytest==8.2.0
 jupyter==1.0.0
 ipykernel==6.29.4
+
+# Scheduler
+apscheduler==3.10.4

@@ -188,10 +188,40 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 - Tablas sortables por clic en columna (client components), fetch en server components
 - Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
 
+## Motor en vivo
+
+El feed en vivo vive en la **v1.1** (`MLB_API_V11_BASE_URL`), no en la v1. El cliente sirve ambas: los métodos históricos usan rutas relativas contra `base_url`, y los de v1.1 arman la URL completa — httpx ignora `base_url` cuando la URL es absoluta.
+
+### Reproducir juegos terminados
+
+La API conserva una instantánea del estado por cada actualización de la transmisión. `/feed/live/timestamps` las lista (359 en el juego inaugural) y `/feed/live?timecode=X` devuelve el juego **tal como se veía** en ese instante. Con eso se desarrolla y se prueba el motor en vivo fuera de temporada, de forma determinista:
+
+```bash
+python capture_gumbo.py            # guarda instantáneas reales en fixtures/
+python verify_live_parser.py       # 45 comprobaciones del parser, sin red
+python replay_game.py 826343       # reproduce un juego contra la API real
+```
+
+### El parser
+
+`src/live/gumbo.py` reduce el megabyte de GUMBO a `LiveGameState`, unos 1.400 bytes — 676 veces más pequeño, y cabe holgado en un evento SSE. Tres decisiones de lectura, tomadas contra instantáneas reales:
+
+- El estado vigente sale de `liveData.linescore` (balls, strikes, outs), **no** de `plays.currentPlay.count`: cuando una jugada termina, `currentPlay` conserva la cuenta con que cerró ese turno.
+- Los corredores salen de `linescore.offense`, donde las claves `first`/`second`/`third` solo aparecen si la base está ocupada. Ausencia significa base vacía.
+- `liveData.decisions` solo existe cuando el juego terminó.
+
+`metaData.wait` trae el intervalo de sondeo que la propia API recomienda (10 segundos en LIDOM). Usar ese valor en vez de fijar uno a mano.
+
+El feed de pre-juego ya expone la alineación publicada — primer bateador y abridor — así que sirve para la pantalla previa.
+
+`fixtures/` está fuera del control de versiones: son megas de JSON que se vuelven a bajar en un minuto.
+
 ## Próximos pasos
 
-1. Endpoints sobre el esquema de juego: boxscore por juego, perfil de jugador, head-to-head, leaderboards con `games_batted`.
-2. Motor en vivo: `/api/v1.1/game/{gamePk}/feed/live` (GUMBO) y `/feed/live/diffPatch` con `startTimecode`. **Requiere API v1.1 — el cliente está fijado en v1.**
-3. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
+1. Poller: sondeo cada `metaData.wait` segundos, solo durante juegos activos, apoyado en `/schedule` para saber cuándo hay.
+2. `diffPatch` con `startTimecode` para no bajar un megabyte por sondeo.
+3. Caché volátil del estado en vivo, separada de la base canónica, y entrega por SSE o WebSocket.
+4. Al pasar un juego a `final`, disparar `ingest-games` para ese `gamePk`.
+5. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
 4. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
 5. Producción: PostgreSQL vía Alembic cuando el volumen lo justifique.

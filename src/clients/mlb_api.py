@@ -38,6 +38,7 @@ from src.constants import (
     LIDOM_SPORT_ID,
     MIN_REQUEST_INTERVAL_SECONDS,
     MLB_API_BASE_URL,
+    MLB_API_V11_BASE_URL,
     USER_AGENT,
 )
 from src.models.api_models import APIHittingStatsResponse
@@ -78,11 +79,16 @@ class MLBAPIClient:
     def __init__(
         self,
         base_url: str = MLB_API_BASE_URL,
+        v11_base_url: str = MLB_API_V11_BASE_URL,
         timeout: float = HTTP_TIMEOUT_SECONDS,
         min_request_interval: float = MIN_REQUEST_INTERVAL_SECONDS,
         user_agent: str = USER_AGENT,
     ):
         self.base_url = base_url.rstrip("/")
+        # El feed en vivo solo existe en la v1.1. httpx ignora base_url cuando
+        # la URL que le pasas es absoluta, así que los métodos de v1.1 arman la
+        # URL completa y los de v1 siguen usando rutas relativas sin enterarse.
+        self.v11_base_url = v11_base_url.rstrip("/")
         self.min_request_interval = min_request_interval
         self._last_request_ts: float = 0.0
 
@@ -129,9 +135,12 @@ class MLBAPIClient:
         before_sleep=before_sleep_log(logger, "WARNING"),
         reraise=True,
     )
-    def _get(self, path: str, params: Optional[dict[str, Any]] = None) -> dict:
+    def _get(self, path: str, params: Optional[dict[str, Any]] = None) -> Any:
         """
         GET con retry exponencial y rate limiting.
+
+        Devuelve lo que traiga el JSON: casi siempre un dict, pero
+        /feed/live/timestamps responde con un array.
 
         Reintenta SOLO en errores transitorios (timeout, conexión, 5xx).
         En 4xx (bad request, not found) NO reintenta — eso es un bug del caller.
@@ -275,6 +284,60 @@ class MLBAPIClient:
     def get_play_by_play(self, game_pk: int) -> dict:
         """Play-by-play completo. Solo para futura granularidad de evento."""
         return self._get(f"/game/{game_pk}/playByPlay")
+
+    # ─── Feed en vivo (API v1.1) ────────────────────────────────────────────
+
+    def get_live_feed(self, game_pk: int, timecode: Optional[str] = None) -> dict:
+        """
+        Estado completo del juego en formato GUMBO.
+
+        Endpoint:
+            GET /api/v1.1/game/{gamePk}/feed/live[?timecode=YYYYMMDD_HHMMSS]
+
+        Sin timecode devuelve el estado actual. CON timecode devuelve el juego
+        tal como se veía en ese instante — la API conserva cada instantánea de
+        la transmisión. Eso permite reproducir juegos terminados para
+        desarrollar y probar el motor en vivo fuera de temporada.
+
+        La respuesta ronda el megabyte. Para seguimiento continuo conviene
+        get_live_diff(), que devuelve solo los cambios.
+        """
+        params = {"timecode": timecode} if timecode else None
+        return self._get(f"{self.v11_base_url}/game/{game_pk}/feed/live", params)
+
+    def get_live_timestamps(self, game_pk: int) -> list[str]:
+        """
+        Todas las marcas de tiempo registradas para un juego.
+
+        Devuelve una lista de strings "YYYYMMDD_HHMMSS" en orden cronológico,
+        una por cada actualización que hubo durante la transmisión. Son las
+        marcas que acepta el parámetro timecode.
+        """
+        raw = self._get(f"{self.v11_base_url}/game/{game_pk}/feed/live/timestamps")
+        # Este endpoint devuelve un array JSON, no un objeto. _get normaliza
+        # a dict, así que lo recuperamos de la clave que use.
+        if isinstance(raw, list):
+            return raw
+        return raw.get("timestamps", raw.get("data", []))
+
+    def get_live_diff(self, game_pk: int, start_timecode: str) -> dict:
+        """
+        Solo los cambios desde start_timecode, en formato JSON Patch.
+
+        Endpoint:
+            GET /api/v1.1/game/{gamePk}/feed/live/diffPatch
+                ?startTimecode=...&endTimecode=...
+
+        Es lo que hace viable el polling continuo: en vez de bajar un megabyte
+        cada diez segundos, se baja el estado completo una vez y después solo
+        los parches. Si la API no puede calcular el diff (marca demasiado vieja)
+        devuelve el feed completo, así que el llamador debe contemplar ambas
+        formas de respuesta.
+        """
+        return self._get(
+            f"{self.v11_base_url}/game/{game_pk}/feed/live/diffPatch",
+            {"startTimecode": start_timecode},
+        )
 
     def get_teams(
         self,

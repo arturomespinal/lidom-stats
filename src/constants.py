@@ -11,7 +11,15 @@ from __future__ import annotations
 # MLB Stats API
 # ─────────────────────────────────────────────────────────────────────────────
 
-MLB_API_BASE_URL = "https://statsapi.mlb.com/api/v1"
+MLB_API_HOST = "https://statsapi.mlb.com"
+
+# La v1 sirve todo lo histórico: /stats, /schedule, /boxscore, /people.
+MLB_API_BASE_URL = f"{MLB_API_HOST}/api/v1"
+
+# El feed en vivo (formato GUMBO) SOLO existe en la v1.1. No es que la v1 lo
+# sirva distinto: la ruta no está. Las dos versiones conviven y el cliente usa
+# la que corresponda según el endpoint.
+MLB_API_V11_BASE_URL = f"{MLB_API_HOST}/api/v1.1"
 
 # IDs oficiales de la MLB Stats API para LIDOM
 LIDOM_LEAGUE_ID = 131

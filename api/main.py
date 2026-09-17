@@ -7,7 +7,9 @@ from sqlalchemy import text
 
 # Registrar flat_models en Base.metadata antes de init_db()
 from src.models import flat_models  # noqa: F401
+from src.constants import LIDOM_TEAMS, TEAM_CODE_TO_MLB_ID
 from src.models.database import get_engine, init_db
+from src.playoffs import PLAYOFF_SPOTS, annotate_playoff_race, games_behind
 from src.qualification import qualifying_ip, qualifying_pa
 
 # Estado en vivo. El poller NO arranca solo: se enciende con la variable de
@@ -117,12 +119,17 @@ def get_standings(season: str = Query("2025", description="Año de temporada")):
                games_played, runs_scored, runs_allowed, run_differential, team_url
         FROM standings
         WHERE season = :season
-        ORDER BY wins DESC
+        ORDER BY win_loss_pct DESC, wins DESC
         """,
         {"season": season},
     )
     if not rows:
         raise HTTPException(404, f"No hay standings para temporada {season}")
+
+    # El orden es por PCT, no por victorias: con juegos suspendidos o pendientes
+    # los equipos no llegan al mismo total de juegos jugados, y ahí ganar más
+    # no significa ir delante. La posición manda sobre la línea de
+    # clasificación, así que un orden equivocado la corre de equipo.
 
     # El games_back que guarda la tabla NO es distancia al líder: la MLB API lo
     # entrega respecto al cuarto puesto, que en LIDOM es la línea de
@@ -135,12 +142,29 @@ def get_standings(season: str = Query("2025", description="Año de temporada")):
     # la API con un nombre honesto.
     leader = rows[0]
     for row in rows:
-        gb = ((leader["wins"] - row["wins"]) + (row["losses"] - leader["losses"])) / 2
+        gb = games_behind(leader, row)
         row["playoff_games_back"] = row["games_back"]
         # "-" en el líder: es lo que los clientes ya saben pintar como guion.
         row["games_back"] = "-" if gb <= 0 else f"{gb:.1f}"
 
-    return {"season": season, "count": len(rows), "data": rows}
+        # El nombre corto viene del catálogo canónico, no de la tabla: en un
+        # teléfono "Estrellas Orientales" no cabe al lado de cinco columnas de
+        # números, y recortarlo con puntos suspensivos en el cliente pierde
+        # información que aquí ya tenemos bien escrita.
+        mlb_id = TEAM_CODE_TO_MLB_ID.get(row["team_id"])
+        row["short_name"] = (
+            LIDOM_TEAMS[mlb_id]["short_name"] if mlb_id else row["team_name"]
+        )
+
+    # Situación frente al round robin. Se calcula sobre las filas ya ordenadas.
+    annotate_playoff_race(rows)
+
+    return {
+        "season": season,
+        "count": len(rows),
+        "playoff_spots": PLAYOFF_SPOTS,
+        "data": rows,
+    }
 
 
 # ── Batting ───────────────────────────────────────────────────────────────────

@@ -24,7 +24,17 @@ export default async function StandingsPage({ searchParams }: Props) {
         {standings.length === 0 ? (
           <EmptyState />
         ) : (
-          <StandingsTable data={standings} />
+          <>
+            <StandingsTable data={standings} />
+            {/* Una columna nueva sin explicación es una columna que nadie usa. */}
+            <p className="mt-3 text-xs leading-relaxed text-[#8b949e]">
+              <span className="font-bold text-[#f0f6fc]">GB</span> — juegos de
+              atraso contra el líder.{" "}
+              <span className="font-bold text-[#f0f6fc]">CLAS</span> — juegos de
+              ventaja sobre el primer equipo fuera, o de atraso contra el último
+              clasificado al round robin.
+            </p>
+          </>
         )}
       </main>
     </>

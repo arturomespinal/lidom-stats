@@ -28,15 +28,19 @@ export default function Navbar({ season }: Props) {
           </span>
         </Link>
 
-        {/* Tabs */}
-        <div className="flex items-center gap-1">
+        {/* Tabs. min-w-0 + overflow-x-auto: en pantalla angosta las pestañas
+            se desplazan dentro de su propia franja en vez de empujar la
+            temporada fuera de la barra. */}
+        <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
           {TABS.map((tab) => {
             const isActive = pathname === tab.href;
             return (
               <Link
                 key={tab.href}
                 href={`${tab.href}?season=${season}`}
-                className={`px-3 py-1.5 rounded text-sm font-medium transition-colors ${
+                // whitespace-nowrap: sin esto "En Vivo" se parte en dos líneas
+                // y desalinea toda la barra en pantallas angostas.
+                className={`whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                   isActive
                     ? "bg-[#21262d] text-white"
                     : "text-[#8b949e] hover:text-white hover:bg-[#21262d]"
@@ -49,7 +53,7 @@ export default function Navbar({ season }: Props) {
         </div>
 
         {/* Season label */}
-        <div className="ml-auto">
+        <div className="ml-auto shrink-0 pl-2">
           <span className="text-xs text-[#8b949e] bg-[#21262d] px-2 py-1 rounded">
             {season}
           </span>

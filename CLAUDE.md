@@ -121,8 +121,13 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 | `api/main.py` | Endpoints sobre tablas planas: `/standings`, `/batting`, `/pitching`, `/player/{name}`, `/seasons` |
 | `api/game_routes.py` | Endpoints sobre el esquema de juego (router aparte, ver abajo) |
 | `src/constants.py` | `LIDOM_TEAMS` (IDs MLB → códigos), `LIDOM_LEAGUE_ID`, `LIDOM_SPORT_ID` |
-| `verify_boxscore_ingestor.py` | 33 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 45 comprobaciones de los endpoints nuevos contra la base real |
+| `src/qualification.py` | Mínimos de calificación (PA/IP), compartidos por las dos capas |
+| `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
+| `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
+| `verify_game_routes.py` | 87 comprobaciones de los endpoints contra la base real |
+
+Las cuatro suites (`verify_game_routes`, `verify_live_poller`, `verify_live_parser`,
+`verify_boxscore_ingestor`) suman **223 comprobaciones** y corren sin red.
 
 ## Endpoints
 
@@ -131,6 +136,10 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 `/standings` · `/batting` · `/pitching` · `/player/{name}` · `/seasons`
 
 Parámetro `season` en formato crudo de la MLB API (`"2025"`).
+
+`/standings` ordena por PCT y añade, sobre lo que guarda la tabla: `short_name`
+(del catálogo canónico, para pantallas angostas), `playoff_spot`, `playoff_games`
+y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 
 ### Esquema de juego (`api/game_routes.py`)
 
@@ -321,16 +330,62 @@ puesto**, que en LIDOM es la línea de clasificación al round robin. Se ve en l
 datos: el `-` cae en el 4to y el líder aparece con valor negativo (−9.5).
 
 `api/main.py` calcula el GB real desde G-P y conserva el de la API como
-`playoff_games_back`. Ese segundo dato es material para una columna futura
-—cuántos juegos le faltan a cada equipo para clasificar— que a un fanático de
-LIDOM probablemente le importa más que la distancia al primero.
+`playoff_games_back`, que hoy solo se usa como **contraprueba** en las pruebas:
+para los equipos fuera debe ser exactamente `-playoff_games`. Si un día dejan de
+cuadrar, uno de los dos cambió y conviene enterarse.
+
+## La línea de clasificación
+
+`src/playoffs.py`. LIDOM juega seis equipos y clasifican cuatro, así que el corte
+entre el 4to y el 5to es lo único que se juega la temporada regular. `/standings`
+devuelve tres campos para representarlo:
+
+| Campo | Qué es |
+|-------|--------|
+| `playoff_spots` (raíz) | Cupos al round robin — hoy 4 |
+| `playoff_spot` | Si ese equipo ocupa uno |
+| `playoff_games` | Distancia a la línea, con signo: **positivo** = juegos de colchón sobre el primero que está fuera, **negativo** = de atraso contra el último que está dentro |
+
+El punto de referencia cambia según el lado, a propósito: a un clasificado le
+importa cuánto le pisa el 5to, y a uno fuera cuánto le falta para alcanzar al
+4to. Medir ambos contra el mismo equipo daría un número correcto pero inútil.
+
+Se calcula desde G-P y **no** se toma del `gamesBack` de la MLB, aunque hoy
+coincida: depender de él sería depender de cómo la MLB decide agrupar una liga
+que no es suya, y el día que cambie el formato la columna mentiría en silencio.
+
+Dos cosas que no conviene deshacer:
+
+- **`/standings` ordena por `win_loss_pct`, no por victorias.** Con juegos
+  suspendidos los equipos no llegan al mismo total de juegos jugados y ganar más
+  no significa ir delante. `playoff_spot` se calcula sobre ese orden, así que un
+  orden equivocado corre el corte de equipo.
+- **Los clientes NO reordenan.** Reordenar en el cliente desincroniza la bandera
+  de la posición mostrada. Ambos traían un `.sort()` por PCT que ya se quitó.
+
+`playoff_games` se normaliza con `+ 0.0`: negar cero en punto flotante da `-0.0`,
+viaja así en el JSON y JavaScript lo imprime como `-0`.
+
+## Deuda de seguridad conocida
+
+`npm audit` en `frontend/` reporta **3 vulnerabilidades (1 crítica)** de Next.js y
+su `postcss` anidado. El rango afectado es `9.3.4 – 16.3.0`, es decir **toda** la
+línea 14 y 15: no hay parche dentro de 14.x, la única salida es migrar a Next 16
+(cambio mayor). Entre ellas hay una RCE sin autenticar en servidores Windows.
+
+Hoy la exposición práctica es baja —el frontend es un tablero de solo lectura, sin
+autenticación, sin Server Actions y sin `next/image` con dominios remotos— pero
+**esto se resuelve antes de desplegar, no después**. Junto con lo ya anotado: la
+API no tiene autenticación ni límite de tasa, CORS está fijo en el código y
+`/health` expone conteos internos.
 
 ## Próximos pasos
 
-1. Columna de distancia a la clasificación en Posiciones, usando `playoff_games_back`.
-2. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
+1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
+2. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-4. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
-5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
-4. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
-5. Producción: PostgreSQL vía Alembic cuando el volumen lo justifique.
+4. Identidad visual: la paleta es la de GitHub oscuro (`#0d1117`, `#161b22`, azul `#58a6ff`) y no dice LIDOM. Los colores oficiales ya viven en `TEAM_STYLES` de ambos clientes; Posiciones ya los usa como borde de fila, falta el resto de la app y un acento propio.
+5. Escudos de los equipos en vez de siglas. Es el salto visual más grande y el que más cuidado legal necesita: son marcas registradas de los clubes.
+6. Migrar a Next 16 (ver deuda de seguridad).
+7. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
+8. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.

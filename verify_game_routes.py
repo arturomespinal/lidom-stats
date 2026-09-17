@@ -159,10 +159,12 @@ check("mismo equipo → 400", c.get("/teams/LIC/h2h/LIC").status_code, 400)
 check("equipo inválido → 400", c.get("/teams/LIC/h2h/XXX").status_code, 400)
 
 print("\n━━━ Posiciones: GB calculado, no el de la API ━━━")
-st = call("/standings?season=2025")["data"]
-for r in st:
-    print(f"    {r['team_id']}: {r['wins']}-{r['losses']}  GB={r['games_back']:>5}  "
-          f"clasificación={r['playoff_games_back']}")
+sr = call("/standings?season=2025")
+st = sr["data"]
+for i, r in enumerate(st, 1):
+    print(f"    {i}. {r['team_id']} {r['short_name']:10} {r['wins']:2}-{r['losses']:2} "
+          f"GB={r['games_back']:>5}  CLAS={r['playoff_games']:+5.1f}  "
+          f"{'dentro' if r['playoff_spot'] else 'fuera '}  api_crudo={r['playoff_games_back']}")
 check("el líder no tiene GB", st[0]["games_back"], "-")
 check("GB del 2do calculado de G-P", st[1]["games_back"], "5.0")
 check("GB del último", st[-1]["games_back"], "11.5")
@@ -170,6 +172,44 @@ check("GB del último", st[-1]["games_back"], "11.5")
 # en LIDOM es la línea de clasificación. Se conserva con nombre honesto.
 check("conserva el dato original de la API", st[0]["playoff_games_back"], "-9.5")
 check("el cero del dato original cae en el 4to", st[3]["playoff_games_back"], "-")
+
+# El orden es por PCT: con juegos jugados distintos (49 vs 50) ordenar por
+# victorias correría la línea de clasificación de equipo.
+check("ordena por PCT descendente",
+      [r["win_loss_pct"] for r in st] == sorted((r["win_loss_pct"] for r in st), reverse=True),
+      True)
+check("nombre corto del catálogo canónico", st[0]["short_name"], "Águilas")
+
+print("\n━━━ Posiciones: línea de clasificación ━━━")
+check("cupos de round robin", sr["playoff_spots"], 4)
+check("los primeros cuatro clasifican",
+      [r["playoff_spot"] for r in st], [True, True, True, True, False, False])
+# Colchón del líder: se mide contra el 5to (22-28), no contra el 4to.
+check("colchón del líder sobre el primero fuera", st[0]["playoff_games"], 10.5)
+check("colchón del 4to sobre el 5to", st[3]["playoff_games"], 1.0)
+check("atraso del 5to contra el 4to", st[4]["playoff_games"], -1.0)
+check("atraso del último", st[5]["playoff_games"], -2.0)
+# Contraprueba independiente: para los equipos FUERA, el gamesBack crudo de la
+# MLB API ya mide contra el 4to puesto, así que debe ser exactamente lo nuestro
+# con el signo cambiado. Si algún día dejan de cuadrar, uno de los dos cambió.
+check("el atraso cuadra con el dato crudo de la MLB",
+      [-r["playoff_games"] for r in st if not r["playoff_spot"]],
+      [float(r["playoff_games_back"]) for r in st if not r["playoff_spot"]])
+
+# La regla no depende de que la liga tenga seis equipos.
+from src.playoffs import annotate_playoff_race  # noqa: E402
+
+empatados = annotate_playoff_race([
+    {"wins": 30, "losses": 20}, {"wins": 25, "losses": 25},
+    {"wins": 25, "losses": 25}, {"wins": 24, "losses": 26},
+    {"wins": 24, "losses": 26}, {"wins": 10, "losses": 40},
+])
+check("empate justo en la línea da colchón 0", empatados[3]["playoff_games"], 0.0)
+check("y el 5to empatado da atraso 0", empatados[4]["playoff_games"], 0.0)
+
+sin_linea = annotate_playoff_race([{"wins": 5, "losses": 1}, {"wins": 1, "losses": 5}])
+check("con menos equipos que cupos no hay línea", sin_linea[0]["playoff_games"], None)
+check("y todos figuran dentro", [r["playoff_spot"] for r in sin_linea], [True, True])
 
 print("\n━━━ Endpoints planos: calificación ━━━")
 bat = call("/batting?season=2025&sort_by=ops")

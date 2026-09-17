@@ -1,12 +1,22 @@
 export interface StandingRow {
   team_id: string;
   team_name: string;
+  /** Nombre corto del catálogo canónico ("Águilas"), para pantallas angostas. */
+  short_name: string;
   wins: number;
   losses: number;
   games_played: number | null;
   win_loss_pct: number | null;
   games_back: string;
   run_differential: number | null;
+  /** Si el equipo ocupa hoy un puesto de round robin. */
+  playoff_spot: boolean;
+  /**
+   * Distancia con signo a la línea de clasificación: positivo = colchón sobre
+   * el primero que está fuera, negativo = atraso contra el último que está
+   * dentro. null cuando no hay línea (menos equipos que cupos).
+   */
+  playoff_games: number | null;
 }
 
 export interface BattingRow {

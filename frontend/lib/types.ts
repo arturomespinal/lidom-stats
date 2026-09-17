@@ -108,7 +108,10 @@ export interface LiveGameState {
   poll_wait_seconds: number;
 
   inning: number | null;
+  /** Crudo de la MLB: "1st", "7th". Se conserva, no se pinta. */
   inning_ordinal: string | null;
+  /** El que se pinta: "1ro", "7mo". Derivado del número en el backend. */
+  inning_ordinal_es: string | null;
   inning_half: string | null;
   is_top_inning: boolean | null;
   scheduled_innings: number;

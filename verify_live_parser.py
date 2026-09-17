@@ -78,6 +78,19 @@ check("outs en el 5to", mid.outs, 0)
 check("cuenta en el 5to", (mid.balls, mid.strikes), (3, 1))
 check("mitad de entrada", mid.inning_half, "bottom")
 check("entrada ordinal", mid.inning_ordinal, "5th")
+# El ordinal de la MLB viene en inglés y los clientes lo metían en una frase en
+# español: "Baja del 1st". Se deriva del número, no se traduce el string.
+check("entrada ordinal en español", mid.inning_ordinal_es, "5to")
+check("la situación se lee en español", mid.situation.startswith("Baja del 5to"), True)
+
+from src.live.gumbo import ordinal_es  # noqa: E402
+
+check("ordinales de la 1ra a la 10ma",
+      [ordinal_es(i) for i in range(1, 11)],
+      ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo", "9no", "10mo"])
+check("entradas extra pasadas la décima", ordinal_es(12), "12vo")
+check("sin entrada no inventa ordinal", ordinal_es(None), None)
+check("una entrada inválida tampoco", ordinal_es(0), None)
 check("bateador presente en vivo", mid.batter, "Magneuris Sierra")
 check("lanzador presente en vivo", mid.pitcher, "Jarlín García")
 check("última jugada narrada", mid.last_play_event, "Single")

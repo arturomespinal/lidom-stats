@@ -176,9 +176,12 @@ export default function LiveScoreboard({
     <View style={styles.card}>
       <View style={styles.header}>
         <StatusPill state={state} />
-        {isLive && !!state.inning_ordinal && (
+        {/* inning_ordinal_es, no inning_ordinal: el crudo de la MLB viene en
+            inglés y dentro de esta frase daba "Baja del 1st". */}
+        {isLive && !!(state.inning_ordinal_es ?? state.inning_ordinal) && (
           <Text style={styles.inning}>
-            {state.is_top_inning ? 'Alta' : 'Baja'} del {state.inning_ordinal}
+            {state.is_top_inning ? 'Alta' : 'Baja'} del{' '}
+            {state.inning_ordinal_es ?? state.inning_ordinal}
           </Text>
         )}
         {stale && <Text style={styles.stale}>sin señal</Text>}

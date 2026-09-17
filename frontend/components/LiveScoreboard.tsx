@@ -180,9 +180,12 @@ export default function LiveScoreboard({ state, stale }: Props) {
     <article className="bg-[#161b22] border border-[#30363d] rounded-lg overflow-hidden">
       <header className="flex items-center gap-2 px-4 py-2 border-b border-[#30363d] bg-[#0d1117]">
         <StatusPill state={state} />
-        {isLive && state.inning_ordinal && (
+        {/* inning_ordinal_es, no inning_ordinal: el crudo de la MLB viene en
+            inglés y dentro de esta frase daba "Baja del 1st". */}
+        {isLive && (state.inning_ordinal_es ?? state.inning_ordinal) && (
           <span className="text-xs text-[#c9d1d9]">
-            {state.is_top_inning ? "Alta" : "Baja"} del {state.inning_ordinal}
+            {state.is_top_inning ? "Alta" : "Baja"} del{" "}
+            {state.inning_ordinal_es ?? state.inning_ordinal}
           </span>
         )}
         {stale && (

@@ -221,6 +221,13 @@ python replay_game.py 826343       # reproduce un juego contra la API real
 
 `metaData.wait` trae el intervalo de sondeo que la propia API recomienda (10 segundos en LIDOM). Usar ese valor en vez de fijar uno a mano.
 
+**El ordinal de la entrada viene en inglés.** `currentInningOrdinal` devuelve
+`"1st"`, `"7th"`, y los dos clientes lo metían tal cual en una frase en español:
+"Baja del 1st". `ordinal_es()` lo deriva del **número** de entrada — no traduce el
+string — y el parser expone `inning_ordinal_es` junto al crudo. Los clientes
+pintan el segundo. Misma regla que con `games_back`: el dato de la MLB se
+conserva, la presentación es nuestra.
+
 El feed de pre-juego ya expone la alineación publicada — primer bateador y abridor — así que sirve para la pantalla previa.
 
 `fixtures/` está fuera del control de versiones: son megas de JSON que se vuelven a bajar en un minuto.

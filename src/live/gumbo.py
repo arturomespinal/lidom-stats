@@ -39,6 +39,30 @@ ABSTRACT_STATE = {
     "Other": "other",
 }
 
+# Ordinales masculinos, que es lo que pide "inning" en el uso dominicano:
+# "la parte baja del séptimo inning". Hasta la 10ma con su forma propia; de la
+# 11 en adelante la escritura corriente usa "vo" para todo (11vo, 12vo, 13vo),
+# y las entradas extra pasadas la décima son raras de por sí.
+_ORDINALES_ES = {
+    1: "1ro", 2: "2do", 3: "3ro", 4: "4to", 5: "5to",
+    6: "6to", 7: "7mo", 8: "8vo", 9: "9no", 10: "10mo",
+}
+
+
+def ordinal_es(inning: Optional[int]) -> Optional[str]:
+    """
+    Ordinal en español de la entrada.
+
+    Existe porque `currentInningOrdinal` de la MLB viene en inglés ("1st",
+    "7th") y los dos clientes lo pintaban tal cual dentro de una frase en
+    español: "Baja del 1st". Se deriva del número, no se traduce el string,
+    porque el número es un dato y el string es una decisión de presentación
+    de otra liga.
+    """
+    if not isinstance(inning, int) or inning < 1:
+        return None
+    return _ORDINALES_ES.get(inning, f"{inning}vo")
+
 
 def _team_code(team: dict) -> str:
     """
@@ -127,7 +151,8 @@ class LiveGameState(BaseModel):
 
     # Situación
     inning: Optional[int] = None
-    inning_ordinal: Optional[str] = None
+    inning_ordinal: Optional[str] = None      # crudo de la MLB: "1st", "7th"
+    inning_ordinal_es: Optional[str] = None   # "1ro", "7mo" — ver ordinal_es()
     inning_half: Optional[str] = None   # "top" | "bottom"
     is_top_inning: Optional[bool] = None
     scheduled_innings: int = 9
@@ -170,12 +195,15 @@ class LiveGameState(BaseModel):
 
     @property
     def situation(self) -> str:
-        """'5th Bottom · 0 out · 3-1 · corredor en 1ª' — resumen legible."""
+        """'Baja del 5to · 0 outs · 3-1 · corredor en 1ª' — resumen legible."""
         if self.status == "preview":
             return "Por comenzar"
         if self.status == "final":
-            return f"Final{f' ({self.inning} inn)' if self.inning and self.inning != self.scheduled_innings else ''}"
-        base = f"{self.inning_ordinal or self.inning} {self.inning_half or ''}".strip()
+            extra = (self.inning and self.inning != self.scheduled_innings)
+            return f"Final{f' ({self.inning} entradas)' if extra else ''}"
+        media = "Alta" if self.is_top_inning else "Baja"
+        entrada = self.inning_ordinal_es or self.inning_ordinal or self.inning
+        base = f"{media} del {entrada}"
         outs = f"{self.outs} out" + ("s" if self.outs != 1 else "")
         count = f"{self.balls}-{self.strikes}"
         runners = {
@@ -262,6 +290,7 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
 
         inning=linescore.get("currentInning"),
         inning_ordinal=linescore.get("currentInningOrdinal"),
+        inning_ordinal_es=ordinal_es(linescore.get("currentInning")),
         inning_half=half.lower() if isinstance(half, str) else None,
         is_top_inning=linescore.get("isTopInning"),
         scheduled_innings=linescore.get("scheduledInnings") or 9,

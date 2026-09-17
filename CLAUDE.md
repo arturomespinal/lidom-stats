@@ -118,9 +118,36 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 | `src/models/api_models.py` | Pydantic: validación de respuestas MLB (maneja strings ".368") |
 | `src/pipeline/mlb_ingestor.py` | `MLBIngestor.ingest(season)` — puebla las 3 tablas planas |
 | `src/pipeline/boxscore_ingestor.py` | `BoxscoreIngestor.ingest(season)` — puebla el esquema de juego |
-| `api/main.py` | Endpoints: `/standings`, `/batting`, `/pitching`, `/player/{name}`, `/seasons` |
+| `api/main.py` | Endpoints sobre tablas planas: `/standings`, `/batting`, `/pitching`, `/player/{name}`, `/seasons` |
+| `api/game_routes.py` | Endpoints sobre el esquema de juego (router aparte, ver abajo) |
 | `src/constants.py` | `LIDOM_TEAMS` (IDs MLB → códigos), `LIDOM_LEAGUE_ID`, `LIDOM_SPORT_ID` |
 | `verify_boxscore_ingestor.py` | 33 comprobaciones del ingestor contra un boxscore sintético |
+| `verify_game_routes.py` | 45 comprobaciones de los endpoints nuevos contra la base real |
+
+## Endpoints
+
+### Tablas planas (`api/main.py`) — los que consumen el frontend y el mobile
+
+`/standings` · `/batting` · `/pitching` · `/player/{name}` · `/seasons`
+
+Parámetro `season` en formato crudo de la MLB API (`"2025"`).
+
+### Esquema de juego (`api/game_routes.py`)
+
+| Endpoint | Qué da |
+|----------|--------|
+| `GET /games` | Listado con filtros: `team`, `opponent`, `stage`, `status`, `date_from`, `date_to`, `order`, paginado con `limit`/`offset` |
+| `GET /games/{game_id}` | Boxscore completo: las dos alineaciones con líneas de bateo y pitcheo |
+| `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
+| `GET /players/{player_id}` | Perfil biográfico + temporadas desde las vistas |
+| `GET /players/{player_id}/gamelog` | Juego por juego — lo que las tablas planas no pueden dar |
+| `GET /leaderboards/batting` | Líderes con calificación por PA |
+| `GET /leaderboards/pitching` | Líderes con calificación por IP |
+| `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
+
+`season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
+
+En `/players/search` el orden de declaración importa: la ruta estática va **antes** de `/players/{player_id}`, porque FastAPI resuelve en orden y si no `"search"` entraría como un `player_id`.
 
 ## Reglas críticas
 
@@ -142,7 +169,9 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 
 9. **`games` vs `games_batted`** en `v_batting_season`: `games` cuenta cualquier aparición (convención oficial, incluye corredores emergentes y sustitutos defensivos con 0 turnos); `games_batted` solo juegos con al menos una aparición al plato. Usar `games_batted` para filtrar tablas de líderes.
 
-10. **No migrar a PostgreSQL aún** — Alembic se agregará cuando se decida migrar.
+10. **El mínimo de calificación solo aplica a estadísticas de tasa**. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. Constantes en `api/game_routes.py`.
+
+11. **No migrar a PostgreSQL aún** — Alembic se agregará cuando se decida migrar.
 
 ## Validación cruzada
 

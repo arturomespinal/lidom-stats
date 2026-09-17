@@ -23,6 +23,13 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Endpoints sobre el esquema de granularidad de juego. Van en su propio módulo
+# y no comparten nada con los de abajo, que leen las tablas planas y son los
+# que consumen el frontend y el mobile en producción.
+from api.game_routes import router as game_router  # noqa: E402
+
+app.include_router(game_router)
+
 
 def query_db(sql: str, params: dict = {}) -> list[dict]:
     with engine.connect() as conn:
@@ -34,13 +41,31 @@ def query_db(sql: str, params: dict = {}) -> list[dict]:
 
 @app.get("/health")
 def health():
-    counts = {}
-    for table in ["standings", "batting_stats", "pitching_stats"]:
+    def count(table: str) -> int:
         try:
-            counts[table] = query_db(f"SELECT COUNT(*) as c FROM {table}")[0]["c"]
+            return query_db(f"SELECT COUNT(*) as c FROM {table}")[0]["c"]
         except Exception:
-            counts[table] = 0
-    return {"status": "ok", "records": counts}
+            return 0
+
+    # Las dos capas por separado: si una está vacía el diagnóstico es inmediato
+    # y se sabe cuál de los dos ingestores falta correr.
+    flat = {t: count(t) for t in ("standings", "batting_stats", "pitching_stats")}
+    game_level = {
+        t: count(t)
+        for t in ("teams", "players", "seasons", "games",
+                  "batting_lines", "pitching_lines")
+    }
+
+    return {
+        "status": "ok",
+        "records": flat,                 # se mantiene por compatibilidad
+        "flat_tables": flat,
+        "game_level": game_level,
+        "ingest_hints": {
+            "flat_tables": "python main.py ingest 2025",
+            "game_level": "python main.py ingest-games 2025",
+        },
+    }
 
 
 # ── Standings ─────────────────────────────────────────────────────────────────

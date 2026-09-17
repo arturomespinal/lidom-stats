@@ -3,6 +3,7 @@ import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
+import LiveScreen from './src/screens/LiveScreen';
 import StandingsScreen from './src/screens/StandingsScreen';
 import BattingScreen from './src/screens/BattingScreen';
 import PitchingScreen from './src/screens/PitchingScreen';
@@ -26,6 +27,7 @@ const DarkTheme = {
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
+  'En Vivo':  { active: 'flash',          inactive: 'flash-outline' },
   Posiciones: { active: 'podium',         inactive: 'podium-outline' },
   Bateo:      { active: 'baseball',       inactive: 'baseball-outline' },
   Pitcheo:    { active: 'radio-button-on',inactive: 'radio-button-off' },
@@ -60,6 +62,7 @@ export default function App() {
           },
         })}
       >
+        <Tab.Screen name="En Vivo"    component={LiveScreen} />
         <Tab.Screen name="Posiciones" component={StandingsScreen} />
         <Tab.Screen name="Bateo"      component={BattingScreen} />
         <Tab.Screen name="Pitcheo"    component={PitchingScreen} />

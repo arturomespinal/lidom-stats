@@ -1,5 +1,5 @@
 import { API_BASE, DEFAULT_SEASON } from './config';
-import { BattingRow, PitchingRow, StandingRow } from './types';
+import { BattingRow, LiveGameState, PitchingRow, StandingRow } from './types';
 
 async function get<T>(path: string): Promise<T | null> {
   try {
@@ -35,5 +35,13 @@ export async function fetchPitching(
   const data = await get<{ data: PitchingRow[] }>(
     `/pitching?season=${season}&sort_by=${sortBy}&limit=${limit}`,
   );
+  return data?.data ?? [];
+}
+
+/* ── En vivo ─────────────────────────────────────────────────────────────── */
+
+export async function fetchLiveGames(onlyLive = false): Promise<LiveGameState[]> {
+  const q = onlyLive ? '?only_live=true' : '';
+  const data = await get<{ data: LiveGameState[] }>(`/live/games${q}`);
   return data?.data ?? [];
 }

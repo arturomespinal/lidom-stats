@@ -29,3 +29,10 @@ apscheduler==3.10.4
 # API
 fastapi==0.111.0
 uvicorn==0.30.1
+
+# Motor en vivo
+# El feed de MLB entrega los cambios como JSON Patch (RFC 6902). Implementar
+# el estándar a mano —add/remove/replace/move/copy, índices de array, el "-"
+# de append— es un problema resuelto, y equivocarse en un detalle corrompe el
+# estado en silencio, que es el peor modo de fallo posible aquí.
+jsonpatch==1.33

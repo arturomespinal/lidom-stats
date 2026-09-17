@@ -216,12 +216,40 @@ El feed de pre-juego ya expone la alineación publicada — primer bateador y ab
 
 `fixtures/` está fuera del control de versiones: son megas de JSON que se vuelven a bajar en un minuto.
 
+### El poller
+
+`src/live/poller.py` corre en su propio hilo y mantiene al día la caché volátil. Un ciclo: `/schedule` dice qué juegos hay hoy → la primera vez de cada juego se baja el feed completo → a partir de ahí **solo parches** desde la última marca, aplicados sobre el crudo guardado → al pasar a final dispara `on_final` y suelta el documento crudo.
+
+Medido sobre doce sondeos reales: **7,9 MB por feed completo contra 0,75 MB por parches, 10,5 veces menos.** Y el estado que sale de la cadena de parches es idéntico campo por campo al del feed completo. La única discrepancia entre ambos documentos son 49 valores `int` frente a `float` en `pitchData` y `hitData` — mismo número, distinta serialización, y nada de eso llega al marcador.
+
+Cuando un parche no se puede aplicar —respuesta con forma inesperada, marca demasiado vieja, operación inválida— el poller baja el feed completo. Es más caro, pero nunca deja el estado corrupto.
+
+`src/live/store.py` es la caché: deliberadamente en memoria y **no** en SQLite. La base es la verdad histórica y se escribe una vez por juego; esto cambia cada diez segundos y no debe sobrevivir a un reinicio. Si el proceso cae, el poller reconstruye todo en un sondeo. Guarda el GUMBO crudo (porque los parches se aplican sobre él) y el estado reducido; al terminar un juego suelta el crudo, que es un megabyte sin uso.
+
+### Endpoints en vivo
+
+| Endpoint | Qué da |
+|----------|--------|
+| `GET /live/status` | Qué sigue el poller y qué proporción de sondeos resolvió por parche |
+| `GET /live/games` | Marcador de todos los juegos en seguimiento (`?only_live=true`) |
+| `GET /live/games/{game_pk}` | Uno solo, con la antigüedad del dato |
+| `GET /live/games/{game_pk}/stream` | Flujo SSE: un evento por cambio, latido cada 20 s, cierra al llegar a final |
+
+El generador SSE consulta la caché una vez por segundo y emite solo cuando cambia la marca de tiempo. Se podría notificar desde el hilo del poller con colas, pero eso obliga a cruzar hilos y asyncio; leer un diccionario en memoria cada segundo no cuesta nada y el marcador cambia cada diez.
+
+**El poller no arranca solo.** Se enciende con `LIDOM_LIVE_POLLER=1` (y opcionalmente `LIDOM_LIVE_DATE=YYYY-MM-DD`), para que levantar la API a trabajar en los endpoints históricos no dispare tráfico contra la MLB API:
+
+```bash
+set LIDOM_LIVE_POLLER=1
+python -m uvicorn api.main:app --reload
+```
+
 ## Próximos pasos
 
-1. Poller: sondeo cada `metaData.wait` segundos, solo durante juegos activos, apoyado en `/schedule` para saber cuándo hay.
-2. `diffPatch` con `startTimecode` para no bajar un megabyte por sondeo.
-3. Caché volátil del estado en vivo, separada de la base canónica, y entrega por SSE o WebSocket.
-4. Al pasar un juego a `final`, disparar `ingest-games` para ese `gamePk`.
-5. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
+1. Consumir el SSE desde el frontend y el mobile: pantalla de marcador en vivo.
+2. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
+3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
+4. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
+5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 4. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
 5. Producción: PostgreSQL vía Alembic cuando el volumen lo justifique.

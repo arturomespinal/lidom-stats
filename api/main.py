@@ -1,4 +1,6 @@
 # api/main.py — API REST LIDOM Stats
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI, Query, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
@@ -7,13 +9,32 @@ from sqlalchemy import text
 from src.models import flat_models  # noqa: F401
 from src.models.database import get_engine, init_db
 
+# Estado en vivo. El poller NO arranca solo: se enciende con la variable de
+# entorno LIDOM_LIVE_POLLER=1, para que levantar la API a trabajar en los
+# endpoints históricos no dispare tráfico contra la MLB API.
+from api.live_routes import (
+    router as live_router,
+    maybe_start_poller,
+    stop_poller,
+)
+
 init_db()
 engine = get_engine()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Arranque y apagado. on_event está deprecado; esta es la forma actual."""
+    maybe_start_poller()
+    yield
+    stop_poller()
+
 
 app = FastAPI(
     title="LIDOM Stats API",
     description="Estadísticas de la Liga de Béisbol Profesional Dominicana",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -29,6 +50,8 @@ app.add_middleware(
 from api.game_routes import router as game_router  # noqa: E402
 
 app.include_router(game_router)
+
+app.include_router(live_router)
 
 
 def query_db(sql: str, params: dict = {}) -> list[dict]:

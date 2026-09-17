@@ -8,6 +8,7 @@ from sqlalchemy import text
 # Registrar flat_models en Base.metadata antes de init_db()
 from src.models import flat_models  # noqa: F401
 from src.models.database import get_engine, init_db
+from src.qualification import qualifying_ip, qualifying_pa
 
 # Estado en vivo. El poller NO arranca solo: se enciende con la variable de
 # entorno LIDOM_LIVE_POLLER=1, para que levantar la API a trabajar en los
@@ -60,6 +61,21 @@ def query_db(sql: str, params: dict = {}) -> list[dict]:
     return [dict(r) for r in rows]
 
 
+def _season_team_games(season: str) -> int:
+    """
+    Juegos del equipo que más jugó en la temporada.
+
+    Es la base del mínimo de calificación. Se toma el máximo y no el equipo de
+    cada jugador: si no, alguien de un equipo con un juego suspendido tendría
+    un listón más bajo que el resto de la liga.
+    """
+    rows = query_db(
+        "SELECT MAX(games_played) AS g FROM standings WHERE season = :s",
+        {"s": season},
+    )
+    return (rows[0]["g"] or 0) if rows else 0
+
+
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
@@ -107,6 +123,23 @@ def get_standings(season: str = Query("2025", description="Año de temporada")):
     )
     if not rows:
         raise HTTPException(404, f"No hay standings para temporada {season}")
+
+    # El games_back que guarda la tabla NO es distancia al líder: la MLB API lo
+    # entrega respecto al cuarto puesto, que en LIDOM es la línea de
+    # clasificación al round robin. Se ve en los datos — el "-" cae en el 4to,
+    # no en el 1ro, y el líder aparece con valor negativo.
+    #
+    # Es un dato útil, incluso más relevante para un fanático que el GB
+    # tradicional, pero una columna "GB" en una tabla de posiciones significa
+    # otra cosa. Así que calculamos el de verdad desde G-P y conservamos el de
+    # la API con un nombre honesto.
+    leader = rows[0]
+    for row in rows:
+        gb = ((leader["wins"] - row["wins"]) + (row["losses"] - leader["losses"])) / 2
+        row["playoff_games_back"] = row["games_back"]
+        # "-" en el líder: es lo que los clientes ya saben pintar como guion.
+        row["games_back"] = "-" if gb <= 0 else f"{gb:.1f}"
+
     return {"season": season, "count": len(rows), "data": rows}
 
 
@@ -116,7 +149,8 @@ def get_standings(season: str = Query("2025", description="Año de temporada")):
 def get_batting(
     season: str = Query("2025"),
     team: str = Query(None, description="Filtrar por equipo (ej. LIC, AGU, EST)"),
-    min_pa: int = Query(0, description="Mínimo de plate appearances"),
+    min_pa: int = Query(None, description="Mínimo de apariciones al plato; si se omite se calcula"),
+    qualified: bool = Query(True, description="Aplica el mínimo en las tablas de tasa"),
     sort_by: str = Query("ops", description="Campo para ordenar"),
     limit: int = Query(50, le=200),
 ):
@@ -125,6 +159,15 @@ def get_batting(
         "home_runs", "rbi", "hits", "stolen_bases", "plate_appearances",
         "runs", "walks", "strikeouts", "games",
     } else "ops"
+
+    # Sin mínimo, quien batea de 1-1 encabeza el promedio con 1.000 y la tabla
+    # deja de significar algo. Solo aplica a las tasas: nadie exige un mínimo
+    # para liderar jonrones. Un min_pa explícito manda siempre.
+    applies = qualified and safe_sort in {
+        "batting_avg", "on_base_pct", "slugging_pct", "ops",
+    }
+    if min_pa is None:
+        min_pa = qualifying_pa(_season_team_games(season)) if applies else 0
 
     team_filter = "AND team_id = :team" if team else ""
     sql = f"""
@@ -146,7 +189,8 @@ def get_batting(
     rows = query_db(sql, params)
     if not rows:
         raise HTTPException(404, "No se encontraron datos de bateo")
-    return {"season": season, "count": len(rows), "data": rows}
+    return {"season": season, "sort_by": safe_sort, "min_pa": min_pa,
+            "qualification_applied": applies, "count": len(rows), "data": rows}
 
 
 # ── Pitching ──────────────────────────────────────────────────────────────────
@@ -155,7 +199,8 @@ def get_batting(
 def get_pitching(
     season: str = Query("2025"),
     team: str = Query(None),
-    min_ip: float = Query(0.0, description="Mínimo de innings pitched"),
+    min_ip: float = Query(None, description="Mínimo de entradas lanzadas; si se omite se calcula"),
+    qualified: bool = Query(True, description="Aplica el mínimo en las tablas de tasa"),
     sort_by: str = Query("era", description="Campo para ordenar"),
     limit: int = Query(50, le=200),
 ):
@@ -165,6 +210,15 @@ def get_pitching(
         "innings_pitched", "strikeouts", "wins", "saves", "games",
     } else "era"
     order = "ASC" if safe_sort in asc_fields else "DESC"
+
+    # Mismo criterio que en bateo: el mínimo es para las tasas. Sin él, 24 de
+    # los 32 lanzadores con efectividad 0.00 lanzaron menos de 5 entradas y la
+    # tabla de líderes se llena de apariciones de un tercio de inning.
+    applies = qualified and safe_sort in {
+        "era", "whip", "strikeouts_per_nine", "walks_per_nine", "hits_per_nine",
+    }
+    if min_ip is None:
+        min_ip = qualifying_ip(_season_team_games(season)) if applies else 0.0
 
     team_filter = "AND team_id = :team" if team else ""
     sql = f"""
@@ -186,7 +240,8 @@ def get_pitching(
     rows = query_db(sql, params)
     if not rows:
         raise HTTPException(404, "No se encontraron datos de pitcheo")
-    return {"season": season, "count": len(rows), "data": rows}
+    return {"season": season, "sort_by": safe_sort, "min_ip": min_ip,
+            "qualification_applied": applies, "count": len(rows), "data": rows}
 
 
 # ── Jugador individual ────────────────────────────────────────────────────────

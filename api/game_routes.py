@@ -21,6 +21,7 @@ from sqlalchemy import text
 
 from src.constants import LIDOM_TEAMS
 from src.models.database import get_engine
+from src.qualification import qualifying_ip, qualifying_pa
 
 router = APIRouter()
 engine = get_engine()
@@ -29,21 +30,9 @@ engine = get_engine()
 # confiar en que la query no devuelva nada, para poder dar un 400 claro.
 TEAM_CODES = {info["team_code"] for info in LIDOM_TEAMS.values()}
 
-# Cuánto tiene que jugar alguien para entrar a una tabla de líderes de tasa,
-# expresado por juego de equipo.
-#
-# En bateo usamos el mínimo oficial del béisbol, 3.1 apariciones al plato por
-# juego: en una temporada de 50 juegos son 155 PA y deja 16 calificados de 209,
-# unos 2,7 por equipo. Funciona tal cual.
-#
-# En pitcheo el estándar oficial es 1.0 IP por juego, y NO es trasladable a una
-# liga invernal. Un abridor de LIDOM hace entre 8 y 14 aperturas y llega a lo
-# sumo a 50 entradas, contra las ~32 aperturas y ~190 entradas de un abridor de
-# Grandes Ligas. Con 1.0 califica un solo lanzador en toda la liga; con 0.8,
-# cinco. Usamos 0.6 (30 IP), que deja 14 calificados — unos 2,3 por equipo, la
-# misma proporción que el bateo, para que ambas tablas se vean coherentes.
-PA_PER_TEAM_GAME = 3.1
-IP_PER_TEAM_GAME = 0.6
+# Los mínimos viven en src/qualification.py porque los comparten estos
+# endpoints y los de tablas planas de api/main.py. Duplicarlos garantizaría que
+# un día muestren líderes distintos.
 
 
 def query_db(sql: str, params: dict | None = None) -> list[dict]:
@@ -418,15 +407,16 @@ BATTING_ASC = {"so"}
 PITCHING_SORTS = {
     "era", "whip", "so", "bb", "wins", "losses", "saves", "innings_pitched",
     "h", "er", "games", "games_started",
+    "strikeouts_per_nine", "walks_per_nine",
 }
-PITCHING_ASC = {"era", "whip", "bb", "h", "er", "losses"}
+PITCHING_ASC = {"era", "whip", "bb", "h", "er", "losses", "walks_per_nine"}
 
 # El mínimo de calificación existe para las estadísticas de TASA, donde pocas
 # apariciones inflan el número: sin él, quien batea 1-de-1 encabeza el promedio.
 # En las acumuladas no aplica — nadie exige un mínimo para liderar jonrones o
 # ponches, porque el propio acumulado ya premia haber jugado.
 BATTING_RATE_STATS = {"avg", "obp", "slg", "ops"}
-PITCHING_RATE_STATS = {"era", "whip"}
+PITCHING_RATE_STATS = {"era", "whip", "strikeouts_per_nine", "walks_per_nine"}
 
 
 @router.get("/leaderboards/batting", tags=["Líderes"])
@@ -450,7 +440,7 @@ def leaderboard_batting(
     # orden es por tasa: una tabla de jonrones no lleva mínimo.
     applies = qualified and sort in BATTING_RATE_STATS
     if min_pa is None:
-        min_pa = round(PA_PER_TEAM_GAME * season_games_played(season_id)) if applies else 0
+        min_pa = qualifying_pa(season_games_played(season_id)) if applies else 0
 
     params: dict = {"season_id": season_id, "min_pa": min_pa, "limit": limit}
     team_filter = ""
@@ -494,7 +484,7 @@ def leaderboard_pitching(
 
     applies = qualified and sort in PITCHING_RATE_STATS
     if min_ip is None:
-        min_ip = IP_PER_TEAM_GAME * season_games_played(season_id) if applies else 0.0
+        min_ip = qualifying_ip(season_games_played(season_id)) if applies else 0.0
 
     params: dict = {"season_id": season_id, "min_ip": min_ip, "limit": limit}
     team_filter = ""
@@ -505,7 +495,13 @@ def leaderboard_pitching(
     rows = query_db(
         f"""
         SELECT player_id, full_name, team_code, games, games_started,
-               wins, losses, saves, innings_pitched, h, er, so, bb, era, whip
+               wins, losses, saves, innings_pitched, h, er, so, bb, era, whip,
+               -- K/9 y BB/9 se calculan aquí y no se guardan: son tasas, y la
+               -- regla 3 del proyecto es que los agregados salen de la vista.
+               CASE WHEN innings_pitched > 0
+                    THEN ROUND(so * 9.0 / innings_pitched, 2) END AS strikeouts_per_nine,
+               CASE WHEN innings_pitched > 0
+                    THEN ROUND(bb * 9.0 / innings_pitched, 2) END AS walks_per_nine
         FROM v_pitching_season
         WHERE season_id = :season_id AND innings_pitched >= :min_ip {team_filter}
         ORDER BY {sort} {direction} NULLS LAST

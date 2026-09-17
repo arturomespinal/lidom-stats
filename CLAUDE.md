@@ -169,7 +169,7 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 
 9. **`games` vs `games_batted`** en `v_batting_season`: `games` cuenta cualquier aparición (convención oficial, incluye corredores emergentes y sustitutos defensivos con 0 turnos); `games_batted` solo juegos con al menos una aparición al plato. Usar `games_batted` para filtrar tablas de líderes.
 
-10. **El mínimo de calificación solo aplica a estadísticas de tasa**. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. Constantes en `api/game_routes.py`.
+10. **El mínimo de calificación solo aplica a estadísticas de tasa**, y rige en las DOS capas — endpoints planos y vistas. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. Los mínimos viven en `src/qualification.py`, compartidos por `api/main.py` y `api/game_routes.py`: duplicarlos garantizaría que un día muestren líderes distintos.
 
 11. **No migrar a PostgreSQL aún** — Alembic se agregará cuando se decida migrar.
 
@@ -271,9 +271,63 @@ Dos trampas que ya costaron un fallo, documentadas para no repetirlas:
 
 **El `mobile/` (Expo) todavía no tiene pantalla en vivo.** El backend le sirve igual, pero React Native no trae `EventSource`: haría falta `react-native-sse` o consultar `/live/games` con un `setInterval`, que para un marcador de ritmo conocido es suficiente.
 
+## Mobile (Expo)
+
+**SDK 57** — React Native 0.86.3, React 19.2.3, navegación 7. Expo Go solo corre
+proyectos de su misma versión de SDK, y en iPhone físico **no** se puede instalar
+un Expo Go viejo, así que subir el SDK es obligatorio para probar en dispositivo.
+Desde SDK 57 además hay que tener sesión iniciada **en los dos lados**: `npx expo
+login` en la terminal y el avatar dentro de Expo Go, con la misma cuenta.
+
+### El punto de entrada NO es App.tsx
+
+`"main": "index.js"`, y ese archivo importa `expo` antes que `./App`. No es
+cosmético:
+
+```js
+import { registerRootComponent } from 'expo';
+import App from './App';
+```
+
+Importar `expo` primero ejecuta `expo/src/Expo.fx`, que instala los polyfills del
+runtime —entre ellos un `URL` conforme al estándar— **antes** de que se cargue
+`expo-asset`. Con `"main": "App.tsx"` ese archivo nunca corría, y como App.tsx
+importa `@expo/vector-icons` → `expo-font` → `expo-asset`, y expo-asset calcula
+`manifestBaseUrl` al importarse escribiendo sobre `url.protocol` (que en RN 0.86
+es solo getter), la app moría antes de renderizar con:
+
+```
+TypeError: Cannot assign to property 'protocol' which has only a getter
+```
+
+No borrar `index.js` pensando que sobra.
+
+### Pantalla en vivo
+
+`src/screens/LiveScreen.tsx` **sondea**, no usa SSE: React Native no trae
+`EventSource`, y para un marcador cuyo ritmo dicta la API (`poll_wait_seconds`)
+un intervalo basta sin añadir dependencias. El sondeo se programa después de cada
+respuesta —no con `setInterval`, para que no se apilen— y se detiene cuando la
+pantalla pierde el foco o la app pasa a segundo plano.
+
+El diamante (`components/BaseDiamond.tsx`) usa `View` rotadas 45°, no SVG:
+`react-native-svg` no está en las dependencias y no vale añadir una librería
+nativa por tres cuadrados.
+
+## El games_back de la MLB API no es distancia al líder
+
+En `/standings`, el `games_back` que devuelve la API mide respecto al **cuarto
+puesto**, que en LIDOM es la línea de clasificación al round robin. Se ve en los
+datos: el `-` cae en el 4to y el líder aparece con valor negativo (−9.5).
+
+`api/main.py` calcula el GB real desde G-P y conserva el de la API como
+`playoff_games_back`. Ese segundo dato es material para una columna futura
+—cuántos juegos le faltan a cada equipo para clasificar— que a un fanático de
+LIDOM probablemente le importa más que la distancia al primero.
+
 ## Próximos pasos
 
-1. Pantalla en vivo en el `mobile/` (Expo), con polling o `react-native-sse`.
+1. Columna de distancia a la clasificación en Posiciones, usando `playoff_games_back`.
 2. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
 4. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).

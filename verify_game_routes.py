@@ -158,7 +158,63 @@ check("carreras invertidas coinciden", inv["runs_for"], s["runs_against"])
 check("mismo equipo → 400", c.get("/teams/LIC/h2h/LIC").status_code, 400)
 check("equipo inválido → 400", c.get("/teams/LIC/h2h/XXX").status_code, 400)
 
-print("\n━━━ los endpoints viejos siguen intactos ━━━")
+print("\n━━━ Posiciones: GB calculado, no el de la API ━━━")
+st = call("/standings?season=2025")["data"]
+for r in st:
+    print(f"    {r['team_id']}: {r['wins']}-{r['losses']}  GB={r['games_back']:>5}  "
+          f"clasificación={r['playoff_games_back']}")
+check("el líder no tiene GB", st[0]["games_back"], "-")
+check("GB del 2do calculado de G-P", st[1]["games_back"], "5.0")
+check("GB del último", st[-1]["games_back"], "11.5")
+# El dato crudo de la MLB API no es distancia al líder sino al 4to puesto, que
+# en LIDOM es la línea de clasificación. Se conserva con nombre honesto.
+check("conserva el dato original de la API", st[0]["playoff_games_back"], "-9.5")
+check("el cero del dato original cae en el 4to", st[3]["playoff_games_back"], "-")
+
+print("\n━━━ Endpoints planos: calificación ━━━")
+bat = call("/batting?season=2025&sort_by=ops")
+check("bateo aplica el mínimo por defecto", bat["qualification_applied"], True)
+check("mínimo calculado 3.1 × 50", bat["min_pa"], 155)
+check("ningún calificado por debajo del mínimo",
+      min(r["plate_appearances"] for r in bat["data"]) >= 155, True)
+print(f"    líder OPS: {bat['data'][0]['player']} "
+      f"(PA {bat['data'][0]['plate_appearances']}, OPS {bat['data'][0]['ops']})")
+
+hr = call("/batting?season=2025&sort_by=home_runs")
+check("jonrones NO lleva mínimo", hr["qualification_applied"], False)
+check("y min_pa queda en cero", hr["min_pa"], 0)
+
+libre = call("/batting?season=2025&sort_by=ops&qualified=false")
+check("qualified=false deja entrar al de 1 turno",
+      libre["data"][0]["plate_appearances"], 1)
+check("min_pa explícito manda sobre el cálculo",
+      call("/batting?season=2025&sort_by=ops&min_pa=200")["min_pa"], 200)
+
+pit = call("/pitching?season=2025&sort_by=era")
+check("pitcheo aplica el mínimo por defecto", pit["qualification_applied"], True)
+check("mínimo calculado 0.6 × 50", pit["min_ip"], 30.0)
+check("el líder ya no es un 0.00 de una entrada", pit["data"][0]["era"] > 0, True)
+print(f"    líder ERA: {pit['data'][0]['player']} "
+      f"(IP {pit['data'][0]['innings_pitched']}, ERA {pit['data'][0]['era']})")
+check("K/9 lleva mínimo por ser tasa",
+      call("/pitching?season=2025&sort_by=strikeouts_per_nine")["qualification_applied"], True)
+check("ponches NO lleva mínimo",
+      call("/pitching?season=2025&sort_by=strikeouts")["qualification_applied"], False)
+
+print("\n━━━ /leaderboards/pitching: K/9 y BB/9 ━━━")
+lbp = call("/leaderboards/pitching?season=2025&sort_by=strikeouts_per_nine")
+top = lbp["data"][0]
+check("expone strikeouts_per_nine", "strikeouts_per_nine" in top, True)
+check("expone walks_per_nine", "walks_per_nine" in top, True)
+check("K/9 = SO*9/IP", round(top["so"] * 9 / top["innings_pitched"], 2),
+      top["strikeouts_per_nine"])
+print(f"    {top['full_name']}: IP={top['innings_pitched']} K={top['so']} "
+      f"K/9={top['strikeouts_per_nine']} BB/9={top['walks_per_nine']}")
+bb9 = call("/leaderboards/pitching?season=2025&sort_by=walks_per_nine")
+check("BB/9 ordena ascendente (menos es mejor)",
+      bb9["data"][0]["walks_per_nine"] <= bb9["data"][1]["walks_per_nine"], True)
+
+print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:
     r = call(path)

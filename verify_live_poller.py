@@ -232,6 +232,81 @@ eventos = asyncio.run(asyncio.wait_for(probar_final(), timeout=5))
 check("emite estado y después final", [e.split("\n")[0] for e in eventos],
       ["event: state", "event: final"])
 
+print("\n━━━ 10. ReplayClient contra instantáneas reales ━━━")
+from src.live.replay import ReplayClient
+
+
+class InnerFake:
+    """Cliente interno que sirve las instantáneas guardadas."""
+
+    def __init__(self):
+        self.marcas = sorted(snapshots, key=lambda d: d["metaData"]["timeStamp"])
+        self.stamps = [d["metaData"]["timeStamp"] for d in self.marcas]
+        self.diff_calls = []
+
+    def get_live_timestamps(self, game_pk):
+        return list(self.stamps)
+
+    def get_live_feed(self, game_pk, timecode=None):
+        for d in self.marcas:
+            if d["metaData"]["timeStamp"] == timecode:
+                return json.loads(json.dumps(d))
+        return json.loads(json.dumps(self.marcas[0]))
+
+    def get_live_diff(self, game_pk, start_timecode, end_timecode=None):
+        self.diff_calls.append((start_timecode, end_timecode))
+        return [{"diff": [{"op": "replace", "path": "/metaData/timeStamp",
+                           "value": end_timecode}]}]
+
+    def close(self):
+        pass
+
+
+inner = InnerFake()
+rc = ReplayClient(GAME_PK, client=inner, step=2, interval=3, game_date="2026-09-17")
+
+# Esto es exactamente lo que falló en Windows: el calendario sintético traía
+# los IDs en None porque el feed en vivo no anida los equipos como /schedule.
+check("lee el ID del local del feed en vivo", rc.home_id, 669)
+check("lee el ID del visitante", rc.away_id, 668)
+
+sched = rc.get_schedule(season="2026")
+juego = sched["dates"][0]["games"][0]
+check("el calendario sintético usa la anidación de /schedule",
+      juego["teams"]["home"]["team"]["id"], 669)
+
+st6 = LiveStore()
+p6 = LivePoller(store=st6, client=rc, game_date="2026-09-17")
+check("discover() SÍ encuentra el juego", p6.discover(), [GAME_PK])
+check("y le arma el game_id", p6._tracking[GAME_PK] is not None, True)
+
+feed = rc.get_live_feed(GAME_PK)
+check("inyecta su propio intervalo en el feed", feed["metaData"]["wait"], 3)
+
+rc.get_live_diff(GAME_PK, rc.stamps[0])
+check("avanza la posición según step", rc.pos, 2)
+check("pide el diff entre las dos marcas reales",
+      inner.diff_calls[-1], (rc.stamps[0], rc.stamps[2]))
+
+parche = rc.get_live_diff(GAME_PK, rc.stamps[2])
+ops = parche[0]["diff"]
+check("añade la operación que mantiene el ritmo",
+      ops[-1], {"op": "replace", "path": "/metaData/wait", "value": 3})
+
+while not rc.finished:
+    rc.get_live_diff(GAME_PK, "x")
+check("al terminar no avanza más", rc.get_live_diff(GAME_PK, "x"), [])
+check("progreso al 100%", rc.progress, 1.0)
+rc.restart()
+check("restart vuelve al principio", rc.pos, 0)
+
+try:
+    ReplayClient(GAME_PK, client=InnerFake(), game_date="2026-09-17")
+    ajeno_ok = True
+except ValueError:
+    ajeno_ok = False
+check("acepta un juego de LIDOM", ajeno_ok, True)
+
 print()
 if fails:
     print(f"❌ {len(fails)} fallaron: {fails}")

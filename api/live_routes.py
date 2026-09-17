@@ -181,9 +181,36 @@ async def live_stream(game_pk: int):
     )
 
 
+def start_replay(game_pk: int, step: int, interval: int) -> LivePoller:
+    """
+    Arranca el poller contra un juego terminado, reproducido como si ocurriera.
+
+    Fuera de temporada es la única forma de ver la pantalla en movimiento. El
+    frontend no se entera: recibe por SSE exactamente los mismos eventos.
+    """
+    global _poller
+    if _poller is None:
+        from src.live.replay import build_replay_poller
+        _poller = build_replay_poller(game_pk, store=store, step=step,
+                                      interval=interval, on_final=None)
+        _poller.start()
+    return _poller
+
+
 def maybe_start_poller() -> None:
     """Arranca el poller solo si LIDOM_LIVE_POLLER está activado."""
-    if os.environ.get("LIDOM_LIVE_POLLER", "").lower() in ("1", "true", "yes"):
+    if os.environ.get("LIDOM_LIVE_POLLER", "").lower() not in ("1", "true", "yes"):
+        return
+
+    replay = os.environ.get("LIDOM_LIVE_REPLAY")
+    if replay:
+        start_replay(
+            int(replay),
+            step=int(os.environ.get("LIDOM_REPLAY_STEP", 4)),
+            interval=int(os.environ.get("LIDOM_REPLAY_INTERVAL", 2)),
+        )
+        logger.info(f"Modo repetición del juego {replay}")
+    else:
         start_poller(game_date=os.environ.get("LIDOM_LIVE_DATE") or None)
         logger.info("Poller en vivo activado por LIDOM_LIVE_POLLER")
 

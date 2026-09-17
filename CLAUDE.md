@@ -244,9 +244,36 @@ set LIDOM_LIVE_POLLER=1
 python -m uvicorn api.main:app --reload
 ```
 
+### Pantalla en vivo (web)
+
+`frontend/app/live/page.tsx` + `components/LiveGames.tsx`, `LiveScoreboard.tsx`, `BaseDiamond.tsx`.
+
+La página no hace fetch en el servidor: el estado cambia cada diez segundos y cualquier cosa renderizada ahí nacería vieja. El componente cliente carga `/live/games` al montarse y abre un `EventSource` por juego que no esté terminado. Al recibir el evento `final` cierra la conexión — sin eso, `EventSource` reconecta solo y recibe el mismo par de eventos en bucle.
+
+Para verla en movimiento fuera de temporada, dos consolas:
+
+```bash
+set LIDOM_LIVE_POLLER=1
+set LIDOM_LIVE_REPLAY=826343
+python -m uvicorn api.main:app
+```
+```bash
+cd frontend
+npm run dev
+```
+
+`src/live/replay.py` no añade ningún modo al poller: le inyecta un `ReplayClient` que imita la interfaz de `MLBAPIClient` caminando las marcas de un juego terminado y pidiendo los parches **reales** entre cada par. El frontend no distingue una repetición de un juego en vivo.
+
+Dos trampas que ya costaron un fallo, documentadas para no repetirlas:
+
+- En `/schedule` los equipos vienen anidados (`teams.home.team.id`); en el feed en vivo van directos (`gameData.teams.home.id`). Confundirlas deja los IDs en `None` y `discover()` no encuentra nada, en silencio.
+- Los parches traen el `metaData.wait` real de 10 s, así que la repetición necesita añadir una operación extra que lo sobreescriba o se arrastra.
+
+**El `mobile/` (Expo) todavía no tiene pantalla en vivo.** El backend le sirve igual, pero React Native no trae `EventSource`: haría falta `react-native-sse` o consultar `/live/games` con un `setInterval`, que para un marcador de ritmo conocido es suficiente.
+
 ## Próximos pasos
 
-1. Consumir el SSE desde el frontend y el mobile: pantalla de marcador en vivo.
+1. Pantalla en vivo en el `mobile/` (Expo), con polling o `react-native-sse`.
 2. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
 4. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).

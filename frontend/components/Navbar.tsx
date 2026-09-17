@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const TABS = [
+  { label: "En Vivo", href: "/live" },
   { label: "Posiciones", href: "/" },
   { label: "Bateo", href: "/batting" },
   { label: "Pitcheo", href: "/pitching" },

@@ -1,6 +1,13 @@
-import { BattingRow, PitchingRow, StandingRow } from "@/lib/types";
+import {
+  BattingRow,
+  LiveGameState,
+  PitchingRow,
+  StandingRow,
+} from "@/lib/types";
 
-const API_BASE =
+/* Se exporta porque el marcador en vivo arma la URL del EventSource a mano:
+   SSE no pasa por fetch. */
+export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
 async function apiFetch<T>(path: string): Promise<T | null> {
@@ -51,4 +58,34 @@ export async function fetchPitching(
 
   const data = await apiFetch<{ data: PitchingRow[] }>(`/pitching?${params}`);
   return data?.data ?? [];
+}
+
+/* ── En vivo ─────────────────────────────────────────────────────────────── */
+
+export async function fetchLiveGames(
+  onlyLive = false
+): Promise<LiveGameState[]> {
+  const q = onlyLive ? "?only_live=true" : "";
+  const data = await apiFetch<{ data: LiveGameState[] }>(`/live/games${q}`);
+  return data?.data ?? [];
+}
+
+export interface LiveStatus {
+  poller_running: boolean;
+  tracked: number;
+  live: number;
+  final: number;
+  polls: number;
+  full_fetches: number;
+  patch_applications: number;
+  patch_ratio: number | null;
+}
+
+export async function fetchLiveStatus(): Promise<LiveStatus | null> {
+  return apiFetch<LiveStatus>("/live/status");
+}
+
+/* La URL del flujo SSE de un juego. EventSource la consume directamente. */
+export function liveStreamUrl(gamePk: number): string {
+  return `${API_BASE}/live/games/${gamePk}/stream`;
 }

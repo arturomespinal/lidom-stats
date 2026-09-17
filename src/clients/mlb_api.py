@@ -320,7 +320,12 @@ class MLBAPIClient:
             return raw
         return raw.get("timestamps", raw.get("data", []))
 
-    def get_live_diff(self, game_pk: int, start_timecode: str) -> dict:
+    def get_live_diff(
+        self,
+        game_pk: int,
+        start_timecode: str,
+        end_timecode: Optional[str] = None,
+    ) -> dict:
         """
         Solo los cambios desde start_timecode, en formato JSON Patch.
 
@@ -336,7 +341,7 @@ class MLBAPIClient:
         """
         return self._get(
             f"{self.v11_base_url}/game/{game_pk}/feed/live/diffPatch",
-            {"startTimecode": start_timecode},
+            {"startTimecode": start_timecode, "endTimecode": end_timecode},
         )
 
     def get_teams(

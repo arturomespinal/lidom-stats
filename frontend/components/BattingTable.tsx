@@ -1,0 +1,153 @@
+"use client";
+
+import { useState } from "react";
+import TeamBadge from "@/components/TeamBadge";
+import { BattingRow } from "@/lib/types";
+
+type SortKey =
+  | "ops"
+  | "batting_avg"
+  | "on_base_pct"
+  | "slugging_pct"
+  | "home_runs"
+  | "rbi"
+  | "hits"
+  | "stolen_bases"
+  | "plate_appearances";
+
+const COLUMNS: { key: SortKey; label: string; title: string }[] = [
+  { key: "batting_avg", label: "AVG", title: "Promedio de bateo" },
+  { key: "on_base_pct", label: "OBP", title: "On-base percentage" },
+  { key: "slugging_pct", label: "SLG", title: "Slugging percentage" },
+  { key: "ops", label: "OPS", title: "On-base plus slugging" },
+  { key: "home_runs", label: "HR", title: "Home runs" },
+  { key: "rbi", label: "RBI", title: "Carreras impulsadas" },
+  { key: "hits", label: "H", title: "Hits" },
+  { key: "stolen_bases", label: "SB", title: "Bases robadas" },
+  { key: "plate_appearances", label: "PA", title: "Turnos al bate" },
+];
+
+const fmt = {
+  avg: (v: number | null) =>
+    v != null ? v.toFixed(3).replace(/^0/, "") : "—",
+  ops: (v: number | null) =>
+    v != null ? v.toFixed(3) : "—",
+};
+
+interface SortBtnProps {
+  col: (typeof COLUMNS)[number];
+  active: boolean;
+  asc: boolean;
+  onClick: () => void;
+}
+
+function SortBtn({ col, active, asc, onClick }: SortBtnProps) {
+  return (
+    <th
+      className={`px-3 py-3 text-center cursor-pointer select-none transition-colors ${
+        active
+          ? "text-[#58a6ff] bg-[#1c2128]"
+          : "text-[#8b949e] hover:text-[#f0f6fc]"
+      }`}
+      title={col.title}
+      onClick={onClick}
+    >
+      <span className="inline-flex items-center gap-0.5 text-xs uppercase tracking-wider">
+        {col.label}
+        <span className="text-[10px] opacity-60">
+          {active ? (asc ? "↑" : "↓") : ""}
+        </span>
+      </span>
+    </th>
+  );
+}
+
+export default function BattingTable({ data }: { data: BattingRow[] }) {
+  const [sortKey, setSortKey] = useState<SortKey>("ops");
+  const [asc, setAsc] = useState(false);
+
+  const toggle = (key: SortKey) => {
+    if (key === sortKey) setAsc((a) => !a);
+    else { setSortKey(key); setAsc(false); }
+  };
+
+  const sorted = [...data].sort((a, b) => {
+    const av = (a[sortKey] as number | null) ?? -Infinity;
+    const bv = (b[sortKey] as number | null) ?? -Infinity;
+    return asc ? av - bv : bv - av;
+  });
+
+  return (
+    <div className="overflow-x-auto table-scroll rounded-lg border border-[#30363d]">
+      <table className="w-full text-sm whitespace-nowrap">
+        <thead>
+          <tr className="bg-[#21262d]">
+            <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-[#8b949e]">
+              Jugador
+            </th>
+            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-[#8b949e]">
+              Equipo
+            </th>
+            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-[#8b949e]">
+              JJ
+            </th>
+            {COLUMNS.map((col) => (
+              <SortBtn
+                key={col.key}
+                col={col}
+                active={sortKey === col.key}
+                asc={asc}
+                onClick={() => toggle(col.key)}
+              />
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {sorted.map((row, i) => (
+            <tr
+              key={`${row.player}-${i}`}
+              className="border-t border-[#30363d] bg-[#161b22] hover:bg-[#1c2128] transition-colors"
+            >
+              <td className="px-4 py-2.5 font-medium">{row.player}</td>
+              <td className="px-3 py-2.5 text-center">
+                <TeamBadge code={row.team_id} />
+              </td>
+              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+                {row.games}
+              </td>
+              <td className="px-3 py-2.5 text-center font-mono">
+                {fmt.avg(row.batting_avg)}
+              </td>
+              <td className="px-3 py-2.5 text-center font-mono text-[#8b949e]">
+                {fmt.avg(row.on_base_pct)}
+              </td>
+              <td className="px-3 py-2.5 text-center font-mono text-[#8b949e]">
+                {fmt.avg(row.slugging_pct)}
+              </td>
+              <td
+                className={`px-3 py-2.5 text-center font-mono font-semibold ${
+                  sortKey === "ops" ? "text-[#58a6ff]" : ""
+                }`}
+              >
+                {fmt.ops(row.ops)}
+              </td>
+              <td className="px-3 py-2.5 text-center">{row.home_runs}</td>
+              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+                {row.rbi}
+              </td>
+              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+                {row.hits}
+              </td>
+              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+                {row.stolen_bases}
+              </td>
+              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+                {row.plate_appearances}
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}

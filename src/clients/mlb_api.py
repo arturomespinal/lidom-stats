@@ -177,6 +177,7 @@ class MLBAPIClient:
         game_type: str = "R",
         limit: int = 10000,
         offset: int = 0,
+        player_pool: str = "All",
     ) -> APIHittingStatsResponse:
         """
         Obtiene stats de bateo agregadas por temporada.
@@ -189,6 +190,10 @@ class MLBAPIClient:
             season: "2025" (representa la temp. invernal 2024-25)
             game_type: "R" temporada regular, "P" playoffs, "L" final, "W" caribe
             limit: máximo de splits a devolver (10000 es de facto "sin límite")
+            player_pool: "All" devuelve todos los jugadores con al menos una
+                aparición. CRÍTICO: si se omite, la MLB API asume "QUALIFIED"
+                y filtra a quienes alcanzan el mínimo de PA por juego de equipo
+                — en una liga invernal corta eso reduce 206 bateadores a 22.
 
         Returns:
             APIHittingStatsResponse validado.
@@ -202,6 +207,7 @@ class MLBAPIClient:
             "gameType": game_type,
             "limit": limit,
             "offset": offset,
+            "playerPool": player_pool,
         }
         raw = self._get("/stats", params=params)
         return APIHittingStatsResponse.model_validate(raw)
@@ -213,10 +219,14 @@ class MLBAPIClient:
         sport_id: int = LIDOM_SPORT_ID,
         game_type: str = "R",
         limit: int = 10000,
+        player_pool: str = "All",
     ) -> dict:
         """
         Stats de pitcheo agregadas. Devuelve dict raw por ahora — modelo
         Pydantic específico se añade en siguiente iteración.
+
+        player_pool: ver nota en get_hitting_stats(). Sin este parámetro la API
+        devuelve solo lanzadores calificados (IP >= 1 por juego de equipo).
         """
         params = {
             "stats": "season",
@@ -226,6 +236,7 @@ class MLBAPIClient:
             "season": season,
             "gameType": game_type,
             "limit": limit,
+            "playerPool": player_pool,
         }
         return self._get("/stats", params=params)
 
@@ -282,6 +293,26 @@ class MLBAPIClient:
     def get_person(self, person_id: int) -> dict:
         """Perfil completo de un jugador."""
         return self._get(f"/people/{person_id}")
+
+    def get_people(self, person_ids: list[int]) -> dict:
+        """
+        Perfiles de varios jugadores en UN solo request.
+
+        Endpoint:
+            GET /people?personIds=1,2,3
+
+        Existe para no hacer ~450 llamadas a /people/{id} al ingestar una
+        temporada completa de boxscores. La URL tiene un límite práctico de
+        longitud, así que el llamador debe trocear en lotes (~100 IDs).
+
+        Returns:
+            dict raw: {"people": [ {...}, ... ]}
+        """
+        if not person_ids:
+            return {"people": []}
+
+        params = {"personIds": ",".join(str(pid) for pid in person_ids)}
+        return self._get("/people", params=params)
 
     def get_standings(
         self,

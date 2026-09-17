@@ -1,7 +1,8 @@
 # src/pipeline/loader.py — ETL: transforma dicts del scraper → filas de DB
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.sqlite import insert as sqlite_insert
-from src.models.database import Standing, BattingStats, PitchingStats, get_engine
+from src.models.flat_models import Standing, BattingStats, PitchingStats
+from src.models.database import get_engine
 from src.utils.logger import logger
 
 

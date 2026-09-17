@@ -324,7 +324,15 @@ VIEW_STATEMENTS = {
             p.full_name,
             g.season_id,
             bl.team_code,
+            -- games sigue la convención oficial: cuenta CUALQUIER aparición,
+            -- incluidos corredores emergentes y sustitutos defensivos que
+            -- nunca pasaron al plato.
             COUNT(DISTINCT bl.game_id)                 AS games,
+            -- games_batted excluye esas apariciones. Es el filtro correcto
+            -- para tablas de líderes, donde un corredor emergente con 0 turnos
+            -- no debería contar como juego disputado.
+            COUNT(DISTINCT CASE WHEN bl.plate_appearances > 0
+                                THEN bl.game_id END)   AS games_batted,
             SUM(bl.plate_appearances)                  AS pa,
             SUM(bl.at_bats)                            AS ab,
             SUM(bl.hits)                               AS h,
@@ -470,10 +478,18 @@ def init_db(db_url: str = "sqlite:///data/lidom_stats.db"):
     Base.metadata.create_all(engine)
  
     # Crear vistas DESPUÉS de las tablas (dependen de las tablas).
+    #
+    # DROP antes de CREATE a propósito: con "CREATE VIEW IF NOT EXISTS" una
+    # base que ya existe conserva la definición vieja para siempre, así que
+    # cambiar el SQL de una vista aquí no tendría ningún efecto y quedarías
+    # leyendo columnas obsoletas sin ningún aviso. Las vistas no guardan datos
+    # —son solo SELECT guardados— así que recrearlas en cada arranque no
+    # cuesta nada y garantiza que reflejen este archivo.
     with engine.connect() as conn:
         for view_name, sql in VIEW_STATEMENTS.items():
+            conn.execute(text(f"DROP VIEW IF EXISTS {view_name}"))
             conn.execute(text(sql))
-            logger.debug(f"Vista creada/actualizada: {view_name}")
+            logger.debug(f"Vista recreada: {view_name}")
         conn.commit()
  
     logger.info(f"✅ DB inicializada: {db_url}")

@@ -1,0 +1,19 @@
+# Normaliza los fines de línea en el repo.
+#
+# Trabajamos en Windows (CRLF) pero el repo guarda LF. Sin esto, un archivo
+# editado en un editor y otro generado por herramienta producen diffs de
+# cientos de líneas donde solo cambió una — el contenido es idéntico y solo
+# difiere el fin de línea.
+* text=auto
+
+# Archivos que deben conservar LF siempre, incluso en Windows.
+*.sh text eol=lf
+
+# Binarios: git no debe tocarlos.
+*.db binary
+*.sqlite3 binary
+*.png binary
+*.jpg binary
+*.ico binary
+*.woff binary
+*.woff2 binary

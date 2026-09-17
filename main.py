@@ -1,8 +1,10 @@
-# main.py — pipeline completo: scrape → JSON → DB
+# main.py — pipeline completo: scrape → JSON → DB  |  ingest: MLB API → DB
 import os
 import sys
 from src.utils.logger import setup_logger, logger
 from src.storage.json_storage import save_result
+# Importar flat_models para registrarlos en Base.metadata antes de init_db()
+from src.models import flat_models  # noqa: F401
 from src.models.database import init_db
 from src.pipeline.loader import load_to_db
 
@@ -18,14 +20,37 @@ def main():
 
     mode = sys.argv[1] if len(sys.argv) > 1 else "scrape"
     season = sys.argv[2] if len(sys.argv) > 2 else "2025"
+    flags = set(sys.argv[3:])
 
     # Inicializar DB (crea tablas si no existen)
     init_db()
 
-    if mode == "schedule":
+    # ── MLB API ingestor (fuente canónica) ─────────────────────────────────────
+    if mode == "ingest":
+        from src.pipeline.mlb_ingestor import MLBIngestor
+        ingestor = MLBIngestor()
+        summary = ingestor.ingest(season=season)
+        logger.success(f"✅ Ingestión MLB API completa: {summary}")
+
+    # ── Boxscores → esquema de granularidad de juego ───────────────────────────
+    elif mode == "ingest-games":
+        from src.pipeline.boxscore_ingestor import BoxscoreIngestor
+        ingestor = BoxscoreIngestor()
+        summary = ingestor.ingest(
+            season=season,
+            game_type=os.environ.get("LIDOM_GAME_TYPE", "R"),
+            # --refresh re-procesa juegos que ya tienen líneas cargadas
+            refresh="--refresh" in flags,
+            # --smoke corre solo 3 juegos, para verificar el parser sin esperar
+            max_games=3 if "--smoke" in flags else None,
+        )
+        logger.success(f"✅ Ingesta de boxscores completa: {summary}")
+
+    elif mode == "schedule":
         from src.scheduler.jobs import start_scheduler
         start_scheduler()
 
+    # ── Baseball-Reference scraper (legacy) ────────────────────────────────────
     elif mode == "all_seasons":
         from src.scrapers.baseball_reference_scraper import BaseballReferenceScraper
         scraper = BaseballReferenceScraper()
@@ -39,9 +64,7 @@ def main():
         result = scraper.scrape(season=season)
 
         if result.success:
-            # 1. Persistir JSON raw (backup)
             save_result(result.data, category=f"season_{season}")
-            # 2. Cargar a SQLite
             summary = load_to_db(result.data)
             logger.success(
                 f"✅ Pipeline completo | "

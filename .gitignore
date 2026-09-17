@@ -1,12 +1,23 @@
 # Entorno virtual
 .venv/
+venv/
 
 # Variables de entorno (NUNCA subir al repo)
 .env
+.env.local
+frontend/.env.local
+mobile/.env.local
 
 # Datos crudos (pueden ser muy pesados)
 data/raw/
 data/exports/
+
+# Base de datos generada — se reconstruye con:
+#   python main.py ingest 2025 && python main.py ingest-games 2025
+# Crece con cada temporada del backfill; no tiene sentido versionarla.
+data/*.db
+data/*.db-journal
+data/*.sqlite3
 
 # Python cache
 __pycache__/
@@ -22,3 +33,26 @@ __pycache__/
 
 # Logs
 logs/
+
+# ── Frontend (Next.js) ───────────────────────────────────────────────────────
+node_modules/
+frontend/.next/
+frontend/out/
+frontend/build/
+frontend/next-env.d.ts
+.vercel
+
+# ── Mobile (Expo / React Native) ─────────────────────────────────────────────
+mobile/.expo/
+mobile/dist/
+mobile/web-build/
+*.jks
+*.p12
+*.key
+*.mobileprovision
+*.orig.*
+
+# ── Sistema operativo ────────────────────────────────────────────────────────
+Thumbs.db
+desktop.ini
+.DS_Store

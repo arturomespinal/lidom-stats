@@ -125,9 +125,11 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
 | `verify_game_routes.py` | 87 comprobaciones de los endpoints contra la base real |
+| `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 
-Las cuatro suites (`verify_game_routes`, `verify_live_poller`, `verify_live_parser`,
-`verify_boxscore_ingestor`) suman **223 comprobaciones** y corren sin red.
+Las cinco suites (`verify_game_routes`, `verify_live_poller`, `verify_live_parser`,
+`verify_live_detail`, `verify_boxscore_ingestor`) suman **288 comprobaciones** y
+corren sin red.
 
 ## Endpoints
 
@@ -287,6 +289,7 @@ Cuando un parche no se puede aplicar —respuesta con forma inesperada, marca de
 | `GET /live/status` | Qué sigue el poller y qué proporción de sondeos resolvió por parche |
 | `GET /live/games` | Marcador de todos los juegos en seguimiento (`?only_live=true`) |
 | `GET /live/games/{game_pk}` | Uno solo, con la antigüedad del dato |
+| `GET /live/games/{game_pk}/detail` | Relato, línea por entradas, boxscore y alineaciones (ver abajo) |
 | `GET /live/games/{game_pk}/stream` | Flujo SSE: un evento por cambio, latido cada 20 s, cierra al llegar a final |
 
 El generador SSE consulta la caché una vez por segundo y emite solo cuando cambia la marca de tiempo. Se podría notificar desde el hilo del poller con colas, pero eso obliga a cruzar hilos y asyncio; leer un diccionario en memoria cada segundo no cuesta nada y el marcador cambia cada diez.
@@ -297,6 +300,50 @@ El generador SSE consulta la caché una vez por segundo y emite solo cuando camb
 set LIDOM_LIVE_POLLER=1
 python -m uvicorn api.main:app --reload
 ```
+
+### El detalle de un juego
+
+`src/live/detail.py` — **segundo** parser sobre el mismo GUMBO, deliberadamente
+separado de `gumbo.py`. El de allá produce la tarjeta: 1.400 bytes que el móvil
+sondea cada diez segundos por cada juego del día. Meterle el relato y el
+boxscore lo llevaría a decenas de kilobytes y multiplicaría ese tráfico por
+nada, porque la tarjeta no muestra ninguna de esas cosas. Esto se pide una sola
+vez, cuando alguien abre un juego.
+
+**Abrir un juego no dispara ni una petición contra la MLB API**: se proyecta del
+documento que la caché ya tiene.
+
+Cuatro proyecciones, que son las cuatro pestañas de la pantalla: relato
+(`plays.allPlays`, del más reciente al más viejo), línea por entradas
+(`linescore.innings`), boxscore (`boxscore.teams[].players`, los números de HOY)
+y alineaciones (`battingOrder` + `pitchers` + `bullpen`).
+
+Cinco cosas que no conviene deshacer:
+
+- **Las descripciones de la MLB vienen en inglés** ("Manuel Pena flies out to
+  center fielder…") y **no se traducen**. Traducir texto libre de una API ajena
+  se rompe en silencio el día que cambien la redacción. El titular se compone en
+  español desde los campos estructurados con `evento_es()`, que mapea sobre
+  `result.event` —no sobre `eventType`, porque `field_out` cubre por igual un
+  roletazo, un elevado y una palomita, y esa distinción le importa al fanático—
+  y el texto original viaja en `description` por si el cliente lo quiere debajo.
+  Un evento que no esté en `EVENTOS_ES` cae al inglés, nunca a una cadena vacía.
+- **`inningsPitched` es un STRING.** `"0.2"` son dos outs, no dos décimas.
+  Convertirlo a float lo rompe en silencio.
+- **Una entrada sin jugar es `None`, no `0`.** El local que gana no batea en la
+  baja del 9no; ahí el cuadro lleva un guion, y un cero sería mentira.
+- **`battingOrder` múltiplo de 100 es titular**; 101 y 102 son quienes lo
+  relevaron, y por eso ordenar por ese número deja a cada sustituto justo debajo
+  del titular al que entró a sustituir.
+- **`store.drop()` congela el detalle antes de soltar el crudo.** Sin eso, la
+  pantalla de un juego recién terminado se quedaría vacía justo cuando más gente
+  la abre. Son 42 KB en vez de un mega, y ya no va a cambiar. El endpoint
+  devuelve `is_updating` para que el cliente sepa cuándo dejar de refrescar.
+
+El relato viene recortado (`?plays=25` por defecto, el más reciente primero):
+un juego completo son 71 jugadas y 42 KB, contra 23 KB con las 25 últimas. El
+boxscore y las alineaciones son un piso fijo de 13 KB que recortar no toca.
+`plays_total` siempre dice cuántas hay.
 
 ### Pantalla en vivo (web)
 

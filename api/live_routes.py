@@ -129,6 +129,45 @@ def live_game(game_pk: int):
     }
 
 
+@router.get("/games/{game_pk}/detail")
+def live_game_detail(
+    game_pk: int,
+    plays: int = Query(
+        25, ge=0, le=500,
+        description="Jugadas más recientes a devolver; 0 las omite todas",
+    ),
+):
+    """
+    Todo lo que la pantalla de un juego necesita, en una respuesta.
+
+    Se proyecta del GUMBO que la caché YA tiene, así que abrir un juego no
+    dispara ni una petición contra la MLB API por muchas veces que se pida.
+
+    El relato viene del más reciente al más viejo y recortado, porque un juego
+    completo son 71 jugadas y 42 KB, contra 19 KB con las 25 últimas — que es
+    lo que cabe en pantalla. `plays_total` siempre dice cuántas hay.
+    """
+    entry = store.get(game_pk)
+    if not entry:
+        raise HTTPException(404, f"El juego {game_pk} no está en seguimiento")
+
+    detail = store.get_detail(game_pk, plays_limit=plays)
+    if detail is None:
+        # En seguimiento pero sin documento: el primer sondeo todavía no ha
+        # vuelto. Es un estado transitorio, no un juego inexistente.
+        raise HTTPException(
+            503, f"Todavía no hay datos del juego {game_pk}; reintenta en unos segundos"
+        )
+
+    return {
+        "age_seconds": round(entry.age_seconds, 1),
+        # `false` avisa al cliente de que esto ya no va a cambiar y puede dejar
+        # de refrescar.
+        "is_updating": entry.raw is not None,
+        "data": detail.model_dump(mode="json"),
+    }
+
+
 @router.get("/games/{game_pk}/stream")
 async def live_stream(game_pk: int):
     """

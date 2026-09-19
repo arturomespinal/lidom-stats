@@ -7,9 +7,11 @@ sobrevive a un reinicio y no debe: si el proceso se cae, el poller vuelve a
 pedir el feed completo y reconstruye todo en un sondeo. Escribir esto en disco
 solo produciría desgaste y la ilusión de durabilidad.
 
-Guarda dos cosas por juego:
+Guarda tres cosas por juego:
   - el documento GUMBO crudo, porque los parches se aplican SOBRE él
-  - el LiveGameState ya reducido, que es lo que se sirve
+  - el LiveGameState ya reducido, que es lo que se sirve en la tarjeta
+  - al terminar, el LiveGameDetail congelado, para que la pantalla del juego
+    siga funcionando después de soltar el crudo
 
 El acceso va bajo un lock porque el poller corre en su propio hilo y los
 manejadores HTTP leen desde otro.
@@ -21,13 +23,14 @@ import threading
 import time
 from typing import Any, Optional
 
+from src.live.detail import LiveGameDetail, parse_game_detail
 from src.live.gumbo import LiveGameState
 
 
 class LiveEntry:
     """Lo que sabemos de un juego que estamos siguiendo."""
 
-    __slots__ = ("game_pk", "game_id", "raw", "timecode", "state",
+    __slots__ = ("game_pk", "game_id", "raw", "timecode", "state", "detail",
                  "updated_at", "poll_count", "full_fetches", "patch_applications")
 
     def __init__(self, game_pk: int, game_id: Optional[str] = None):
@@ -36,6 +39,9 @@ class LiveEntry:
         self.raw: Optional[dict] = None       # documento GUMBO completo
         self.timecode: Optional[str] = None   # marca del último estado aplicado
         self.state: Optional[LiveGameState] = None
+        # Solo se llena al terminar el juego, cuando se suelta el crudo. Ver
+        # drop(). Mientras el juego corre el detalle se proyecta al vuelo.
+        self.detail: Optional[LiveGameDetail] = None
         self.updated_at: float = 0.0
         # Contadores para diagnóstico: cuántos sondeos, cuántas veces hubo que
         # bajar el feed entero y cuántas bastó con parches.
@@ -84,11 +90,24 @@ class LiveStore:
         termina ya no vamos a aplicarle parches, así que el crudo no sirve para
         nada; el marcador final, que son 1.400 bytes, sí queremos conservarlo
         para seguir sirviéndolo.
+
+        Antes de soltarlo se congela el DETALLE —relato, línea por entradas,
+        boxscore, alineaciones— porque se proyecta del crudo y sin esto la
+        pantalla de un juego recién terminado se quedaría vacía justo cuando
+        más gente la abre. Son 42 KB en vez de un mega: 25 veces menos, y ya no
+        va a cambiar.
         """
         with self._lock:
             e = self._entries.get(game_pk)
-            if e:
-                e.raw = None
+            if not e:
+                return
+            if e.raw is not None and e.detail is None:
+                try:
+                    e.detail = parse_game_detail(e.raw, e.game_id)
+                except Exception:
+                    # Que un detalle mal formado no impida liberar el megabyte.
+                    e.detail = None
+            e.raw = None
 
     # ── Lectura (la usan los manejadores HTTP) ────────────────────────────────
 
@@ -100,6 +119,36 @@ class LiveStore:
         with self._lock:
             e = self._entries.get(game_pk)
             return e.state if e else None
+
+    def get_detail(
+        self, game_pk: int, plays_limit: Optional[int] = None
+    ) -> Optional[LiveGameDetail]:
+        """
+        Detalle del juego, sin tocar la MLB API.
+
+        Mientras hay crudo se proyecta al vuelo, para que el relato esté al día
+        con el último sondeo. Cuando el juego terminó se sirve el congelado de
+        drop(). `plays_limit` recorta a las N jugadas más recientes en los dos
+        casos.
+        """
+        with self._lock:
+            e = self._entries.get(game_pk)
+            if e is None:
+                return None
+            raw, frozen, game_id = e.raw, e.detail, e.game_id
+
+        if raw is not None:
+            return parse_game_detail(raw, game_id, plays_limit=plays_limit)
+        if frozen is None:
+            return None
+        if plays_limit is None or plays_limit >= frozen.plays_total:
+            return frozen
+        # Copia recortada: el congelado se comparte entre peticiones y no se
+        # puede mutar.
+        return frozen.model_copy(update={
+            "plays": frozen.plays[:plays_limit],
+            "plays_returned": min(plays_limit, frozen.plays_total),
+        })
 
     def by_game_id(self, game_id: str) -> Optional[LiveEntry]:
         with self._lock:
@@ -131,6 +180,7 @@ class LiveStore:
             "full_fetches": sum(e.full_fetches for e in entries),
             "patch_applications": sum(e.patch_applications for e in entries),
             "raw_documents_held": sum(1 for e in entries if e.raw is not None),
+            "frozen_details": sum(1 for e in entries if e.detail is not None),
         }
 
     def clear(self) -> None:

@@ -5,10 +5,11 @@ import PitchingTable from "@/components/PitchingTable";
 import EmptyState from "@/components/EmptyState";
 
 interface Props {
-  searchParams: { season?: string; team?: string; min_ip?: string };
+  searchParams: Promise<{ season?: string; team?: string; min_ip?: string }>;
 }
 
-export default async function PitchingPage({ searchParams }: Props) {
+export default async function PitchingPage(props: Props) {
+  const searchParams = await props.searchParams;
   const season = searchParams.season ?? DEFAULT_SEASON;
   const team = searchParams.team;
   // `?? "0"` convertía "el usuario no pidió mínimo" en "mínimo cero", y un

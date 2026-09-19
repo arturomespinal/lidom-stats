@@ -11,7 +11,8 @@ Pipeline de datos + API + dashboard visual para estadísticas de LIDOM (béisbol
 **MLB Stats API** — `statsapi.mlb.com/api/v1` — pública, sin autenticación.
 - `leagueId=131` (LIDOM), `sportId=17` (Winter Leagues)
 - IDs de equipos LIDOM: 667–672 (AGU, TOR, EST, GIG, ESC, LIC) — ver `src/constants.py`
-- **No usar Baseball-Reference**; los scrapers BR que quedan en `src/scrapers/` son legacy.
+- **No usar Baseball-Reference.** Los scrapers BR se eliminaron del repositorio;
+  están en el historial de git si algún día hacen falta.
 
 ### Etiquetado de temporada — OJO
 
@@ -40,16 +41,26 @@ python main.py ingest-games 2025
 python main.py ingest-games 2025 --smoke      # solo 3 juegos, para validar el parser
 python main.py ingest-games 2025 --refresh    # re-procesa juegos ya ingestados
 
-# Prueba de integración del ingestor (cliente MLB simulado, SQLite aparte)
-python verify_boxscore_ingestor.py
-
 # Levantar la API
 uvicorn api.main:app --reload          # http://localhost:8000
 # Docs interactivas: http://localhost:8000/docs
 
-# Tests
-pytest
+# Las seis suites. Ninguna necesita red: corren contra fixtures, un cliente
+# MLB simulado o la base local. Son scripts, no pytest — salen con código 0
+# si todo pasa, así que encadenarlas con && funciona.
+python verify_game_routes.py         # endpoints del esquema de juego
+python verify_live_detail.py         # parser del detalle
+python verify_live_parser.py         # parser de la tarjeta
+python verify_live_poller.py         # poller y cadena de parches
+python verify_boxscore_ingestor.py   # ingestor contra boxscore sintético
+python verify_api_models.py          # modelos Pydantic contra JSON real
 ```
+
+**No hay pruebas de pytest.** El `pytest` que estuvo documentado aquí no corría
+nada: el único archivo `test_*.py` era un script de prints sin funciones de
+prueba, así que pytest lo recogía y reportaba "no tests ran" — verde por vacío,
+que es peor que rojo. Ese archivo es ahora `verify_api_models.py` y corre con
+las demás. Si algún día se añaden pruebas de verdad, pytest vuelve.
 
 ### Frontend (Next.js) — desde `frontend/`
 
@@ -57,7 +68,7 @@ pytest
 npm install
 npm run dev      # http://localhost:3000
 npm run build
-npm run lint
+npm run lint     # `eslint .` — `next lint` ya no existe en Next 16
 ```
 
 ### Mobile (Expo / React Native) — desde `mobile/`
@@ -100,7 +111,7 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
                        │
         ┌──────────────┴───────────────┐
         ▼                              ▼
-   frontend/ (Next.js 14)         mobile/ (Expo)
+   frontend/ (Next.js 16)         mobile/ (Expo)
    /          → posiciones
    /batting   → líderes de bateo
    /pitching  → líderes de pitcheo
@@ -198,6 +209,55 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 - Tema oscuro fijo, colores de equipos en `frontend/lib/constants.ts`
 - Tablas sortables por clic en columna (client components), fetch en server components
 - Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
+
+### Next.js 16 — lo que cambió y por qué importa
+
+La web corre en **Next 16.3.5 con React 19.3**. Cuatro cosas de la migración que
+hay que tener en la cabeza al escribir código nuevo:
+
+1. **`params` y `searchParams` son promesas.** Una página que los reciba tiene que
+   `await`-earlos antes de leer un campo. Las cinco páginas ya están así:
+
+   ```tsx
+   export default async function BattingPage(props: Props) {
+     const searchParams = await props.searchParams;   // ← sin esto, undefined
+     const season = searchParams.season ?? DEFAULT_SEASON;
+   }
+   ```
+
+   El tipo también cambia: `searchParams: Promise<{ season?: string }>`. Si se
+   declara sin `Promise`, TypeScript pasa y la página falla en tiempo de
+   ejecución — por eso el tipo es parte del contrato, no adorno.
+
+2. **Turbopack es el empaquetador por defecto**, en `dev` y en `build`. No hay
+   configuración de webpack que mantener; si algún día hace falta un loader, se
+   escribe contra Turbopack o se vuelve a webpack explícitamente.
+
+3. **`next lint` desapareció.** El script `lint` llama a `eslint .` y la
+   configuración vive en `eslint.config.mjs` (formato plano). `.eslintrc.json`
+   ya no se lee.
+
+   **ESLint queda clavado en 9.x a propósito.** `eslint-config-next@16` arrastra
+   `eslint-plugin-react@7.37`, que todavía no habla la API de ESLint 10 y revienta
+   al arrancar. No subir a 10 hasta que ese plugin lo soporte.
+
+4. **Cache Components (PPR) está APAGADO.** El codemod había sembrado
+   `export const instant = false;` en seis archivos, y eso no compila si
+   `nextConfig.cacheComponents` no está encendido. Se quitaron los seis. Si algún
+   día se enciende PPR, es una decisión aparte y hay que medirla: el valor de la
+   página en vivo lo pone el cliente sondeando, no el render del servidor.
+
+`react-hooks/immutability` del nuevo linter **encontró un error real** en
+`PlayByPlay.tsx`: se mutaba un acumulador dentro del callback de `.map()` durante
+el render. Con React 19 eso no es manía del linter — el render se puede
+interrumpir y reiniciar, y el acumulador queda con el valor de la pasada
+abortada. El corte de media entrada ahora se precalcula con un `reduce` antes de
+renderizar. Si aparece esa regla de nuevo, es lo mismo: sacar el cálculo del
+render.
+
+Las cinco páginas se compararon en captura antes y después de migrar. Posiciones,
+Bateo y Pitcheo salen idénticas píxel a píxel; las dos de En Vivo difieren solo
+porque la repetición avanzó entre una captura y otra.
 
 ## Escudos de los equipos
 
@@ -547,23 +607,38 @@ viaja así en el JSON y JavaScript lo imprime como `-0`.
 
 ## Deuda de seguridad conocida
 
-`npm audit` en `frontend/` reporta **3 vulnerabilidades (1 crítica)** de Next.js y
-su `postcss` anidado. El rango afectado es `9.3.4 – 16.3.0`, es decir **toda** la
-línea 14 y 15: no hay parche dentro de 14.x, la única salida es migrar a Next 16
-(cambio mayor). Entre ellas hay una RCE sin autenticar en servidores Windows.
+**Resuelto:** las 3 vulnerabilidades de Next.js (1 crítica, RCE sin autenticar en
+servidores Windows) afectaban el rango `9.3.4 – 16.3.0`, o sea toda la línea 14 y
+15. No había parche dentro de 14.x; se migró a Next 16.3.5.
 
-Hoy la exposición práctica es baja —el frontend es un tablero de solo lectura, sin
-autenticación, sin Server Actions y sin `next/image` con dominios remotos— pero
-**esto se resuelve antes de desplegar, no después**. Junto con lo ya anotado: la
-API no tiene autenticación ni límite de tasa, CORS está fijo en el código y
-`/health` expone conteos internos.
+**Pendiente, y hay que resolverlo antes de desplegar:** la API no tiene
+autenticación ni límite de tasa, CORS está fijo en el código, y `/health` expone
+conteos internos.
 
 ## Próximos pasos
 
 1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
 2. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-4. Escudos de los equipos en vez de siglas.
-5. Migrar a Next 16 (ver deuda de seguridad).
-6. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
-7. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+4. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
+5. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
+6. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+
+## Antes de monetizar: leer la guía legal
+
+Si el proyecto va a llevar anuncios, hay decisiones que cuestan cero hoy y mucho
+después. Las dos concretas: **el nombre "LIDOM Stats"** usa una marca ajena para
+identificar el producto (art. 86 de la Ley 20-00), y **los escudos** acumulan
+marca figurativa, derecho de autor y competencia desleal — LIDOM y los seis
+clubes tienen una campaña de protección de marca declarada desde 2022.
+
+Y la de fondo: cada respuesta de `statsapi.mlb.com` trae un `copyright` que
+apunta a `gdx.mlb.com/components/copyright.txt`, donde MLBAM permite solo uso
+**individual, no comercial y no masivo**. Este pipeline incumple las tres en
+cuanto haya un banner.
+
+`static/crests/` puede vaciarse sin tocar código: `TeamBadge` cae a las siglas
+por su cuenta en las dos plataformas. Eso fue diseño deliberado, no casualidad.
+
+La guía completa, con fuentes y precedentes, está en el proyecto de Claude como
+`claude/guia-legal-ads.md`.

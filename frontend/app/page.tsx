@@ -5,10 +5,11 @@ import StandingsTable from "@/components/StandingsTable";
 import EmptyState from "@/components/EmptyState";
 
 interface Props {
-  searchParams: { season?: string };
+  searchParams: Promise<{ season?: string }>;
 }
 
-export default async function StandingsPage({ searchParams }: Props) {
+export default async function StandingsPage(props: Props) {
+  const searchParams = await props.searchParams;
   const season = searchParams.season ?? DEFAULT_SEASON;
   const standings = await fetchStandings(season);
 

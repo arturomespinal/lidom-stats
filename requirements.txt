@@ -1,30 +1,17 @@
-# HTTP & Scraping
-requests==2.32.3
+# Cliente HTTP
+# httpx y no requests: soporta HTTP/2, timeouts por fase y un cliente con
+# sesión reutilizable, con una API casi idéntica. Ver src/clients/mlb_api.py.
 httpx==0.27.0
-beautifulsoup4==4.12.3
-lxml==5.2.2
-selenium==4.21.0
-playwright==1.44.0
+tenacity==8.3.0      # Reintentos con backoff exponencial contra la MLB API
 
 # Datos & ETL
-pandas==2.2.2
 pydantic==2.7.1
 
 # Base de datos
 SQLAlchemy==2.0.30
 
 # Utilidades
-python-dotenv==1.0.1
-tenacity==8.3.0      # Reintentos automáticos en scraping
-loguru==0.7.2        # Logging profesional
-
-# Desarrollo
-pytest==8.2.0
-jupyter==1.0.0
-ipykernel==6.29.4
-
-# Scheduler
-apscheduler==3.10.4
+loguru==0.7.2
 
 # API
 fastapi==0.111.0

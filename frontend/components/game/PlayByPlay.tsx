@@ -89,29 +89,40 @@ export default function PlayByPlay({ detail }: { detail: LiveGameDetail }) {
   const away = detail.away.team_code ?? "VIS";
   const home = detail.home.team_code ?? "LOC";
 
-  let lastHalf: string | null = null;
+  // El corte de media entrada se calcula ANTES de renderizar, no mutando una
+  // variable dentro del .map(). Con React 19 eso último es un error de verdad
+  // y no una manía del linter: el render se puede interrumpir y reiniciar, y
+  // el acumulador quedaría con el valor de la pasada abortada. Aquí el reduce
+  // termina antes de que se devuelva un solo elemento.
+  const filas = detail.plays.reduce<{ play: PlayLine; abreMedia: boolean }[]>(
+    (acc, p) => {
+      const anterior = acc[acc.length - 1]?.play.half_label ?? null;
+      acc.push({
+        play: p,
+        abreMedia: !!p.half_label && p.half_label !== anterior,
+      });
+      return acc;
+    },
+    []
+  );
 
   return (
     <>
       <ul>
-        {detail.plays.map((p) => {
-          const nuevaMedia = p.half_label && p.half_label !== lastHalf;
-          if (nuevaMedia) lastHalf = p.half_label;
-          return (
-            <Fragment key={p.index}>
-              {nuevaMedia && (
-                <li className="flex items-center gap-3 bg-bg px-4 py-2">
-                  <span className="h-px flex-1 bg-line" />
-                  <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-dim">
-                    {p.half_label}
-                  </span>
-                  <span className="h-px flex-1 bg-line" />
-                </li>
-              )}
-              <Play play={p} away={away} home={home} />
-            </Fragment>
-          );
-        })}
+        {filas.map(({ play: p, abreMedia }) => (
+          <Fragment key={p.index}>
+            {abreMedia && (
+              <li className="flex items-center gap-3 bg-bg px-4 py-2">
+                <span className="h-px flex-1 bg-line" />
+                <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-dim">
+                  {p.half_label}
+                </span>
+                <span className="h-px flex-1 bg-line" />
+              </li>
+            )}
+            <Play play={p} away={away} home={home} />
+          </Fragment>
+        ))}
       </ul>
       {detail.plays_returned < detail.plays_total && (
         <p className="px-4 py-4 text-center text-xs text-dim">

@@ -3,14 +3,15 @@ import LiveGames from "@/components/LiveGames";
 import { DEFAULT_SEASON } from "@/lib/constants";
 
 interface Props {
-  searchParams: { season?: string };
+  searchParams: Promise<{ season?: string }>;
 }
 
 /* Esta página no hace fetch en el servidor a propósito: el estado en vivo
    cambia cada diez segundos y cualquier cosa renderizada en el servidor
    nacería vieja. El componente cliente carga el estado actual al montarse y
    después se queda escuchando el flujo SSE. */
-export default function LivePage({ searchParams }: Props) {
+export default async function LivePage(props: Props) {
+  const searchParams = await props.searchParams;
   const season = searchParams.season ?? DEFAULT_SEASON;
 
   return (

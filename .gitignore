@@ -40,6 +40,7 @@ frontend/.next/
 frontend/out/
 frontend/build/
 frontend/next-env.d.ts
+frontend/tsconfig.tsbuildinfo
 .vercel
 
 # ── Mobile (Expo / React Native) ─────────────────────────────────────────────

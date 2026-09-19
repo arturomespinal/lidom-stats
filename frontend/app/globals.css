@@ -2,14 +2,46 @@
 @tailwind components;
 @tailwind utilities;
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Paleta de LIDOM Stats — fuente única para la web.
+
+   Los valores son CANALES RGB separados por espacio, no hex. Así Tailwind
+   puede componer la opacidad sobre el token (`bg-card/50`, `text-live/30`)
+   mediante rgb(var(--x) / <alpha-value>), que con un hex no se puede.
+
+   Decisión de fondo: la app NO tiene color de marca. Los seis equipos ya
+   ocupan el amarillo, el rojo, el verde y el azul; cualquier acento que
+   eligiéramos competiría con alguno y haría que las filas se leyeran como si
+   pertenecieran a un equipo. El acento es el mismo blanco del texto, y la
+   jerarquía la cargan el tamaño y el peso.
+
+   Corolario que no se puede olvidar: el color ya no distingue lo activo de
+   lo inactivo. Un elemento seleccionado se invierte — relleno claro, texto
+   oscuro (--accent-on) — en vez de teñirse.
+
+   Los únicos colores de la interfaz son los semánticos de abajo. Los de
+   equipo viven aparte, en lib/constants.ts, porque son de los clubes.
+   ───────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg-page: #0d1117;
-  --bg-card: #161b22;
-  --bg-header: #21262d;
-  --border: #30363d;
-  --text-primary: #f0f6fc;
-  --text-secondary: #8b949e;
-  --accent: #58a6ff;
+  --bg:        11 11 12;      /* #0B0B0C — fondo de página            */
+  --sunken:    15 15 17;      /* #0F0F11 — filas hundidas             */
+  --card:      21 21 23;      /* #151517 — superficie principal       */
+  --raised:    29 29 33;      /* #1D1D21 — hover / superficie elevada */
+  --header:    30 30 33;      /* #1E1E21 — cabeceras de tabla         */
+  --line:      44 44 49;      /* #2C2C31 — bordes y separadores       */
+
+  --fg:       244 244 245;    /* #F4F4F5 — texto principal            */
+  --fg2:      214 214 218;    /* #D6D6DA — texto de apoyo             */
+  --dim:      150 150 158;    /* #96969E — etiquetas, datos menores   */
+
+  --accent:    244 244 245;   /* = --fg. Ver la nota de arriba.       */
+  --accent-on:  11 11 12;     /* = --bg. Texto sobre relleno claro.   */
+
+  /* Semánticos. Significan algo, así que no cambian con la paleta. */
+  --pos:       74 222 128;    /* #4ADE80 — bueno, ventaja, clasifica  */
+  --neg:      248 113 113;    /* #F87171 — malo, atraso               */
+  --warn:     251 191 36;     /* #FBBF24 — base ocupada, dato viejo   */
+  --live:     255  77  79;    /* #FF4D4F — en vivo, ahora mismo       */
 }
 
 * {
@@ -17,8 +49,8 @@
 }
 
 body {
-  background-color: var(--bg-page);
-  color: var(--text-primary);
+  background-color: rgb(var(--bg));
+  color: rgb(var(--fg));
 }
 
 /* Scrollbar fina para tablas en overflow */
@@ -26,9 +58,9 @@ body {
   height: 4px;
 }
 .table-scroll::-webkit-scrollbar-track {
-  background: var(--bg-card);
+  background: rgb(var(--card));
 }
 .table-scroll::-webkit-scrollbar-thumb {
-  background: var(--border);
+  background: rgb(var(--line));
   border-radius: 2px;
 }

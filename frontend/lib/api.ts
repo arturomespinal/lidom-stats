@@ -38,7 +38,7 @@ export async function fetchBatting(
 ): Promise<BattingRow[]> {
   const params = new URLSearchParams({ season });
   if (opts.team) params.set("team", opts.team);
-  if (opts.min_pa != null) params.set("min_pa", String(opts.min_pa));
+  if (opts.min_pa != null && Number.isFinite(opts.min_pa)) params.set("min_pa", String(opts.min_pa));
   if (opts.sort_by) params.set("sort_by", opts.sort_by);
   if (opts.limit) params.set("limit", String(opts.limit));
 
@@ -52,7 +52,7 @@ export async function fetchPitching(
 ): Promise<PitchingRow[]> {
   const params = new URLSearchParams({ season });
   if (opts.team) params.set("team", opts.team);
-  if (opts.min_ip != null) params.set("min_ip", String(opts.min_ip));
+  if (opts.min_ip != null && Number.isFinite(opts.min_ip)) params.set("min_ip", String(opts.min_ip));
   if (opts.sort_by) params.set("sort_by", opts.sort_by);
   if (opts.limit) params.set("limit", String(opts.limit));
 

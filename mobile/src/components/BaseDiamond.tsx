@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LiveRunners } from '../types';
+import { COLORS } from '../constants';
 
 /**
  * El diamante con los corredores.
@@ -13,8 +14,8 @@ import { LiveRunners } from '../types';
  * desde detrás del home. Base ocupada = rellena; vacía = solo contorno.
  */
 
-const OCCUPIED = '#facc15';
-const EMPTY = '#30363d';
+const OCCUPIED = COLORS.warning;
+const EMPTY = COLORS.border;
 
 export default function BaseDiamond({
   runners,

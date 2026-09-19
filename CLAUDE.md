@@ -197,6 +197,44 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 - Tablas sortables por clic en columna (client components), fetch en server components
 - Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
 
+## La paleta
+
+**La app no tiene color de marca.** Los seis equipos ya ocupan el amarillo, el
+rojo, el verde y el azul —casi todo el círculo cromático útil— y cualquier
+acento que eligiéramos competiría con alguno: las filas se leerían como si
+pertenecieran a un equipo. El acento es el mismo blanco del texto (`#F4F4F5`) y
+la jerarquía la cargan el tamaño y el peso.
+
+Fuente única por plataforma. **Ningún componente escribe un hex a mano**; si un
+color no está en estos archivos, o es de equipo o falta un token:
+
+| Plataforma | Dónde | Cómo |
+|-----------|-------|------|
+| Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 21 21 23`), expuestas como `rgb(var(--card) / <alpha-value>)`. Así `bg-card/50` compone opacidad sobre el token, cosa que con un hex no se puede. Se usan por nombre: `bg-card`, `text-dim`, `border-line`. |
+| Móvil | `mobile/src/constants.ts` | `COLORS` y `ALPHA`. |
+
+**Corolario que no se puede olvidar: el color ya no distingue lo activo de lo
+inactivo.** Un fondo tenue del acento sobre una tarjeta es invisible cuando el
+acento es el blanco del texto. Lo seleccionado se **invierte** —relleno claro,
+texto `accentOn` / `--accent-on`— o se marca con una regla, como la columna
+ordenada de las tablas web (`shadow-[inset_0_-2px_0_rgb(var(--accent))]`). Si
+algún día una pestaña activa vuelve a ser "accent sobre card", va a desaparecer.
+
+Los semánticos (`pos`, `neg`, `warn`, `live`) están **separados del acento** a
+propósito: significan algo, así que sobreviven a cualquier cambio de paleta. Los
+de equipo viven aparte (`TEAM_STYLES`) porque son de los clubes.
+
+### Un mínimo explícito MANDA sobre el calculado
+
+`/batting` y `/pitching` calculan el mínimo de calificación salvo que el cliente
+mande uno. `app/batting/page.tsx` hacía `parseInt(searchParams.min_pa ?? "0") || 0`,
+que convierte "el usuario no pidió mínimo" en **"mínimo cero"** — y la web siguió
+encabezada por un OPS de 4.000 en un turno meses después de que la API ya
+calificara. El móvil no tenía el bug porque nunca mandaba el parámetro.
+
+La regla: **omitir el parámetro, no mandar cero.** `undefined` significa "que
+decida la API"; `0` significa "sin mínimo" y es una decisión, no un default.
+
 ## Motor en vivo
 
 El feed en vivo vive en la **v1.1** (`MLB_API_V11_BASE_URL`), no en la v1. El cliente sirve ambas: los métodos históricos usan rutas relativas contra `base_url`, y los de v1.1 arman la URL completa — httpx ignora `base_url` cuando la URL es absoluta.
@@ -391,8 +429,7 @@ API no tiene autenticación ni límite de tasa, CORS está fijo en el código y
 1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
 2. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-4. Identidad visual: la paleta es la de GitHub oscuro (`#0d1117`, `#161b22`, azul `#58a6ff`) y no dice LIDOM. Los colores oficiales ya viven en `TEAM_STYLES` de ambos clientes; Posiciones ya los usa como borde de fila, falta el resto de la app y un acento propio.
-5. Escudos de los equipos en vez de siglas. Es el salto visual más grande y el que más cuidado legal necesita: son marcas registradas de los clubes.
-6. Migrar a Next 16 (ver deuda de seguridad).
-7. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
-8. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+4. Escudos de los equipos en vez de siglas.
+5. Migrar a Next 16 (ver deuda de seguridad).
+6. Scraper secundario de lidom.com para rosters y noticias (httpx + BeautifulSoup).
+7. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.

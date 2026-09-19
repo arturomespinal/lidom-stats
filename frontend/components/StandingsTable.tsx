@@ -26,7 +26,7 @@ const fmt = {
 };
 
 const clasColor = (v: number | null) => {
-  if (v == null) return "text-[#8b949e]";
+  if (v == null) return "text-dim";
   if (v > 0) return POS;
   if (v < 0) return NEG;
   return EVEN;
@@ -42,7 +42,7 @@ const clasColor = (v: number | null) => {
  */
 function CutlineRow({ span }: { span: number }) {
   return (
-    <tr className="bg-[#0d1117]">
+    <tr className="bg-bg">
       <td colSpan={span} className="px-4 py-1.5">
         {/* La etiqueta va a la IZQUIERDA, no centrada. La celda abarca el ancho
             completo de la tabla, que en pantalla angosta es más ancho que el
@@ -68,19 +68,19 @@ export default function StandingsTable({ data }: { data: StandingRow[] }) {
   const COLS = 11;
 
   return (
-    <div className="overflow-x-auto table-scroll rounded-lg border border-[#30363d]">
+    <div className="overflow-x-auto table-scroll rounded-lg border border-line">
       <table className="w-full text-sm whitespace-nowrap">
         <thead>
-          <tr className="bg-[#21262d] text-[#8b949e] text-xs uppercase tracking-wider">
+          <tr className="bg-header text-dim text-xs uppercase tracking-wider">
             <th className="px-3 py-3 text-center w-8">#</th>
             <th className="px-4 py-3 text-left">Equipo</th>
             <th className="px-3 py-3 text-center">JJ</th>
-            <th className="px-3 py-3 text-center text-[#f0f6fc]">G</th>
+            <th className="px-3 py-3 text-center text-fg">G</th>
             <th className="px-3 py-3 text-center">P</th>
-            <th className="px-3 py-3 text-center text-[#f0f6fc]">PCT</th>
+            <th className="px-3 py-3 text-center text-fg">PCT</th>
             <th className="px-3 py-3 text-center">GB</th>
             <th
-              className="px-3 py-3 text-center text-[#f0f6fc]"
+              className="px-3 py-3 text-center text-fg"
               title="Juegos de ventaja sobre el primer equipo fuera, o de atraso contra el último clasificado"
             >
               CLAS
@@ -94,16 +94,16 @@ export default function StandingsTable({ data }: { data: StandingRow[] }) {
           {data.map((row, i) => (
             <Fragment key={row.team_id}>
               <tr
-                className={`border-t border-[#30363d] transition-colors hover:bg-[#1c2128] ${
-                  row.playoff_spot ? "bg-[#161b22]" : "bg-[#12161c]"
+                className={`border-t border-line transition-colors hover:bg-raised ${
+                  row.playoff_spot ? "bg-card" : "bg-sunken"
                 }`}
               >
                 <td className="px-3 py-3 text-center text-xs">
                   <span
                     className={
                       row.playoff_spot
-                        ? "font-bold text-[#f0f6fc]"
-                        : "text-[#8b949e]"
+                        ? "font-bold text-fg"
+                        : "text-dim"
                     }
                   >
                     {i + 1}
@@ -118,26 +118,26 @@ export default function StandingsTable({ data }: { data: StandingRow[] }) {
                       className="h-9 w-[3px] shrink-0 rounded-r"
                       style={{
                         backgroundColor:
-                          TEAM_STYLES[row.team_id]?.primary ?? "#30363d",
+                          TEAM_STYLES[row.team_id]?.primary ?? "rgb(var(--line))",
                       }}
                     />
                     <TeamBadge code={row.team_id} />
                     <span className="font-medium">{row.team_name}</span>
                   </div>
                 </td>
-                <td className="px-3 py-3 text-center text-[#8b949e] tabular-nums">
+                <td className="px-3 py-3 text-center text-dim tabular-nums">
                   {fmt.num(row.games_played)}
                 </td>
                 <td className="px-3 py-3 text-center font-bold tabular-nums">
                   {row.wins}
                 </td>
-                <td className="px-3 py-3 text-center text-[#8b949e] tabular-nums">
+                <td className="px-3 py-3 text-center text-dim tabular-nums">
                   {row.losses}
                 </td>
                 <td className="px-3 py-3 text-center font-bold tabular-nums">
                   {fmt.pct(row.win_loss_pct)}
                 </td>
-                <td className="px-3 py-3 text-center text-[#8b949e] tabular-nums">
+                <td className="px-3 py-3 text-center text-dim tabular-nums">
                   {row.games_back === "-" ? "—" : row.games_back}
                 </td>
                 <td
@@ -147,10 +147,10 @@ export default function StandingsTable({ data }: { data: StandingRow[] }) {
                 >
                   {fmt.clas(row.playoff_games)}
                 </td>
-                <td className="px-3 py-3 text-center text-[#8b949e] tabular-nums hidden lg:table-cell">
+                <td className="px-3 py-3 text-center text-dim tabular-nums hidden lg:table-cell">
                   {fmt.num(row.runs_scored)}
                 </td>
-                <td className="px-3 py-3 text-center text-[#8b949e] tabular-nums hidden lg:table-cell">
+                <td className="px-3 py-3 text-center text-dim tabular-nums hidden lg:table-cell">
                   {fmt.num(row.runs_allowed)}
                 </td>
                 <td className="px-3 py-3 text-center hidden lg:table-cell">

@@ -85,7 +85,7 @@ export default function LiveGames() {
         {[0, 1].map((i) => (
           <div
             key={i}
-            className="h-28 bg-[#161b22] border border-[#30363d] rounded-lg animate-pulse"
+            className="h-28 bg-card border border-line rounded-lg animate-pulse"
           />
         ))}
       </div>
@@ -100,17 +100,17 @@ export default function LiveGames() {
 
   if (!entries.length) {
     return (
-      <div className="bg-[#161b22] border border-[#30363d] rounded-lg px-6 py-10 text-center">
+      <div className="bg-card border border-line rounded-lg px-6 py-10 text-center">
         <p className="text-3xl mb-3">⚾</p>
-        <p className="text-sm text-[#c9d1d9] mb-1">
+        <p className="text-sm text-fg2 mb-1">
           No hay juegos en seguimiento
         </p>
-        <p className="text-xs text-[#8b949e] mb-5 max-w-md mx-auto">
+        <p className="text-xs text-dim mb-5 max-w-md mx-auto">
           La temporada de LIDOM va de octubre a enero. Fuera de temporada
           puedes reproducir un juego terminado: el marcador recibe exactamente
           los mismos eventos que recibirá en vivo.
         </p>
-        <pre className="text-[11px] text-left inline-block bg-[#0d1117] border border-[#30363d] rounded px-4 py-3 text-[#8b949e] leading-relaxed">
+        <pre className="text-[11px] text-left inline-block bg-bg border border-line rounded px-4 py-3 text-dim leading-relaxed">
           <code>
             set LIDOM_LIVE_POLLER=1{"\n"}
             set LIDOM_LIVE_REPLAY=826343{"\n"}

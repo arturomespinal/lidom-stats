@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, StyleSheet, Text, View } from 'react-native';
-import { COLORS } from '../constants';
+import { ALPHA, COLORS } from '../constants';
 import { LiveGameState, LiveTeamLine } from '../types';
 import BaseDiamond from './BaseDiamond';
 import TeamBadge from './TeamBadge';
@@ -295,15 +295,15 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     borderWidth: 1,
   },
-  pillLive: { backgroundColor: '#da363320', borderColor: '#da363350' },
-  pillLiveText: { color: '#ff6b6b', fontSize: 10, fontWeight: '700' },
+  pillLive: { backgroundColor: ALPHA.live15, borderColor: ALPHA.live30 },
+  pillLiveText: { color: COLORS.live, fontSize: 10, fontWeight: '700' },
   pillFinal: { backgroundColor: COLORS.bgHeader, borderColor: COLORS.border },
   pillFinalText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '700' },
-  pillPreview: { backgroundColor: '#1f6feb20', borderColor: '#1f6feb50' },
+  pillPreview: { backgroundColor: ALPHA.neutral15, borderColor: ALPHA.neutral30 },
   pillPreviewText: { color: COLORS.accent, fontSize: 10, fontWeight: '700' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#ff6b6b' },
-  inning: { color: '#c9d1d9', fontSize: 12 },
-  stale: { color: '#d29922', fontSize: 10 },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.live },
+  inning: { color: COLORS.textSupport, fontSize: 12 },
+  stale: { color: COLORS.warning, fontSize: 10 },
   venue: {
     color: COLORS.textSecondary,
     fontSize: 10,
@@ -330,10 +330,10 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   teamRow: { flexDirection: 'row', alignItems: 'center', paddingVertical: 7, gap: 8 },
-  battingArrow: { width: 10, color: '#facc15', fontSize: 11 },
-  teamName: { flex: 1, color: '#c9d1d9', fontSize: 14 },
+  battingArrow: { width: 10, color: COLORS.warning, fontSize: 11 },
+  teamName: { flex: 1, color: COLORS.textSupport, fontSize: 14 },
   teamNameWon: { color: COLORS.textPrimary, fontWeight: '700' },
-  runs: { width: 30, textAlign: 'right', color: '#c9d1d9', fontSize: 16, fontWeight: '700' },
+  runs: { width: 30, textAlign: 'right', color: COLORS.textSupport, fontSize: 16, fontWeight: '700' },
   runsWon: { color: COLORS.textPrimary },
   minor: { width: 30, textAlign: 'right', color: COLORS.textSecondary, fontSize: 12 },
 
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
   },
   outs: { flexDirection: 'row', gap: 5 },
   out: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
-  outFilled: { backgroundColor: '#facc15' },
+  outFilled: { backgroundColor: COLORS.warning },
   count: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
 
   matchup: { flex: 1, gap: 3 },
@@ -366,15 +366,15 @@ const styles = StyleSheet.create({
   lineScore: { gap: 3 },
   lsRow: { flexDirection: 'row', alignItems: 'center' },
   lsCode: { width: 34, color: COLORS.textSecondary, fontSize: 11, fontWeight: '700' },
-  lsCell: { width: 22, textAlign: 'center', color: '#c9d1d9', fontSize: 11 },
+  lsCell: { width: 22, textAlign: 'center', color: COLORS.textSupport, fontSize: 11 },
   lsHead: { color: COLORS.textSecondary, fontWeight: '600' },
   lsTotal: { color: COLORS.textPrimary, fontWeight: '700', marginLeft: 6 },
 
-  scoringPlay: { backgroundColor: '#23863618' },
+  scoringPlay: { backgroundColor: ALPHA.positive12 },
   lastPlay: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
-  scoringPlayText: { color: '#7ee787' },
+  scoringPlayText: { color: COLORS.positive },
 
   decisions: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
-  decision: { color: '#c9d1d9', fontSize: 11 },
+  decision: { color: COLORS.textSupport, fontSize: 11 },
   decisionLabel: { color: COLORS.textSecondary },
 });

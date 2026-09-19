@@ -19,7 +19,7 @@ export default function LivePage({ searchParams }: Props) {
       <main className="max-w-3xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-5">
           <h1 className="text-lg font-semibold">En Vivo</h1>
-          <span className="text-xs text-[#8b949e]">
+          <span className="text-xs text-dim">
             Actualización automática
           </span>
         </div>

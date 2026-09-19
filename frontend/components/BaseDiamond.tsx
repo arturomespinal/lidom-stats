@@ -15,8 +15,10 @@ interface Props {
 export default function BaseDiamond({ runners, size = 64 }: Props) {
   const s = size;
   const b = s * 0.20; // lado de cada base
-  const occupied = "#facc15";
-  const empty = "#30363d";
+  // Desde los tokens CSS, no literales: el SVG va en el DOM, así que
+  // rgb(var(--x)) resuelve igual que en una clase de Tailwind.
+  const occupied = "rgb(var(--warn))";
+  const empty = "rgb(var(--line))";
 
   // Centros de cada base dentro del lienzo.
   const bases = [

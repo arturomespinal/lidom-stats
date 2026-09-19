@@ -18,7 +18,7 @@ export default async function StandingsPage({ searchParams }: Props) {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-5">
           <h1 className="text-lg font-semibold">Tabla de Posiciones</h1>
-          <span className="text-xs text-[#8b949e]">Temporada regular · {season}</span>
+          <span className="text-xs text-dim">Temporada regular · {season}</span>
         </div>
 
         {standings.length === 0 ? (
@@ -27,10 +27,10 @@ export default async function StandingsPage({ searchParams }: Props) {
           <>
             <StandingsTable data={standings} />
             {/* Una columna nueva sin explicación es una columna que nadie usa. */}
-            <p className="mt-3 text-xs leading-relaxed text-[#8b949e]">
-              <span className="font-bold text-[#f0f6fc]">GB</span> — juegos de
+            <p className="mt-3 text-xs leading-relaxed text-dim">
+              <span className="font-bold text-fg">GB</span> — juegos de
               atraso contra el líder.{" "}
-              <span className="font-bold text-[#f0f6fc]">CLAS</span> — juegos de
+              <span className="font-bold text-fg">CLAS</span> — juegos de
               ventaja sobre el primer equipo fuera, o de atraso contra el último
               clasificado al round robin.
             </p>

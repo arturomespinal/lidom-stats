@@ -1,5 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
+import { COLORS } from '../constants';
 
 export default function EmptyState({ message }: { message?: string }) {
   return (
@@ -18,10 +19,10 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#0d1117',
+    backgroundColor: COLORS.bgPage,
     padding: 32,
   },
   icon: { fontSize: 48, marginBottom: 16 },
-  msg: { color: '#8b949e', fontSize: 15, textAlign: 'center', marginBottom: 8 },
-  hint: { color: '#30363d', fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
+  msg: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', marginBottom: 8 },
+  hint: { color: COLORS.border, fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
 });

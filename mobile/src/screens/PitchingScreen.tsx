@@ -160,9 +160,11 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     backgroundColor: COLORS.bgCard,
   },
-  chipActive: { borderColor: COLORS.accent, backgroundColor: '#58a6ff20' },
+  // Invertido, no teñido: con el acento igual al texto, un fondo tenue del
+  // acento sería invisible. Relleno claro y texto oscuro.
+  chipActive: { borderColor: COLORS.accent, backgroundColor: COLORS.accent },
   chipLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
-  chipLabelActive: { color: COLORS.accent },
+  chipLabelActive: { color: COLORS.accentOn },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

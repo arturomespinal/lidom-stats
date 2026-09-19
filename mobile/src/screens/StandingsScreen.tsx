@@ -14,9 +14,9 @@ import { StandingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
 
-const POS = '#4ade80';
-const NEG = '#f87171';
-const EVEN = '#fbbf24';
+const POS = COLORS.positive;
+const NEG = COLORS.negative;
+const EVEN = COLORS.warning;
 
 const fmtPct = (v: number | null) =>
   v != null ? v.toFixed(3).replace(/^0/, '') : '—';

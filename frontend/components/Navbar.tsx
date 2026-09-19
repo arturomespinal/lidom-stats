@@ -18,7 +18,7 @@ export default function Navbar({ season }: Props) {
   const pathname = usePathname();
 
   return (
-    <nav className="sticky top-0 z-10 bg-[#161b22] border-b border-[#30363d]">
+    <nav className="sticky top-0 z-10 bg-card border-b border-line">
       <div className="max-w-5xl mx-auto px-4 flex items-center gap-2 h-14">
         {/* Logo */}
         <Link href={`/?season=${season}`} className="flex items-center gap-2 mr-4">
@@ -42,8 +42,8 @@ export default function Navbar({ season }: Props) {
                 // y desalinea toda la barra en pantallas angostas.
                 className={`whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-[#21262d] text-white"
-                    : "text-[#8b949e] hover:text-white hover:bg-[#21262d]"
+                    ? "bg-header text-white"
+                    : "text-dim hover:text-white hover:bg-header"
                 }`}
               >
                 {tab.label}
@@ -54,7 +54,7 @@ export default function Navbar({ season }: Props) {
 
         {/* Season label */}
         <div className="ml-auto shrink-0 pl-2">
-          <span className="text-xs text-[#8b949e] bg-[#21262d] px-2 py-1 rounded">
+          <span className="text-xs text-dim bg-header px-2 py-1 rounded">
             {season}
           </span>
         </div>

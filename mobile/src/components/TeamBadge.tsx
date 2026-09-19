@@ -1,9 +1,15 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { TEAM_STYLES } from '../constants';
+import { ALPHA, COLORS, TEAM_STYLES } from '../constants';
 
 export default function TeamBadge({ code, size = 32 }: { code: string; size?: number }) {
-  const style = TEAM_STYLES[code] ?? { primary: '#6b7280', bg: '#6b728025', text: '#9ca3af' };
+  // Respaldo para un código fuera del catálogo: gris de la paleta, nunca un
+  // color inventado que parezca de equipo.
+  const style = TEAM_STYLES[code] ?? {
+    primary: COLORS.textSecondary,
+    bg: ALPHA.neutral15,
+    text: COLORS.textSecondary,
+  };
 
   return (
     <View

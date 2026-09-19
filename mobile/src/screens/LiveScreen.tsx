@@ -195,7 +195,7 @@ const styles = StyleSheet.create({
   },
   emptyIcon: { fontSize: 44, marginBottom: 14 },
   emptyTitle: {
-    color: '#c9d1d9',
+    color: COLORS.textSupport,
     fontSize: 15,
     fontWeight: '600',
     marginBottom: 8,
@@ -220,7 +220,7 @@ const styles = StyleSheet.create({
   },
   codeText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'monospace' },
   emptyHint: {
-    color: '#30363d',
+    color: COLORS.border,
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',

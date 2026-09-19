@@ -46,8 +46,8 @@ function SortBtn({ col, active, asc, onClick }: SortBtnProps) {
     <th
       className={`px-3 py-3 text-center cursor-pointer select-none transition-colors ${
         active
-          ? "text-[#58a6ff] bg-[#1c2128]"
-          : "text-[#8b949e] hover:text-[#f0f6fc]"
+          ? "text-accent bg-raised shadow-[inset_0_-2px_0_rgb(var(--accent))]"
+          : "text-dim hover:text-fg"
       }`}
       title={col.title}
       onClick={onClick}
@@ -78,17 +78,17 @@ export default function BattingTable({ data }: { data: BattingRow[] }) {
   });
 
   return (
-    <div className="overflow-x-auto table-scroll rounded-lg border border-[#30363d]">
+    <div className="overflow-x-auto table-scroll rounded-lg border border-line">
       <table className="w-full text-sm whitespace-nowrap">
         <thead>
-          <tr className="bg-[#21262d]">
-            <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-[#8b949e]">
+          <tr className="bg-header">
+            <th className="px-4 py-3 text-left text-xs uppercase tracking-wider text-dim">
               Jugador
             </th>
-            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-[#8b949e]">
+            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-dim">
               Equipo
             </th>
-            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-[#8b949e]">
+            <th className="px-3 py-3 text-center text-xs uppercase tracking-wider text-dim">
               JJ
             </th>
             {COLUMNS.map((col) => (
@@ -106,42 +106,42 @@ export default function BattingTable({ data }: { data: BattingRow[] }) {
           {sorted.map((row, i) => (
             <tr
               key={`${row.player}-${i}`}
-              className="border-t border-[#30363d] bg-[#161b22] hover:bg-[#1c2128] transition-colors"
+              className="border-t border-line bg-card hover:bg-raised transition-colors"
             >
               <td className="px-4 py-2.5 font-medium">{row.player}</td>
               <td className="px-3 py-2.5 text-center">
                 <TeamBadge code={row.team_id} />
               </td>
-              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center text-dim">
                 {row.games}
               </td>
               <td className="px-3 py-2.5 text-center font-mono">
                 {fmt.avg(row.batting_avg)}
               </td>
-              <td className="px-3 py-2.5 text-center font-mono text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center font-mono text-dim">
                 {fmt.avg(row.on_base_pct)}
               </td>
-              <td className="px-3 py-2.5 text-center font-mono text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center font-mono text-dim">
                 {fmt.avg(row.slugging_pct)}
               </td>
               <td
                 className={`px-3 py-2.5 text-center font-mono font-semibold ${
-                  sortKey === "ops" ? "text-[#58a6ff]" : ""
+                  sortKey === "ops" ? "text-accent" : ""
                 }`}
               >
                 {fmt.ops(row.ops)}
               </td>
               <td className="px-3 py-2.5 text-center">{row.home_runs}</td>
-              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center text-dim">
                 {row.rbi}
               </td>
-              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center text-dim">
                 {row.hits}
               </td>
-              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center text-dim">
                 {row.stolen_bases}
               </td>
-              <td className="px-3 py-2.5 text-center text-[#8b949e]">
+              <td className="px-3 py-2.5 text-center text-dim">
                 {row.plate_appearances}
               </td>
             </tr>

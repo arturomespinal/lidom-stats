@@ -11,7 +11,11 @@ interface Props {
 export default async function PitchingPage({ searchParams }: Props) {
   const season = searchParams.season ?? DEFAULT_SEASON;
   const team = searchParams.team;
-  const min_ip = parseFloat(searchParams.min_ip ?? "0") || 0;
+  // `?? "0"` convertía "el usuario no pidió mínimo" en "mínimo cero", y un
+  // min explícito MANDA sobre el que calcula la API. Por eso esta tabla seguía
+  // encabezada por efectividades de 0.00 en un tercio de entrada aunque /pitching ya calificaba.
+  // undefined = que decida la API.
+  const min_ip = searchParams.min_ip ? parseFloat(searchParams.min_ip) : undefined;
 
   const pitching = await fetchPitching(season, { team, min_ip, limit: 100 });
 
@@ -22,11 +26,11 @@ export default async function PitchingPage({ searchParams }: Props) {
         <div className="flex items-center justify-between mb-5">
           <div>
             <h1 className="text-lg font-semibold">Líderes de Pitcheo</h1>
-            <p className="text-xs text-[#8b949e] mt-0.5">
+            <p className="text-xs text-dim mt-0.5">
               Clic en columna para ordenar · ERA/WHIP: menor es mejor
             </p>
           </div>
-          <span className="text-xs text-[#8b949e]">Temporada {season}</span>
+          <span className="text-xs text-dim">Temporada {season}</span>
         </div>
 
         {pitching.length === 0 ? (

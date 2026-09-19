@@ -53,9 +53,24 @@ function Row({
 }
 
 export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
-  const innings = detail.innings;
+  // El backend solo manda las entradas JUGADAS, así que en el 2do el cuadro
+  // salía con dos columnas y media pantalla vacía. Un marcador de béisbol
+  // enseña las nueve desde el primer lanzamiento: las que faltan van en
+  // blanco, y eso también dice cuánto queda de juego.
+  const jugadas = detail.innings;
+  const minimas = Math.max(detail.scheduled_innings, jugadas.length);
+  const innings = Array.from({ length: minimas }, (_, i) =>
+    jugadas[i] ?? {
+      num: i + 1,
+      ordinal_es: null,
+      away_runs: null,
+      home_runs: null,
+      away_hits: 0,
+      home_hits: 0,
+    },
+  );
 
-  if (innings.length === 0) {
+  if (jugadas.length === 0) {
     return (
       <View style={styles.empty}>
         <Text style={styles.emptyText}>El juego no ha comenzado.</Text>
@@ -63,8 +78,9 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
     );
   }
 
-  // Quién batea ahora: la última entrada con la baja sin jugar y el juego vivo.
-  const last = innings[innings.length - 1];
+  // Quién batea ahora: la última entrada JUGADA con la baja sin jugar. Se mira
+  // sobre `jugadas` y no sobre `innings`, que ahora lleva relleno en blanco.
+  const last = jugadas[jugadas.length - 1];
   const homeBatting =
     detail.status === 'live' && last.away_runs !== null && last.home_runs === null;
   const awayBatting = detail.status === 'live' && !homeBatting;

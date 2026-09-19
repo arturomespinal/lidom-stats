@@ -199,6 +199,43 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 - Tablas sortables por clic en columna (client components), fetch en server components
 - Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
 
+## Escudos de los equipos
+
+`static/crests/{CODIGO}.png`, servidos por el backend en
+`/static/crests/AGU.png`. **No se empaquetan en los clientes**, por tres razones:
+
+1. Un solo lugar para los seis archivos, compartido por la web y el móvil.
+2. Cambiar un escudo no obliga a recompilar ni a publicar versión nueva en Expo.
+3. En React Native, `require()` de un archivo que no existe **revienta el
+   empaquetado de Metro**. Por URL, un escudo que falta simplemente no carga.
+
+`TeamBadge` cae a las siglas sobre el color del equipo cuando el escudo no está,
+así que la carpeta puede estar vacía o a medias sin que nada se rompa.
+
+**En la web, `onError` NO basta.** El HTML llega renderizado desde el servidor,
+así que el navegador empieza a cargar la imagen antes de que React hidrate: si
+da 404 en esa ventana, el evento se dispara sin manejador escuchando y se
+pierde — se veía el icono de imagen rota en vez del respaldo. El `ref` comprueba
+al montar si la imagen ya terminó con `naturalWidth === 0`, que es la única
+forma de enterarse de ese caso. En el móvil no pasa: no hay render de servidor.
+
+Los archivos están en `.gitignore` (ver `static/crests/README.md`): son marcas
+registradas de los seis clubes y el repositorio es público. Quitar esas dos
+líneas es una decisión de una sola edición.
+
+**Los colores de equipo se ajustaron al escudo, pero no ciegamente.**
+`TEAM_STYLES.primary` pinta la franja de 3 px de la fila; con los escudos
+puestos, Águilas tenía franja amarilla y escudo naranja, y Gigantes franja azul
+y escudo magenta. Solo esos dos cambiaron.
+
+En los otros cuatro el tono dominante del escudo es **más oscuro** que el color
+del uniforme —el verde de Estrellas sale #004818, el azul de Licey casi
+negro— y no se ve como franja sobre `#0B0B0C`. Ahí gana el color del club. Por
+eso los valores llevan un piso de luminosidad y no salen tal cual del PNG.
+
+Toros es monocromo: el escudo no tiene ningún color del que extraer, y conserva
+su rojo.
+
 ## La paleta
 
 **La app no tiene color de marca.** Los seis equipos ya ocupan el amarillo, el
@@ -294,6 +331,13 @@ Cuando un parche no se puede aplicar —respuesta con forma inesperada, marca de
 
 El generador SSE consulta la caché una vez por segundo y emite solo cuando cambia la marca de tiempo. Se podría notificar desde el hilo del poller con colas, pero eso obliga a cruzar hilos y asyncio; leer un diccionario en memoria cada segundo no cuesta nada y el marcador cambia cada diez.
 
+**Arrancar el motor en vivo nunca tumba la aplicación.** Si la MLB API no
+responde al arranque —sin red, un proxy de por medio, la API caída— antes la
+excepción subía por el lifespan y uvicorn salía con *Application startup
+failed*: el motor en vivo se llevaba consigo `/standings`, `/batting` y todo lo
+demás, que no necesitan red para nada. Ahora se registra el fallo y la API queda
+en pie sin motor en vivo.
+
 **El poller no arranca solo.** Se enciende con `LIDOM_LIVE_POLLER=1` (y opcionalmente `LIDOM_LIVE_DATE=YYYY-MM-DD`), para que levantar la API a trabajar en los endpoints históricos no dispare tráfico contra la MLB API:
 
 ```bash
@@ -348,6 +392,21 @@ boxscore y las alineaciones son un piso fijo de 13 KB que recortar no toca.
 ### Pantalla en vivo (web)
 
 `frontend/app/live/page.tsx` + `components/LiveGames.tsx`, `LiveScoreboard.tsx`, `BaseDiamond.tsx`.
+
+El detalle vive en `app/live/[gamePk]/page.tsx` + `components/game/`. Dos
+diferencias con el listado que conviene no deshacer:
+
+- **Sondea, no abre SSE.** El flujo `/stream` emite el marcador reducido, no el
+  detalle; montar un segundo canal solo para esta pantalla no compensa. Un
+  sondeo cada doce segundos sobre una caché en memoria no le cuesta nada al
+  backend, y para cuando llega `is_updating: false`.
+- **La pestaña vive en la URL** (`?t=boxscore`), no en estado. Así un enlace al
+  boxscore de un juego abre en el boxscore y el botón de atrás del navegador
+  funciona. El cambio usa `router.replace(..., { scroll: false })`: sin eso,
+  cambiar de pestaña salta al tope de la página.
+
+En pantalla ancha el boxscore y las alineaciones van a dos columnas; en angosta
+se apilan.
 
 La página no hace fetch en el servidor: el estado cambia cada diez segundos y cualquier cosa renderizada ahí nacería vieja. El componente cliente carga `/live/games` al montarse y abre un `EventSource` por juego que no esté terminado. Al recibir el evento `final` cierra la conexión — sin eso, `EventSource` reconecta solo y recibe el mismo par de eventos en bucle.
 

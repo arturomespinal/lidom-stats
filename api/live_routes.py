@@ -237,21 +237,39 @@ def start_replay(game_pk: int, step: int, interval: int) -> LivePoller:
 
 
 def maybe_start_poller() -> None:
-    """Arranca el poller solo si LIDOM_LIVE_POLLER está activado."""
+    """
+    Arranca el poller solo si LIDOM_LIVE_POLLER está activado.
+
+    Nunca deja caer la aplicación. Antes, si la MLB API no respondía al
+    arrancar —sin red, un proxy de por medio, la API caída— la excepción subía
+    por el lifespan y uvicorn salía con "Application startup failed": el motor
+    en vivo se llevaba consigo /standings, /batting y todo lo demás, que no
+    necesitan red para nada.
+
+    Ahora se registra el fallo y la API queda en pie sin motor en vivo.
+    /live/status lo dirá, y las pantallas en vivo mostrarán su estado vacío,
+    que es exactamente lo que está pasando.
+    """
     if os.environ.get("LIDOM_LIVE_POLLER", "").lower() not in ("1", "true", "yes"):
         return
 
     replay = os.environ.get("LIDOM_LIVE_REPLAY")
-    if replay:
-        start_replay(
-            int(replay),
-            step=int(os.environ.get("LIDOM_REPLAY_STEP", 4)),
-            interval=int(os.environ.get("LIDOM_REPLAY_INTERVAL", 2)),
+    try:
+        if replay:
+            start_replay(
+                int(replay),
+                step=int(os.environ.get("LIDOM_REPLAY_STEP", 4)),
+                interval=int(os.environ.get("LIDOM_REPLAY_INTERVAL", 2)),
+            )
+            logger.info(f"Modo repetición del juego {replay}")
+        else:
+            start_poller(game_date=os.environ.get("LIDOM_LIVE_DATE") or None)
+            logger.info("Poller en vivo activado por LIDOM_LIVE_POLLER")
+    except Exception as e:
+        logger.error(
+            f"No se pudo arrancar el motor en vivo ({type(e).__name__}: {e}). "
+            "La API sigue en pie; los endpoints históricos no se ven afectados."
         )
-        logger.info(f"Modo repetición del juego {replay}")
-    else:
-        start_poller(game_date=os.environ.get("LIDOM_LIVE_DATE") or None)
-        logger.info("Poller en vivo activado por LIDOM_LIVE_POLLER")
 
 
 __all__ = ["router", "start_poller", "stop_poller", "get_poller", "maybe_start_poller"]

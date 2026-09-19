@@ -244,7 +244,9 @@ function TeamSide({
 const styles = StyleSheet.create({
   page: { flex: 1, backgroundColor: COLORS.bgPage },
   scroll: { flex: 1 },
-  scrollContent: { paddingBottom: 28 },
+  // Suficiente para que la última línea no quede pegada a la barra de
+  // pestañas: en la pestaña de alineación el bullpen termina justo ahí.
+  scrollContent: { paddingBottom: 44 },
   center: {
     flex: 1,
     justifyContent: 'center',

@@ -128,6 +128,7 @@ export default function LiveGames() {
           key={state.game_pk}
           state={state}
           stale={state.status === "live" && now - receivedAt > STALE_MS}
+          href={`/live/${state.game_pk}`}
         />
       ))}
     </div>

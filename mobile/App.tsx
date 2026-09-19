@@ -47,7 +47,9 @@ function LiveTab() {
           // Del parámetro y no de la respuesta: así el título está puesto antes
           // del primer fetch y la cabecera no parpadea.
           title: `${route.params.awayCode} vs ${route.params.homeCode}`,
-          headerBackTitle: 'En Vivo',
+          // Solo el chevron. Con el texto, iOS 26 dibuja una cápsula gris que
+          // pesa más que el propio título del juego.
+          headerBackButtonDisplayMode: 'minimal',
         })}
       />
     </LiveStack.Navigator>

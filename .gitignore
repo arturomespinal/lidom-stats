@@ -61,3 +61,11 @@ COMMIT_MSG.txt
 
 # Instantáneas del feed en vivo — se regeneran con capture_gumbo.py
 fixtures/
+
+# ── Escudos de los equipos ───────────────────────────────────────────────────
+# Marcas registradas de los seis clubes, no del proyecto, y este repositorio es
+# público. Se despliegan con static/, no se versionan. Si decides lo contrario,
+# borra estas dos líneas — es reversible; lo que no conviene es que pase sin
+# haberlo decidido. Ver static/crests/README.md.
+static/crests/*
+!static/crests/README.md

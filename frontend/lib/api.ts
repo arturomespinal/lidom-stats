@@ -1,5 +1,6 @@
 import {
   BattingRow,
+  LiveDetailResponse,
   LiveGameState,
   PitchingRow,
   StandingRow,
@@ -88,4 +89,30 @@ export async function fetchLiveStatus(): Promise<LiveStatus | null> {
 /* La URL del flujo SSE de un juego. EventSource la consume directamente. */
 export function liveStreamUrl(gamePk: number): string {
   return `${API_BASE}/live/games/${gamePk}/stream`;
+}
+
+/**
+ * Detalle de un juego: relato, línea por entradas, boxscore y alineaciones.
+ *
+ * Devuelve la respuesta ENTERA y no solo `data`, porque `is_updating` es lo
+ * que le dice a la página cuándo dejar de refrescar.
+ */
+export async function fetchGameDetail(
+  gamePk: number,
+  plays = 40
+): Promise<LiveDetailResponse | null> {
+  return apiFetch<LiveDetailResponse>(
+    `/live/games/${gamePk}/detail?plays=${plays}`
+  );
+}
+
+/**
+ * URL del escudo de un equipo.
+ *
+ * Los archivos los sirve el backend desde static/crests/. Si no existe, la
+ * petición da 404 y TeamBadge cae a las siglas — por eso esto nunca comprueba
+ * nada antes de devolver la URL.
+ */
+export function crestUrl(code: string): string {
+  return `${API_BASE}/static/crests/${code}.png`;
 }

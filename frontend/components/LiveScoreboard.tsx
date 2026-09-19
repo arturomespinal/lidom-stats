@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LiveGameState, LiveTeamLine } from "@/lib/types";
 import TeamBadge from "@/components/TeamBadge";
 import BaseDiamond from "@/components/BaseDiamond";
@@ -6,6 +7,9 @@ interface Props {
   state: LiveGameState;
   /* El juego está en curso pero hace rato que no llega un evento. */
   stale?: boolean;
+  /* Enlace al detalle. Sin esto la tarjeta se queda como estaba: un bloque
+     que no lleva a ninguna parte. */
+  href?: string;
 }
 
 function StatusPill({ state }: { state: LiveGameState }) {
@@ -169,7 +173,7 @@ function Situation({ state }: { state: LiveGameState }) {
   );
 }
 
-export default function LiveScoreboard({ state, stale }: Props) {
+export default function LiveScoreboard({ state, stale, href }: Props) {
   const isLive = state.status === "live";
   const homeWon = state.status === "final" && state.home.runs > state.away.runs;
   const awayWon = state.status === "final" && state.away.runs > state.home.runs;
@@ -257,6 +261,15 @@ export default function LiveScoreboard({ state, stale }: Props) {
             </span>
           )}
         </div>
+      )}
+
+      {!!href && (
+        <Link
+          href={href}
+          className="flex items-center justify-center gap-1 border-t border-line bg-bg py-2 text-[11px] font-semibold text-dim transition-colors hover:bg-raised hover:text-fg"
+        >
+          Ver el juego <span aria-hidden>›</span>
+        </Link>
       )}
     </article>
   );

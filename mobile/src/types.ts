@@ -130,3 +130,126 @@ export interface LiveGameState {
 
   decisions: LiveDecisions | null;
 }
+
+/* ── Detalle de un juego ───────────────────────────────────────────────────
+   Lo que devuelve /live/games/{pk}/detail. Se pide una sola vez, al abrir un
+   juego — la tarjeta del listado NO trae nada de esto. */
+
+export interface PlayLine {
+  index: number;
+  inning: number | null;
+  inning_ordinal_es: string | null;
+  is_top_inning: boolean | null;
+  /** "Alta del 3ro" — ya armado en el backend. */
+  half_label: string | null;
+
+  /** Crudo de la MLB: "Groundout". Se conserva, no se pinta. */
+  event: string | null;
+  /** El que se pinta: "Roletazo de out". */
+  event_es: string | null;
+  /** Texto libre de la MLB, EN INGLÉS. Opcional como subtítulo. */
+  description: string | null;
+
+  batter: string | null;
+  pitcher: string | null;
+
+  rbi: number;
+  is_scoring_play: boolean;
+  is_out: boolean;
+  outs: number;
+  balls: number;
+  strikes: number;
+
+  away_score: number;
+  home_score: number;
+  is_complete: boolean;
+}
+
+export interface DetailInning {
+  num: number;
+  ordinal_es: string | null;
+  /** null = la media entrada no se jugó. NO es cero. */
+  away_runs: number | null;
+  home_runs: number | null;
+  away_hits: number;
+  home_hits: number;
+}
+
+export interface BatterLine {
+  player_id: number;
+  name: string;
+  position: string | null;
+  /** 100, 200… titulares; 101, 102… quienes los relevaron. */
+  batting_order: number | null;
+  is_starter: boolean;
+  summary: string | null;
+  at_bats: number;
+  runs: number;
+  hits: number;
+  doubles: number;
+  triples: number;
+  home_runs: number;
+  rbi: number;
+  walks: number;
+  strikeouts: number;
+  stolen_bases: number;
+  left_on_base: number;
+}
+
+export interface PitcherLine {
+  player_id: number;
+  name: string;
+  order: number;
+  is_starter: boolean;
+  note: string | null;
+  summary: string | null;
+  /** STRING: "0.2" son dos outs, no dos décimas. No convertir a número. */
+  innings_pitched: string | null;
+  hits: number;
+  runs: number;
+  earned_runs: number;
+  walks: number;
+  strikeouts: number;
+  home_runs: number;
+  pitches: number;
+  strikes: number;
+}
+
+export interface BullpenArm {
+  player_id: number;
+  name: string;
+}
+
+export interface TeamDetail {
+  team_code: string | null;
+  team_name: string | null;
+  runs: number;
+  hits: number;
+  errors: number;
+  left_on_base: number;
+  batters: BatterLine[];
+  pitchers: PitcherLine[];
+  bench: BullpenArm[];
+  bullpen: BullpenArm[];
+}
+
+export interface LiveGameDetail {
+  game_pk: number | null;
+  game_id: string | null;
+  status: LiveStatus;
+  timestamp: string | null;
+  innings: DetailInning[];
+  scheduled_innings: number;
+  plays: PlayLine[];
+  plays_total: number;
+  plays_returned: number;
+  home: TeamDetail;
+  away: TeamDetail;
+}
+
+export interface LiveDetailResponse {
+  age_seconds: number;
+  /** false = el juego terminó y esto ya no cambia. Deja de refrescar. */
+  is_updating: boolean;
+  data: LiveGameDetail;
+}

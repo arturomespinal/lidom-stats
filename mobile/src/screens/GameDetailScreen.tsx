@@ -1,0 +1,308 @@
+import React, { useCallback, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  AppState,
+  AppStateStatus,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
+import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { fetchGameDetail } from '../api';
+import { COLORS, ALPHA } from '../constants';
+import { LiveGameDetail } from '../types';
+import type { LiveStackParamList } from '../navigation';
+import GameTabs, { GameTab } from '../components/GameTabs';
+import PlayByPlay from '../components/PlayByPlay';
+import InningGrid from '../components/InningGrid';
+import BoxScore from '../components/BoxScore';
+import Lineups from '../components/Lineups';
+import TeamBadge from '../components/TeamBadge';
+
+/**
+ * Detalle de un juego: relato, cuadro por entradas, boxscore y alineaciones.
+ *
+ * Sondea con la misma disciplina que el marcador —se reprograma DESPUÉS de
+ * cada respuesta, no con setInterval, y se detiene al perder el foco o pasar a
+ * segundo plano— con una parada más: **cuando el backend dice `is_updating:
+ * false` deja de sondear del todo.** El juego terminó y el detalle está
+ * congelado; seguir pidiéndolo sería gastar batería por nada.
+ */
+
+const POLL_SECONDS = 12;
+
+/* Cuántas jugadas traer. Suficientes para llenar varias pantallas de scroll
+   sin arrastrar las 71 de un juego completo en cada sondeo. */
+const PLAYS = 40;
+
+type Props = NativeStackScreenProps<LiveStackParamList, 'GameDetail'>;
+
+export default function GameDetailScreen({ route }: Props) {
+  const { gamePk, awayCode, homeCode } = route.params;
+
+  const [detail, setDetail] = useState<LiveGameDetail | null>(null);
+  const [updating, setUpdating] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [failed, setFailed] = useState(false);
+  const [tab, setTab] = useState<GameTab>('relato');
+
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const active = useRef(true);
+
+  const stop = useCallback(() => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = null;
+    }
+  }, []);
+
+  const load = useCallback(
+    async (isRefresh = false) => {
+      if (isRefresh) setRefreshing(true);
+
+      const res = await fetchGameDetail(gamePk, PLAYS);
+
+      if (!active.current) return;
+
+      if (res) {
+        setDetail(res.data);
+        setUpdating(res.is_updating);
+        setFailed(false);
+      } else {
+        // Un fallo de red no borra lo que ya se mostraba: es mejor un dato de
+        // hace doce segundos que una pantalla en blanco.
+        setFailed(true);
+      }
+      setLoading(false);
+      setRefreshing(false);
+
+      stop();
+      // Terminado = congelado. No hay nada más que pedir.
+      if (res?.is_updating !== false) {
+        timer.current = setTimeout(() => load(), POLL_SECONDS * 1000);
+      }
+    },
+    [gamePk, stop],
+  );
+
+  useFocusEffect(
+    useCallback(() => {
+      active.current = true;
+      load();
+
+      const sub = AppState.addEventListener('change', (s: AppStateStatus) => {
+        if (s === 'active') {
+          active.current = true;
+          load();
+        } else {
+          active.current = false;
+          stop();
+        }
+      });
+
+      return () => {
+        active.current = false;
+        stop();
+        sub.remove();
+      };
+    }, [load, stop]),
+  );
+
+  if (loading) {
+    return (
+      <View style={styles.center}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+      </View>
+    );
+  }
+
+  if (!detail) {
+    return (
+      <View style={styles.center}>
+        <Text style={styles.errorTitle}>No se pudo cargar el juego</Text>
+        <Text style={styles.errorHint}>
+          {awayCode} vs {homeCode} · #{gamePk}
+        </Text>
+        <Text style={styles.errorHint}>
+          Revisa que el backend esté corriendo y accesible desde el celular.
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.page}>
+      <ScoreHeader detail={detail} updating={updating} failed={failed} />
+      <GameTabs active={tab} onChange={setTab} />
+
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.scrollContent}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={COLORS.accent}
+          />
+        }
+      >
+        {tab === 'relato' && <PlayByPlay detail={detail} />}
+        {tab === 'linea' && <InningGrid detail={detail} />}
+        {tab === 'boxscore' && <BoxScore home={detail.home} away={detail.away} />}
+        {tab === 'alineaciones' && <Lineups home={detail.home} away={detail.away} />}
+      </ScrollView>
+    </View>
+  );
+}
+
+function ScoreHeader({
+  detail,
+  updating,
+  failed,
+}: {
+  detail: LiveGameDetail;
+  updating: boolean;
+  failed: boolean;
+}) {
+  const live = detail.status === 'live';
+  const ganaVisitante = detail.away.runs > detail.home.runs;
+  const ganaLocal = detail.home.runs > detail.away.runs;
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerTop}>
+        {live ? (
+          <View style={styles.pillLive}>
+            <View style={styles.dot} />
+            <Text style={styles.pillLiveText}>EN VIVO</Text>
+          </View>
+        ) : (
+          <View style={styles.pill}>
+            <Text style={styles.pillText}>
+              {detail.status === 'final' ? 'FINAL' : 'PREVIA'}
+            </Text>
+          </View>
+        )}
+        {failed && <Text style={styles.stale}>sin señal</Text>}
+        {!updating && detail.status === 'final' && (
+          <Text style={styles.frozen}>resultado definitivo</Text>
+        )}
+      </View>
+
+      <View style={styles.scoreRow}>
+        <TeamSide
+          code={detail.away.team_code}
+          name={detail.away.team_name}
+          runs={detail.away.runs}
+          winning={ganaVisitante}
+        />
+        <Text style={styles.dash}>—</Text>
+        <TeamSide
+          code={detail.home.team_code}
+          name={detail.home.team_name}
+          runs={detail.home.runs}
+          winning={ganaLocal}
+          reverse
+        />
+      </View>
+    </View>
+  );
+}
+
+function TeamSide({
+  code,
+  name,
+  runs,
+  winning,
+  reverse,
+}: {
+  code: string | null;
+  name: string | null;
+  runs: number;
+  winning: boolean;
+  reverse?: boolean;
+}) {
+  return (
+    <View style={[styles.side, reverse && styles.sideReverse]}>
+      <TeamBadge code={code ?? '—'} size={34} />
+      <View style={[styles.sideText, reverse && styles.sideTextReverse]}>
+        <Text style={styles.sideName} numberOfLines={1}>
+          {name ?? '—'}
+        </Text>
+        <Text style={[styles.sideRuns, winning && styles.sideRunsWinning]}>
+          {runs}
+        </Text>
+      </View>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  page: { flex: 1, backgroundColor: COLORS.bgPage },
+  scroll: { flex: 1 },
+  scrollContent: { paddingBottom: 28 },
+  center: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    padding: 28,
+    backgroundColor: COLORS.bgPage,
+  },
+  errorTitle: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
+  errorHint: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' },
+
+  header: {
+    backgroundColor: COLORS.bgCard,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
+  pill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgHeader,
+  },
+  pillText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '700' },
+  pillLive: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: ALPHA.live30,
+    backgroundColor: ALPHA.live15,
+  },
+  pillLiveText: { color: COLORS.live, fontSize: 10, fontWeight: '700' },
+  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.live },
+  stale: { color: COLORS.warning, fontSize: 10 },
+  frozen: { color: COLORS.textSecondary, fontSize: 10 },
+
+  scoreRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  side: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, minWidth: 0 },
+  sideReverse: { flexDirection: 'row-reverse' },
+  sideText: { flex: 1, minWidth: 0 },
+  sideTextReverse: { alignItems: 'flex-end' },
+  sideName: { color: COLORS.textSecondary, fontSize: 11 },
+  sideRuns: {
+    color: COLORS.textSupport,
+    fontSize: 26,
+    fontWeight: '700',
+    fontVariant: ['tabular-nums'],
+    lineHeight: 30,
+  },
+  sideRunsWinning: { color: COLORS.textPrimary },
+  dash: { color: COLORS.border, fontSize: 16 },
+});

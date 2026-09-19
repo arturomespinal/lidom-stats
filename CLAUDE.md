@@ -370,7 +370,7 @@ Dos trampas que ya costaron un fallo, documentadas para no repetirlas:
 - En `/schedule` los equipos vienen anidados (`teams.home.team.id`); en el feed en vivo van directos (`gameData.teams.home.id`). Confundirlas deja los IDs en `None` y `discover()` no encuentra nada, en silencio.
 - Los parches traen el `metaData.wait` real de 10 s, así que la repetición necesita añadir una operación extra que lo sobreescriba o se arrastra.
 
-**El `mobile/` (Expo) todavía no tiene pantalla en vivo.** El backend le sirve igual, pero React Native no trae `EventSource`: haría falta `react-native-sse` o consultar `/live/games` con un `setInterval`, que para un marcador de ritmo conocido es suficiente.
+El móvil consume los mismos endpoints sondeando, no por SSE: React Native no trae `EventSource`. Ver la sección Mobile.
 
 ## Mobile (Expo)
 
@@ -414,6 +414,34 @@ pantalla pierde el foco o la app pasa a segundo plano.
 El diamante (`components/BaseDiamond.tsx`) usa `View` rotadas 45°, no SVG:
 `react-native-svg` no está en las dependencias y no vale añadir una librería
 nativa por tres cuadrados.
+
+### Detalle de un juego
+
+Tocar una tarjeta abre `screens/GameDetailScreen.tsx` con cuatro pestañas:
+`PlayByPlay`, `InningGrid`, `BoxScore` y `Lineups`, todas sobre
+`/live/games/{pk}/detail`.
+
+La pestaña "En Vivo" es una **pila** (`@react-navigation/native-stack`), no una
+pantalla suelta: así hay gesto de volver y botón de atrás. Es JavaScript sobre
+`react-native-screens`, que ya estaba, así que **no añade un módulo nativo
+nuevo** ni obliga a salir de Expo Go. Los tipos de ruta viven en
+`src/navigation.ts` y no en `App.tsx`, porque importar `App.tsx` desde una
+pantalla haría un ciclo.
+
+Tres cosas aprendidas al construirla:
+
+- **El turno EN CURSO viene en `allPlays` sin resultado** (`event` en `null`,
+  `is_complete` en `false`). Pintarlo como una jugada más lo dejaba con un
+  guion. Se muestra como "En turno" con la cuenta y los outs.
+- **El sondeo para cuando `is_updating` llega en `false`.** El juego terminó y
+  el detalle está congelado en el backend; seguir pidiéndolo gasta batería por
+  nada. Es una parada más que en el marcador, que solo para por foco y
+  segundo plano.
+- **Un fallo de red no borra lo que ya se mostraba.** Es mejor un dato de hace
+  doce segundos que una pantalla en blanco; se marca "sin señal" y ya.
+
+El `gamePk` viaja con los códigos de los dos equipos para que la cabecera tenga
+título antes de la primera respuesta y no parpadee.
 
 ## El games_back de la MLB API no es distancia al líder
 

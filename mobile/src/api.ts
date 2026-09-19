@@ -1,5 +1,11 @@
 import { API_BASE, DEFAULT_SEASON } from './config';
-import { BattingRow, LiveGameState, PitchingRow, StandingRow } from './types';
+import {
+  BattingRow,
+  LiveDetailResponse,
+  LiveGameState,
+  PitchingRow,
+  StandingRow,
+} from './types';
 
 async function get<T>(path: string): Promise<T | null> {
   try {
@@ -44,4 +50,17 @@ export async function fetchLiveGames(onlyLive = false): Promise<LiveGameState[]>
   const q = onlyLive ? '?only_live=true' : '';
   const data = await get<{ data: LiveGameState[] }>(`/live/games${q}`);
   return data?.data ?? [];
+}
+
+/**
+ * Detalle de un juego: relato, línea por entradas, boxscore y alineaciones.
+ *
+ * Devuelve la respuesta ENTERA, no solo `data`, porque `is_updating` es lo que
+ * le dice a la pantalla cuándo dejar de sondear.
+ */
+export async function fetchGameDetail(
+  gamePk: number,
+  plays = 25,
+): Promise<LiveDetailResponse | null> {
+  return get<LiveDetailResponse>(`/live/games/${gamePk}/detail?plays=${plays}`);
 }

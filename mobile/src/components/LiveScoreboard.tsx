@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, StyleSheet, Text, View } from 'react-native';
+import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
 import { ALPHA, COLORS } from '../constants';
 import { LiveGameState, LiveTeamLine } from '../types';
 import BaseDiamond from './BaseDiamond';
@@ -161,9 +161,12 @@ function Situation({ state }: { state: LiveGameState }) {
 export default function LiveScoreboard({
   state,
   stale,
+  onPress,
 }: {
   state: LiveGameState;
   stale?: boolean;
+  /** Sin esto la tarjeta se queda como estaba: un bloque que no reacciona. */
+  onPress?: () => void;
 }) {
   const isLive = state.status === 'live';
   const homeWon = state.status === 'final' && state.home.runs > state.away.runs;
@@ -172,8 +175,23 @@ export default function LiveScoreboard({
   const decisions = state.decisions;
   const hasDecisions = !!decisions && (!!decisions.winner || !!decisions.loser);
 
+  // Pressable solo cuando hay a dónde ir: una tarjeta que se hunde al tocarla
+  // y no lleva a ninguna parte promete algo que no cumple.
+  const Card: React.ComponentType<any> = onPress ? Pressable : View;
+  const cardProps = onPress
+    ? {
+        onPress,
+        accessibilityRole: 'button' as const,
+        accessibilityLabel: `Ver el juego ${state.away.team_code} contra ${state.home.team_code}`,
+        style: ({ pressed }: { pressed: boolean }) => [
+          styles.card,
+          pressed && styles.cardPressed,
+        ],
+      }
+    : { style: styles.card };
+
   return (
-    <View style={styles.card}>
+    <Card {...cardProps}>
       <View style={styles.header}>
         <StatusPill state={state} />
         {/* inning_ordinal_es, no inning_ordinal: el crudo de la MLB viene en
@@ -262,7 +280,14 @@ export default function LiveScoreboard({
           )}
         </View>
       )}
-    </View>
+
+      {!!onPress && (
+        <View style={styles.more}>
+          <Text style={styles.moreText}>Ver el juego</Text>
+          <Text style={styles.moreChevron}>›</Text>
+        </View>
+      )}
+    </Card>
   );
 }
 
@@ -275,6 +300,25 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     marginBottom: 12,
   },
+  cardPressed: { backgroundColor: COLORS.bgRaised },
+
+  more: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    paddingVertical: 9,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
+    backgroundColor: COLORS.bgPage,
+  },
+  moreText: {
+    color: COLORS.textSecondary,
+    fontSize: 11,
+    fontWeight: '600',
+    letterSpacing: 0.3,
+  },
+  moreChevron: { color: COLORS.textSecondary, fontSize: 15, lineHeight: 16 },
 
   header: {
     flexDirection: 'row',

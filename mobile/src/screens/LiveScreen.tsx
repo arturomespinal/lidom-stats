@@ -9,7 +9,9 @@ import {
   Text,
   View,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { LiveStackParamList } from '../navigation';
 import { fetchLiveGames } from '../api';
 import { COLORS } from '../constants';
 import { LiveGameState } from '../types';
@@ -37,7 +39,10 @@ const IDLE_POLL_SECONDS = 60;
 
 const DEFAULT_POLL_SECONDS = 10;
 
+type Nav = NativeStackNavigationProp<LiveStackParamList, 'LiveList'>;
+
 export default function LiveScreen() {
+  const navigation = useNavigation<Nav>();
   const [games, setGames] = useState<LiveGameState[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -141,7 +146,19 @@ export default function LiveScreen() {
       data={ordenados}
       keyExtractor={g => String(g.game_pk)}
       renderItem={({ item }) => (
-        <LiveScoreboard state={item} stale={item.status === 'live' && stale} />
+        <LiveScoreboard
+          state={item}
+          stale={item.status === 'live' && stale}
+          // Los códigos viajan con el gamePk para que la cabecera del detalle
+          // tenga título antes de la primera respuesta, y no parpadee.
+          onPress={() =>
+            navigation.navigate('GameDetail', {
+              gamePk: item.game_pk,
+              awayCode: item.away.team_code,
+              homeCode: item.home.team_code,
+            })
+          }
+        />
       )}
       contentContainerStyle={
         ordenados.length ? styles.list : styles.listEmpty

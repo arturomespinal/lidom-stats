@@ -92,6 +92,43 @@ a = prob_gana_local_cached(Estado(5, True, 1, (True, False, False), 2))
 b = prob_gana_local_cached(Estado(5, True, 1, (True, False, False), 2))
 check("la caché no deja temblar la barra", a, b)
 
+print("\n━━━ el store acumula el recorrido ━━━")
+import glob  # noqa: E402
+import json  # noqa: E402
+from src.live.gumbo import parse_live_feed  # noqa: E402
+from src.live.store import LiveStore, MAX_PUNTOS_WP, UMBRAL_WP  # noqa: E402
+
+st = LiveStore()
+instantaneas = 0
+for f in sorted(glob.glob("fixtures/826343_*.json")):
+    try:
+        d = json.load(open(f))
+    except Exception:
+        continue
+    if not isinstance(d, dict) or not d.get("liveData"):
+        continue
+    instantaneas += 1
+    e = parse_live_feed(d, game_id="826343")
+    st.update(826343, d, e)
+    if e.status == "final":
+        st.drop(826343)
+
+track = st.win_prob_track(826343)
+check("acumuló puntos del juego real", len(track) > 4, True)
+check("el umbral descarta repetidos", len(track) < instantaneas, True)
+print(f"    {len(track)} puntos de {instantaneas} instantáneas")
+check("la curva cierra en el resultado real, no en la simulación",
+      track[-1]["wp"], 1.0)
+check("el último punto lleva el marcador final", (track[-1]["away"], track[-1]["home"]), (3, 7))
+check("cada punto trae marcador y entrada",
+      all({"inning", "is_top", "away", "home", "wp"} <= set(p) for p in track), True)
+
+# Un cambio de marcador entra aunque la probabilidad se mueva menos que el umbral.
+subidas = [abs(track[i]["wp"] - track[i - 1]["wp"]) for i in range(1, len(track))]
+check("ningún salto guardado es menor que el umbral, salvo el cierre",
+      all(d >= UMBRAL_WP for d in subidas[:-1]), True)
+check("el tope está por encima de cualquier juego real", MAX_PUNTOS_WP > len(track) * 10, True)
+
 print()
 if fallos:
     print(f"❌ {len(fallos)} fallaron:")

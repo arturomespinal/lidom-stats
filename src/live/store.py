@@ -7,11 +7,14 @@ sobrevive a un reinicio y no debe: si el proceso se cae, el poller vuelve a
 pedir el feed completo y reconstruye todo en un sondeo. Escribir esto en disco
 solo produciría desgaste y la ilusión de durabilidad.
 
-Guarda tres cosas por juego:
+Guarda cuatro cosas por juego:
   - el documento GUMBO crudo, porque los parches se aplican SOBRE él
   - el LiveGameState ya reducido, que es lo que se sirve en la tarjeta
   - al terminar, el LiveGameDetail congelado, para que la pantalla del juego
     siga funcionando después de soltar el crudo
+  - el recorrido de la probabilidad de ganar: un punto por cada vez que se
+    mueve. Es lo ÚNICO acumulativo de toda la caché, y la excepción está
+    justificada abajo, en WinProbPoint.
 
 El acceso va bajo un lock porque el poller corre en su propio hilo y los
 manejadores HTTP leen desde otro.
@@ -27,11 +30,55 @@ from src.live.detail import LiveGameDetail, parse_game_detail
 from src.live.gumbo import LiveGameState
 
 
+class WinProbPoint:
+    """Un punto del recorrido de la probabilidad de ganar.
+
+    Este es el único dato ACUMULATIVO de la caché — todo lo demás es el estado
+    de ahora mismo y se reemplaza. La excepción se justifica porque el recorrido
+    no se puede reconstruir: la probabilidad es función de un estado que ya
+    pasó, y cuando el juego avanza ese estado desaparece del feed. O se guarda
+    cuando ocurre, o se pierde para siempre.
+
+    Lleva el marcador y la entrada, no solo el número, porque una gráfica sin
+    contexto no dice nada: el pico interesante es el que coincide con una
+    carrera, y para etiquetarlo hay que saber cuál era el marcador ahí.
+    """
+
+    __slots__ = ("inning", "is_top", "away", "home", "wp", "at")
+
+    def __init__(self, inning: int, is_top: bool, away: int, home: int,
+                 wp: float, at: float):
+        self.inning = inning
+        self.is_top = is_top
+        self.away = away
+        self.home = home
+        self.wp = wp
+        self.at = at
+
+    def as_dict(self) -> dict:
+        return {
+            "inning": self.inning, "is_top": self.is_top,
+            "away": self.away, "home": self.home, "wp": self.wp,
+        }
+
+
+# Un punto nuevo solo si la probabilidad se movió al menos esto. Sin el umbral
+# se guardaría un punto por sondeo —360 por juego— casi todos idénticos, y la
+# gráfica saldría con escalones de ruido. Con 0.5 puntos porcentuales quedan
+# unos 40-80, que es la densidad de una curva legible.
+UMBRAL_WP = 0.005
+
+# Tope duro. Un juego de entradas extra con muchos cambios podría estirarse;
+# 400 puntos son unos 20 KB y cubren de sobra cualquier juego real.
+MAX_PUNTOS_WP = 400
+
+
 class LiveEntry:
     """Lo que sabemos de un juego que estamos siguiendo."""
 
     __slots__ = ("game_pk", "game_id", "raw", "timecode", "state", "detail",
-                 "updated_at", "poll_count", "full_fetches", "patch_applications")
+                 "updated_at", "poll_count", "full_fetches", "patch_applications",
+                 "win_prob_track")
 
     def __init__(self, game_pk: int, game_id: Optional[str] = None):
         self.game_pk = game_pk
@@ -48,6 +95,8 @@ class LiveEntry:
         self.poll_count = 0
         self.full_fetches = 0
         self.patch_applications = 0
+        # Recorrido de la probabilidad. Ver WinProbPoint.
+        self.win_prob_track: list[WinProbPoint] = []
 
     @property
     def age_seconds(self) -> float:
@@ -81,6 +130,42 @@ class LiveStore:
             e.timecode = state.timestamp
             e.state = state
             e.updated_at = time.time()
+            self._anota_win_prob(e, state)
+
+    def _anota_win_prob(self, e: LiveEntry, state: LiveGameState) -> None:
+        """Añade un punto al recorrido si la probabilidad se movió.
+
+        Se llama con el lock ya tomado, desde update().
+        """
+        wp = state.win_prob_home
+        if wp is None or not state.inning:
+            return
+        track = e.win_prob_track
+        if track:
+            ultimo = track[-1]
+            # El marcador cambiando SIEMPRE merece punto aunque la
+            # probabilidad se mueva poco: es el momento que la gráfica
+            # tiene que poder etiquetar.
+            marcador_igual = (ultimo.away == state.away.runs and
+                              ultimo.home == state.home.runs)
+            if marcador_igual and abs(wp - ultimo.wp) < UMBRAL_WP:
+                return
+            if len(track) >= MAX_PUNTOS_WP:
+                return
+        track.append(WinProbPoint(
+            inning=state.inning,
+            is_top=bool(state.is_top_inning),
+            away=state.away.runs,
+            home=state.home.runs,
+            wp=wp,
+            at=time.time(),
+        ))
+
+    def win_prob_track(self, game_pk: int) -> list[dict]:
+        """El recorrido completo, listo para servir."""
+        with self._lock:
+            e = self._entries.get(game_pk)
+            return [p.as_dict() for p in e.win_prob_track] if e else []
 
     def drop(self, game_pk: int) -> None:
         """
@@ -108,6 +193,18 @@ class LiveStore:
                     # Que un detalle mal formado no impida liberar el megabyte.
                     e.detail = None
             e.raw = None
+            # Cerrar el recorrido con el resultado real. Sin esto la gráfica de
+            # un juego terminado acaba en el último estado simulado —un 97%—
+            # en vez de en el 100% que de hecho ocurrió.
+            st = e.state
+            if st and st.status == "final" and e.win_prob_track:
+                final = 1.0 if st.home.runs > st.away.runs else 0.0
+                if e.win_prob_track[-1].wp != final:
+                    e.win_prob_track.append(WinProbPoint(
+                        inning=st.inning or 9, is_top=False,
+                        away=st.away.runs, home=st.home.runs,
+                        wp=final, at=time.time(),
+                    ))
 
     # ── Lectura (la usan los manejadores HTTP) ────────────────────────────────
 

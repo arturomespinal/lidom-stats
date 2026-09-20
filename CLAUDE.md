@@ -45,7 +45,7 @@ python main.py ingest-games 2025 --refresh    # re-procesa juegos ya ingestados
 uvicorn api.main:app --reload          # http://localhost:8000
 # Docs interactivas: http://localhost:8000/docs
 
-# Las seis suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las siete suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -54,6 +54,7 @@ python verify_live_parser.py         # parser de la tarjeta
 python verify_live_poller.py         # poller y cadena de parches
 python verify_boxscore_ingestor.py   # ingestor contra boxscore sintético
 python verify_api_models.py          # modelos Pydantic contra JSON real
+python verify_winprob.py             # modelo de probabilidad contra los datos reales
 ```
 
 **No hay pruebas de pytest.** El `pytest` que estuvo documentado aquí no corría
@@ -119,10 +120,12 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
 
 **Estado actual:** el esquema de juego cubre **14 temporadas, de la 2012-13 a la
 2025-26** — 2.014 juegos, 2.253 jugadores, 45.029 líneas de bateo y 24.729 de
-pitcheo. Las tablas planas, en cambio, solo tienen 2024 y 2025: el backfill se
-corrió con `ingest-games` por temporada pero el `ingest` de los agregados se
-quedó atrás. Hasta que se complete, `/standings`, `/batting` y `/pitching`
-—que leen las planas— solo responden para esas dos.
+pitcheo. **Las tablas planas cubren las mismas 14**, así que `/standings`,
+`/batting` y `/pitching` responden para toda la historia.
+
+La validación cruzada entre las dos capas se corrió sobre las 14: **12 coinciden
+equipo por equipo**. Las dos que no son el caso de los forfeits, documentado más
+abajo.
 
 Dos temporadas salen cortas y **no es un fallo de ingesta**: 91 juegos en
 2020-21 y 120 en 2021-22, las campañas recortadas por la pandemia.
@@ -152,9 +155,8 @@ la 2015-16. No cambiar esa clave.
 | `verify_game_routes.py` | 87 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 
-Las cinco suites (`verify_game_routes`, `verify_live_poller`, `verify_live_parser`,
-`verify_live_detail`, `verify_boxscore_ingestor`) suman **288 comprobaciones** y
-corren sin red.
+Las siete suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+si todo pasa.
 
 ## Endpoints
 
@@ -668,6 +670,34 @@ demasiada tacañería, y la segunda 3.50 por tratar todos los outs como si
 congelaran a los corredores.
 
 **Si alguien toca una probabilidad de avance, `verify_winprob.py` se entera.**
+
+### El recorrido: lo único acumulativo de la caché
+
+`LiveEntry.win_prob_track` guarda un punto cada vez que la probabilidad se
+mueve, y `GET /live/games/{pk}/winprob` lo sirve. Es la **única excepción** a la
+regla de que la caché solo tiene el estado de ahora mismo, y está justificada:
+la probabilidad es función de un estado que ya pasó, y ese estado desaparece del
+feed cuando el juego avanza. O se guarda cuando ocurre, o se pierde.
+
+Tres detalles que no son obvios:
+
+- **Umbral de 0.5 puntos porcentuales** (`UMBRAL_WP`). Sin él se guardaría un
+  punto por sondeo —360 por juego— casi todos idénticos, y la curva saldría
+  con escalones de ruido. Con el umbral quedan 40-80, la densidad de una
+  gráfica legible. Sobre el juego inaugural: 8 puntos de 10 instantáneas.
+- **Un cambio de marcador SIEMPRE entra**, aunque la probabilidad se mueva
+  menos que el umbral: es justo el momento que la gráfica tiene que etiquetar.
+- **`drop()` cierra la curva con el resultado real**, 1.0 ó 0.0. Sin eso la
+  gráfica de un juego terminado acabaría en el último estado simulado —un 97 %—
+  en lugar del 100 % que de hecho ocurrió.
+
+El endpoint va **aparte de `/detail`** y no dentro. Tienen ritmos distintos: el
+detalle se pide al abrir la pantalla y pesa 19 KB; esto son unos cientos de
+bytes que el cliente refresca en cada sondeo. Juntos obligarían a rebajar 19 KB
+cada diez segundos para mover una curva.
+
+`current` viene en `None` cuando el juego terminó. No es un hueco: ahí ya no hay
+probabilidad, hay resultado.
 
 ### Dos decisiones de producto dentro del modelo
 

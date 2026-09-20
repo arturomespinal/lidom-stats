@@ -168,6 +168,38 @@ def live_game_detail(
     }
 
 
+@router.get("/games/{game_pk}/winprob")
+def live_win_prob(game_pk: int):
+    """El recorrido de la probabilidad de ganar a lo largo del juego.
+
+    Va aparte de /detail y no dentro, porque tienen ritmos distintos: el
+    detalle se pide al abrir la pantalla y pesa 19 KB, mientras que esto son
+    unos pocos cientos de bytes que el cliente quiere refrescar con cada
+    sondeo para mover la gráfica. Meterlos juntos obligaría a rebajar 19 KB
+    cada diez segundos para actualizar una curva.
+
+    El recorrido NO se puede reconstruir después: la probabilidad es función de
+    un estado que ya pasó y que desaparece del feed cuando el juego avanza. Por
+    eso el store lo acumula mientras ocurre — ver WinProbPoint.
+    """
+    entry = store.get(game_pk)
+    if not entry:
+        raise HTTPException(404, f"El juego {game_pk} no está en seguimiento")
+
+    track = store.win_prob_track(game_pk)
+    estado = entry.state
+    return {
+        "age_seconds": round(entry.age_seconds, 1),
+        "is_updating": entry.raw is not None,
+        "home_team": estado.home.team_code if estado else None,
+        "away_team": estado.away.team_code if estado else None,
+        # La probabilidad de AHORA, para la barra; el recorrido, para la curva.
+        "current": estado.win_prob_home if estado else None,
+        "points": track,
+        "points_count": len(track),
+    }
+
+
 @router.get("/games/{game_pk}/stream")
 async def live_stream(game_pk: int):
     """

@@ -179,6 +179,11 @@ class LiveGameState(BaseModel):
 
     decisions: Optional[Decisions] = None
 
+    # Probabilidad de que gane el LOCAL, 0..1. Solo existe mientras el juego
+    # corre: en preview no hay estado que simular y en final ya se sabe quién
+    # ganó, así que un número ahí sería ruido. Ver src/winprob.py.
+    win_prob_home: Optional[float] = None
+
     @property
     def is_live(self) -> bool:
         return self.status == "live"
@@ -276,7 +281,7 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
 
     half = linescore.get("inningHalf") or linescore.get("inningState")
 
-    return LiveGameState(
+    estado = LiveGameState(
         game_pk=payload.get("gamePk") or game_data.get("game", {}).get("pk"),
         game_id=game_id,
         season=game_data.get("game", {}).get("season"),
@@ -324,6 +329,25 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
 
         decisions=decisions,
     )
+
+    # La probabilidad solo tiene sentido con el juego en curso. Se calcula
+    # aquí y no en el cliente porque el modelo vive en el servidor y porque
+    # está memoizado: el mismo estado no se vuelve a simular.
+    if estado.status == "live" and estado.inning:
+        from src.winprob import Estado, prob_gana_local_cached
+        estado.win_prob_home = round(prob_gana_local_cached(Estado(
+            entrada=estado.inning,
+            es_alta=bool(estado.is_top_inning),
+            outs=min(estado.outs, 2),
+            bases=(
+                estado.runners.first is not None,
+                estado.runners.second is not None,
+                estado.runners.third is not None,
+            ),
+            dif_local=estado.home.runs - estado.away.runs,
+        )), 3)
+
+    return estado
 
 
 __all__ = ["LiveGameState", "TeamLine", "InningLine", "Runners", "Decisions",

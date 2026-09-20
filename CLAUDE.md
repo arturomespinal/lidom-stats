@@ -628,6 +628,96 @@ Dos cosas que no conviene deshacer:
 `playoff_games` se normaliza con `+ 0.0`: negar cero en punto flotante da `-0.0`,
 viaja así en el JSON y JavaScript lo imprime como `-0`.
 
+## Probabilidad de ganar en vivo
+
+`src/winprob.py`. El estado en vivo (`LiveGameState`) trae `win_prob_home` —
+probabilidad de que gane el local, 0..1 — mientras el juego corre. En preview no
+hay estado que simular y en final ya se sabe quién ganó, así que ahí va `None`.
+
+**No se usa una tabla de Grandes Ligas, y no es purismo.** LIDOM anota **4.116
+carreras por equipo por juego contra las ~4.5 de MLB**, con jonrones en el
+**1.36 %** de las apariciones frente al ~3 % de allá. Menos carreras y mucho
+menos poder significa que una ventaja se defiende mejor: dos carriles en el
+séptimo valen más aquí. Una tabla importada subestimaría esa ventaja en todos
+los juegos de la liga, siempre en la misma dirección.
+
+**Es una cadena de Markov sobre los 24 estados base-out**, no un modelo ajustado
+a jugadas. Para lo segundo harían falta play-by-play de las 14 temporadas y solo
+existen los que el poller capturó — pero las probabilidades de transición salen
+de tasas de eventos AGREGADAS, y esas sí están en las 45.029 líneas de bateo.
+
+### Cómo se validó, que es lo que lo hace creíble
+
+El modelo tiene parámetros libres (avance de corredores, outs productivos). El
+criterio de aceptación NO es que el código corra:
+
+| Qué se mide | Real | Modelo |
+|---|---|---|
+| Carreras por equipo por juego | 4.116 | 4.098 |
+| Distribución completa de carreras | — | **5.0 puntos de error sobre 200** |
+| El local gana | 54.3 % | 54.6 % |
+
+La segunda fila es la que importa. **Solo se ajustó la media**; la distribución
+entera —blanqueadas, el pico en 3 carreras, las colas de 10+— salió sola. Eso es
+evidencia de que el modelo captura la estructura del béisbol de LIDOM y no
+solamente un promedio.
+
+Dos versiones fallaron antes de esta, y las dos están anotadas en el módulo: la
+primera daba 2.55 carreras por juego (38 % baja) por mover corredores con
+demasiada tacañería, y la segunda 3.50 por tratar todos los outs como si
+congelaran a los corredores.
+
+**Si alguien toca una probabilidad de avance, `verify_winprob.py` se entera.**
+
+### Dos decisiones de producto dentro del modelo
+
+- **La caché usa semilla fija.** Sin ella el mismo estado daría 61.2 % y al
+  siguiente sondeo 60.8 %, y el usuario vería la barra temblar sin que pasara
+  nada en el juego. Memoizar también es lo que hace viable simular 4.000 juegos:
+  un juego entero toca unos pocos cientos de estados distintos.
+- **`recalibrar()` es explícito, no automático.** Que las tasas cambiaran solas
+  al ingestar una temporada haría que la misma situación diera números distintos
+  de un día para otro sin que nadie lo hubiera decidido.
+
+## Los forfeits no entran en las posiciones — deuda conocida
+
+La validación cruzada de las 14 temporadas da **12 de 14 idénticas equipo por
+equipo**. Las dos que no cuadran fallan por un solo juego cada una, y los dos
+son forfeits:
+
+| `game_id` | Marcador en la pizarra | Ganador oficial |
+|-----------|------------------------|-----------------|
+| `2016-11-22-GIG-LIC-1` | GIG 2 – LIC 10 | LIC |
+| `2022-11-06-LIC-AGU-1` | LIC 5 – **AGU 6** | **LIC** |
+
+Tres cosas se juntan aquí:
+
+1. `CODED_STATE_TO_STATUS` en `boxscore_ingestor.py` mapea `"F"` y `"O"` a
+   `final`. El código de un forfeit es **`"R"`**, que no está en la tabla, así
+   que cae al default `"scheduled"`. El juego queda sin boxscore y
+   `v_standings` —que filtra `status = 'final'`— lo ignora.
+
+2. **El ganador de un forfeit NO se deduce del marcador.** Mírese la segunda
+   fila: Licey anotó menos carreras y ganó, porque el juego se perdió por
+   jugador inelegible. Cualquier código que compare `home_score` contra
+   `away_score` acierta en los 2.012 juegos normales y se equivoca **al revés**
+   en este.
+
+3. La MLB API sí lo dice — `teams.away.isWinner` / `teams.home.isWinner` — pero
+   `games` no guarda ese campo, porque hasta ahora nunca hizo falta.
+
+**El arreglo va junto con la migración a PostgreSQL**, porque necesita una
+columna nueva y por tanto recrear la tabla y reingestar las 14 temporadas:
+
+- `"R"` → un estado propio, `forfeit`. No `final`: mezclarlos esconde
+  exactamente el caso que hay que tratar aparte.
+- Columna `winner_team_code`, poblada desde `isWinner` para **todos** los
+  juegos, no solo los forfeits.
+- `v_standings` usa esa columna cuando existe y cae al marcador cuando no.
+
+Mientras tanto son 4 temporadas-equipo mal por un juego, de 84. El resto de la
+base está bien.
+
 ## Deuda de seguridad conocida
 
 **Resuelto:** las 3 vulnerabilidades de Next.js (1 crítica, RCE sin autenticar en

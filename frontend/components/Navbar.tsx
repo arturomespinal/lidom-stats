@@ -20,12 +20,20 @@ export default function Navbar({ season }: Props) {
   return (
     <nav className="sticky top-0 z-10 bg-card border-b border-line">
       <div className="max-w-5xl mx-auto px-4 flex items-center gap-2 h-14">
-        {/* Logo */}
-        <Link href={`/?season=${season}`} className="flex items-center gap-2 mr-4">
-          <span className="text-xl">⚾</span>
-          <span className="font-bold text-white tracking-tight hidden sm:block">
-            LIDOM Stats
+        {/* Logotipo. El punto verde es la ÚNICA pieza de marca que entra a la
+            interfaz, y va pegado al nombre — ver la nota en globals.css sobre
+            por qué el verde de Deportiv no baja al contenido. */}
+        <Link
+          href={`/?season=${season}`}
+          className="flex items-baseline gap-1.5 mr-4 shrink-0"
+        >
+          <span className="font-cond text-xl font-bold tracking-[0.015em] text-fg">
+            DEPORTIV
           </span>
+          <span
+            className="w-1.5 h-1.5 rounded-full bg-brand self-center"
+            aria-hidden="true"
+          />
         </Link>
 
         {/* Tabs. min-w-0 + overflow-x-auto: en pantalla angosta las pestañas

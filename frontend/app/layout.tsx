@@ -1,12 +1,35 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Archivo, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 
-const inter = Inter({ subsets: ["latin"] });
+/**
+ * Dos familias con papeles distintos.
+ *
+ * Archivo lleva el texto y —lo que más importa en una app de estadísticas—
+ * los números: tiene cifras tabulares de verdad, que es lo que permite
+ * comparar una columna de promedios de un vistazo.
+ *
+ * Barlow Condensed lleva los códigos de equipo y las micro-etiquetas en
+ * versalitas. Condensada porque "ESTRELLAS ORIENTALES" en mayúsculas tiene que
+ * caber en 390 px, y porque un código de tres letras en una teja de 32 px
+ * necesita ancho estrecho para no salirse.
+ */
+const archivo = Archivo({
+  subsets: ["latin"],
+  variable: "--font-archivo",
+  display: "swap",
+});
+
+const barlow = Barlow_Condensed({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-cond",
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "LIDOM Stats",
-  description: "Estadísticas de la Liga de Béisbol Profesional Dominicana",
+  title: "Deportiv",
+  description: "Béisbol dominicano en números",
 };
 
 export default function RootLayout({
@@ -16,7 +39,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
-      <body className={`${inter.className} bg-bg text-fg min-h-screen`}>
+      <body
+        className={`${archivo.variable} ${barlow.variable} font-sans bg-bg text-fg min-h-screen`}
+      >
         {children}
       </body>
     </html>

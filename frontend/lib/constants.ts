@@ -1,29 +1,37 @@
 export interface TeamStyle {
+  /** Color del club. Franja de fila, borde y relleno de la marca. */
   primary: string;
-  bg: string;
+  /** El mismo color al 14%, para el relleno de la marca perfilada. */
+  tint: string;
+  /** Versión aclarada, para texto sobre el fondo casi negro. */
   text: string;
 }
 
 /**
- * Los colores oficiales de los seis clubes. NO son parte de la paleta de la
- * app: son identidad ajena y por eso viven aparte de COLORS.
+ * Los colores de los seis clubes. NO son parte de la paleta de la app: son
+ * identidad ajena, y por eso viven aquí y no en globals.css.
  *
- * `primary` es la franja de 3 px de la fila y el borde del respaldo; `text`
- * son las siglas cuando no hay escudo. Ambos tienen un piso de luminosidad
- * porque el fondo es casi negro: el tono dominante de varios escudos es
- * DEMASIADO oscuro para una franja, y ahí el color del uniforme gana.
+ * ── Toros y Escogido ya no comparten color ────────────────────────────────
+ * Hasta la validación de 14 temporadas los dos eran `#C8102E` EXACTO. En una
+ * fila de 28 px eso es indistinguible, y en la barra de probabilidad —donde
+ * los dos colores se enfrentan y el color ES el dato— habría sido un bloque
+ * rojo sin junta visible.
  *
- * Águilas y Gigantes se ajustaron al escudo, que usa otra paleta que el
- * uniforme. Si aparece un escudo en los colores clásicos —amarillo y azul—,
- * revertir es un hex cada uno.
+ * Toros pasa a vino y Escogido se queda con el rojo vivo. Los dos siguen
+ * siendo rojos, que es su identidad, pero se separan.
+ *
+ * ── Todos tienen piso de luminosidad ──────────────────────────────────────
+ * El fondo es #08090C. El azul oficial de Licey (#003DA5) y el verde de
+ * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
+ * franja de 3 px desaparece.
  */
 export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: "#D89018", bg: "#D8901818", text: "#ECB151" },
-  TOR: { primary: "#C8102E", bg: "#C8102E18", text: "#ff4d6d" },
-  EST: { primary: "#00713B", bg: "#00713B18", text: "#4ade80" },
-  GIG: { primary: "#B81F5C", bg: "#B81F5C18", text: "#E35990" },
-  ESC: { primary: "#C8102E", bg: "#C8102E18", text: "#ff4d6d" },
-  LIC: { primary: "#003DA5", bg: "#003DA518", text: "#60a5fa" },
+  AGU: { primary: "#F2A71B", tint: "rgba(242,167,27,0.14)", text: "#F5B94B" },
+  TOR: { primary: "#C7304F", tint: "rgba(199,48,79,0.14)", text: "#E0798F" },
+  EST: { primary: "#14B87A", tint: "rgba(20,184,122,0.14)", text: "#36D498" },
+  GIG: { primary: "#D6357F", tint: "rgba(214,53,127,0.14)", text: "#E7689F" },
+  ESC: { primary: "#EF4B4B", tint: "rgba(239,75,75,0.14)", text: "#F58080" },
+  LIC: { primary: "#4A8BF0", tint: "rgba(74,139,240,0.14)", text: "#7FAEF6" },
 };
 
 export const TEAM_FULL_NAMES: Record<string, string> = {
@@ -33,6 +41,16 @@ export const TEAM_FULL_NAMES: Record<string, string> = {
   GIG: "Gigantes del Cibao",
   ESC: "Leones del Escogido",
   LIC: "Tigres del Licey",
+};
+
+/** Nombre corto, para cuando el completo no cabe. */
+export const TEAM_SHORT_NAMES: Record<string, string> = {
+  AGU: "Águilas",
+  TOR: "Toros",
+  EST: "Estrellas",
+  GIG: "Gigantes",
+  ESC: "Escogido",
+  LIC: "Licey",
 };
 
 export const DEFAULT_SEASON = "2025";

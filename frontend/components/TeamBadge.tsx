@@ -1,74 +1,78 @@
-"use client";
-
-import { useState } from "react";
 import { TEAM_STYLES } from "@/lib/constants";
-import { crestUrl } from "@/lib/api";
 
 interface Props {
   code: string;
   size?: "sm" | "md";
+  /** `solid` para cabeceras y héroes; `outline` para filas de lista. */
+  variant?: "solid" | "outline";
 }
 
 /**
- * El distintivo del equipo: escudo si lo hay, siglas si no.
+ * La marca del equipo: el código de tres letras en una teja.
  *
- * El escudo lo sirve el backend desde `/static/crests/{CODIGO}.png`. `onError`
- * es lo que hace que esto funcione con la carpeta vacía: si da 404 se pintan
- * las siglas, que es exactamente lo que la app mostraba antes.
+ * ── Por qué ya no son los escudos ─────────────────────────────────────────
+ * Los escudos oficiales acumulan tres regímenes a la vez: marca figurativa
+ * (Ley 20-00), derecho de autor sobre el dibujo (Ley 65-00) y competencia
+ * desleal. Y LIDOM tiene una campaña de protección de marca declarada por
+ * decisión unánime de su Junta desde octubre de 2022.
  *
- * Es `<img>` y no `next/image` a propósito: next/image exige declarar el host
- * en next.config, y el backend cambia de dirección entre desarrollo (localhost),
- * la red local (la IP de la máquina) y producción. Un `<img>` de 40 px no gana
- * nada con la optimización y sí pierde con la configuración.
+ * Los NOMBRES sí tienen defensa —el art. 87 permite usar una marca ajena de
+ * buena fe para informar, y no se puede informar sobre un juego de las
+ * Águilas sin nombrar a las Águilas—. El escudo no la tiene: se puede
+ * informar sin reproducirlo.
+ *
+ * Así que la app usa marca propia. Misma forma para los seis, el color del
+ * club como identidad. Además de resolver lo legal, le da a Deportiv una
+ * identidad visual que es suya: con escudos, la identidad de la app ERA la
+ * identidad de los clubes.
+ *
+ * ── Dos pesos, no dos componentes ─────────────────────────────────────────
+ * `solid` (relleno del color, letras oscuras, esquina cortada) grita, y sirve
+ * para cabeceras. `outline` (aro y relleno al 14%) susurra, y es lo que va en
+ * una lista de veinte filas — veinte tejas sólidas serían un arcoíris.
  */
-export default function TeamBadge({ code, size = "sm" }: Props) {
-  const [sinEscudo, setSinEscudo] = useState(false);
-
-  // Respaldo para un código que no esté en el catálogo: gris de la paleta,
-  // nunca un color inventado que parezca de equipo.
+export default function TeamBadge({
+  code,
+  size = "sm",
+  variant = "outline",
+}: Props) {
+  // Respaldo para un código fuera del catálogo: gris de la paleta, nunca un
+  // color inventado que parezca de equipo.
   const style = TEAM_STYLES[code] ?? {
     primary: "rgb(var(--dim))",
-    bg: "rgb(var(--dim) / .10)",
+    tint: "rgb(var(--dim) / .12)",
     text: "rgb(var(--dim))",
   };
 
-  const dim = size === "sm" ? "w-8 h-8 text-xs" : "w-10 h-10 text-sm";
-  const muestraEscudo = !!TEAM_STYLES[code] && !sinEscudo;
+  const dim =
+    size === "sm"
+      ? "w-8 h-8 text-[11px] rounded-lg"
+      : "w-10 h-10 text-[13px] rounded-[10px]";
 
-  if (muestraEscudo) {
+  if (variant === "solid") {
     return (
-      // Sin fondo ni borde: el color ya lo pone el escudo, y un recuadro de
-      // color alrededor lo ensucia.
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={crestUrl(code)}
-        alt={code}
-        onError={() => setSinEscudo(true)}
-        ref={(el) => {
-          // `onError` NO basta. El HTML llega renderizado desde el servidor, así
-          // que el navegador empieza a cargar la imagen antes de que React
-          // hidrate: si da 404 en esa ventana, el evento se dispara sin que
-          // haya un manejador escuchando y se pierde. El resultado era el icono
-          // de imagen rota en vez del respaldo.
-          //
-          // Al montar, una imagen ya terminada con naturalWidth 0 es una imagen
-          // que falló. Es la única forma de enterarse de ese caso.
-          if (el && el.complete && el.naturalWidth === 0) setSinEscudo(true);
+      <span
+        className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.04em] ${dim}`}
+        style={{
+          backgroundColor: style.primary,
+          color: "rgb(var(--accent-on))",
+          // La esquina cortada es lo que hace que la teja se lea como una
+          // marca y no como un cuadrado de color cualquiera.
+          clipPath: "polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%)",
         }}
-        className={`shrink-0 object-contain ${dim}`}
-      />
+      >
+        {code}
+      </span>
     );
   }
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center rounded font-bold ${dim}`}
+      className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.03em] ${dim}`}
       style={{
-        backgroundColor: style.bg,
+        backgroundColor: style.tint,
+        border: `1.5px solid ${style.primary}`,
         color: style.text,
-        // color-mix y no `${primary}50`: concatenar alfa hex solo funciona si
-        // el color ES un hex, y el respaldo de arriba es un rgb(var(--dim)).
-        border: `1px solid color-mix(in srgb, ${style.primary} 50%, transparent)`,
       }}
     >
       {code}

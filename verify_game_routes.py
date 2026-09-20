@@ -52,7 +52,10 @@ check("el primer juego del rango es del 15-oct", gd["data"][0]["game_date"], "20
 print("\n  errores esperados:")
 check("equipo inválido → 400", c.get("/games?season=2025&team=XXX").status_code, 400)
 check("opponent sin team → 400", c.get("/games?season=2025&opponent=LIC").status_code, 400)
-check("temporada sin datos → 404", c.get("/games?season=2019").status_code, 404)
+# 2019 dejó de servir para esto el día del backfill: ahora hay 14 temporadas
+# cargadas, de la 2012-13 a la 2025-26. Se usa una anterior a lo que la MLB API
+# expone para LIDOM, que es lo que de verdad no tiene datos.
+check("temporada sin datos → 404", c.get("/games?season=2005").status_code, 404)
 
 print("\n━━━ /games/{game_id} ━━━")
 gid = g["data"][0]["game_id"]
@@ -87,7 +90,22 @@ check("sin coincidencias → 404", c.get("/players/search?q=zzzzzz").status_code
 print("\n━━━ /players/{player_id} ━━━")
 p = call(f"/players/{pid}")
 bio = p["player"]
-print(f"  {bio['full_name']} | nac. {bio['birth_date']} | batea {bio['bats']} lanza {bio['throws']} | {bio['nationality']}")
+print(f"  {bio['full_name']} | nac. {bio['birth_date']} | "
+      f"batea {bio['bats_label']} lanza {bio['throws_label']} | {bio['nationality']}")
+
+# La lateralidad viaja ya traducida para que ningún cliente tenga que saber
+# que 'S' existe. Se comprueba la tabla entera, no solo el jugador de turno:
+# el caso que se rompe en silencio es el ambidiestro, no el derecho.
+from src.lateralidad import batea_es, lanza_es  # noqa: E402
+check("batea R → Derecho", batea_es("R"), "Derecho")
+check("batea L → Zurdo", batea_es("L"), "Zurdo")
+check("batea S → Ambidiestro", batea_es("S"), "Ambidiestro")
+check("lanza R → Derecha", lanza_es("R"), "Derecha")
+check("lanza L → Zurda", lanza_es("L"), "Zurda")
+check("lanza S → Ambas (existe: Anthony Seigler)", lanza_es("S"), "Ambas")
+check("código desconocido → None, no la letra cruda", batea_es("X"), None)
+check("None → None", lanza_es(None), None)
+check("el perfil trae la etiqueta compuesta", isinstance(bio.get("bats_label"), str), True)
 for b in p["batting"]:
     print(f"    {b['season_id']} {b['team_code']}: G={b['games']} GB={b['games_batted']} "
           f"AB={b['ab']} AVG={b['avg']} OBP={b['obp']} SLG={b['slg']} OPS={b['ops']}")

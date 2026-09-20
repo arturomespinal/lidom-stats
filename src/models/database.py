@@ -97,8 +97,11 @@ class Player(Base):
  
     full_name: Mapped[str] = mapped_column(String(100), nullable=False, index=True)
     birth_date: Mapped[Optional[date]] = mapped_column(Date)
+    # Los DOS admiten 'S' (switch). Lo de `throws` no es teórico: Anthony
+    # Seigler lanza con las dos manos. Traducir estos códigos a español se hace
+    # en src/lateralidad.py, nunca en el cliente.
     bats: Mapped[Optional[str]] = mapped_column(String(1))    # 'L', 'R', 'S'
-    throws: Mapped[Optional[str]] = mapped_column(String(1))  # 'L', 'R'
+    throws: Mapped[Optional[str]] = mapped_column(String(1))  # 'L', 'R', 'S'
     nationality: Mapped[str] = mapped_column(String(3), default="DOM")
     height_cm: Mapped[Optional[int]] = mapped_column(Integer)
     weight_kg: Mapped[Optional[int]] = mapped_column(Integer)

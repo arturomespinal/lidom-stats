@@ -20,6 +20,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
 from src.constants import LIDOM_TEAMS
+from src.lateralidad import anotar_lateralidad
 from src.models.database import get_engine
 from src.qualification import qualifying_ip, qualifying_pa
 
@@ -296,7 +297,7 @@ def search_players(
     )
     if not rows:
         raise HTTPException(404, f"Ningún jugador coincide con '{q}'")
-    return {"query": q, "count": len(rows), "data": rows}
+    return {"query": q, "count": len(rows), "data": [anotar_lateralidad(r) for r in rows]}
 
 
 @router.get("/players/{player_id}", tags=["Jugadores"])
@@ -334,7 +335,8 @@ def get_player_profile(player_id: str):
     )
 
     return {
-        "player": players[0],
+        # Con `bats_label` y `throws_label` ya compuestos: ver src/lateralidad.py.
+        "player": anotar_lateralidad(players[0]),
         "batting": batting,
         "pitching": pitching,
         "is_pitcher": bool(pitching),

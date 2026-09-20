@@ -117,7 +117,21 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
    /pitching  → líderes de pitcheo
 ```
 
-**Estado actual:** la API y el frontend consumen las tablas planas. El esquema de juego está poblado para 2025-26 (149 juegos) pero todavía no tiene endpoints propios.
+**Estado actual:** el esquema de juego cubre **14 temporadas, de la 2012-13 a la
+2025-26** — 2.014 juegos, 2.253 jugadores, 45.029 líneas de bateo y 24.729 de
+pitcheo. Las tablas planas, en cambio, solo tienen 2024 y 2025: el backfill se
+corrió con `ingest-games` por temporada pero el `ingest` de los agregados se
+quedó atrás. Hasta que se complete, `/standings`, `/batting` y `/pitching`
+—que leen las planas— solo responden para esas dos.
+
+Dos temporadas salen cortas y **no es un fallo de ingesta**: 91 juegos en
+2020-21 y 120 en 2021-22, las campañas recortadas por la pandemia.
+
+**El `player_id` es el slug `nombre-fechanacimiento`, no un autoincremental**, y
+esa decisión es la que hace posible la ficha multi-temporada: un jugador de 2012
+y el mismo de 2025 caen en la misma fila solos, sin código de reconciliación.
+Alfredo Marte sale con 14 temporadas y 4 equipos, incluido un cambio a mitad de
+la 2015-16. No cambiar esa clave.
 
 ## Archivos clave
 
@@ -194,6 +208,15 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 10. **El mínimo de calificación solo aplica a estadísticas de tasa**, y rige en las DOS capas — endpoints planos y vistas. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. Los mínimos viven en `src/qualification.py`, compartidos por `api/main.py` y `api/game_routes.py`: duplicarlos garantizaría que un día muestren líderes distintos.
 
 11. **No migrar a PostgreSQL aún** — Alembic se agregará cuando se decida migrar.
+
+12. **`bats` y `throws` admiten los TRES códigos: 'L', 'R' y 'S'.** Y lo de
+    `throws` no es teórico — Anthony Seigler lanza con las dos manos. La
+    traducción vive en `src/lateralidad.py` y la API devuelve `bats_label` y
+    `throws_label` ya compuestos; **el cliente nunca traduce**. Un
+    `bats === "L" ? "Zurdo" : "Derecho"` en el frontend etiqueta mal a los 198
+    ambidiestros de la base, sin error y sin que nadie lo note. Misma lógica
+    que `ordinal_es()`: un solo lugar donde traducir es un solo lugar donde
+    equivocarse.
 
 ## Validación cruzada
 
@@ -618,7 +641,7 @@ conteos internos.
 ## Próximos pasos
 
 1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
-2. Backfill histórico: `ingest-games` por temporada hacia atrás (`2024`, `2023`, …).
+2. Completar las tablas planas del backfill: `python main.py ingest <año>` para 2012–2023. El esquema de juego ya tiene las 14 temporadas; las planas solo 2024 y 2025.
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
 4. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
 5. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.

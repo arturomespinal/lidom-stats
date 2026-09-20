@@ -143,6 +143,7 @@ la 2015-16. No cambiar esa clave.
 | `src/clients/mlb_api.py` | Cliente HTTP (retry exponencial, throttle 100ms, `get_people` en lote) |
 | `src/models/flat_models.py` | ORM de las tablas planas: `Standing`, `BattingStats`, `PitchingStats` (PK compuestas) |
 | `src/models/database.py` | ORM normalizado con granularidad de juego + `VIEW_STATEMENTS` |
+| `src/lateralidad.py` | Traducción de `bats`/`throws` — los TRES códigos, incluido 'S' |
 | `src/models/api_models.py` | Pydantic: validación de respuestas MLB (maneja strings ".368") |
 | `src/pipeline/mlb_ingestor.py` | `MLBIngestor.ingest(season)` — puebla las 3 tablas planas |
 | `src/pipeline/boxscore_ingestor.py` | `BoxscoreIngestor.ingest(season)` — puebla el esquema de juego |
@@ -150,9 +151,10 @@ la 2015-16. No cambiar esa clave.
 | `api/game_routes.py` | Endpoints sobre el esquema de juego (router aparte, ver abajo) |
 | `src/constants.py` | `LIDOM_TEAMS` (IDs MLB → códigos), `LIDOM_LEAGUE_ID`, `LIDOM_SPORT_ID` |
 | `src/qualification.py` | Mínimos de calificación (PA/IP), compartidos por las dos capas |
+| `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 87 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 190 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 
 Las siete suites corren sin red y se encadenan con `&&`: salen con código 0 solo
@@ -177,10 +179,11 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /games` | Listado con filtros: `team`, `opponent`, `stage`, `status`, `date_from`, `date_to`, `order`, paginado con `limit`/`offset` |
 | `GET /games/{game_id}` | Boxscore completo: las dos alineaciones con líneas de bateo y pitcheo |
 | `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
-| `GET /players/{player_id}` | Perfil biográfico + temporadas desde las vistas |
+| `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera |
 | `GET /players/{player_id}/gamelog` | Juego por juego — lo que las tablas planas no pueden dar |
 | `GET /leaderboards/batting` | Líderes con calificación por PA |
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
+| `GET /teams/{code}` | Ficha del equipo: historial por temporada, destacados y plantilla |
 | `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
 
 `season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
@@ -708,6 +711,80 @@ probabilidad, hay resultado.
 - **`recalibrar()` es explícito, no automático.** Que las tasas cambiaran solas
   al ingestar una temporada haría que la misma situación diera números distintos
   de un día para otro sin que nadie lo hubiera decidido.
+
+## Las fichas de jugador y de equipo
+
+`GET /players/{player_id}` y `GET /teams/{code}` — web en
+`app/players/[playerId]` y `app/teams/[code]`. Son las dos pantallas que
+justifican el esquema de granularidad de juego: las tablas planas dan "el líder
+de esta temporada", esto da "las catorce temporadas de este hombre".
+
+### Las tasas de la carrera se RECOMPONEN, nunca se promedian
+
+`src/carrera.py`. Un bateador que hizo .400 en 10 turnos y .250 en 400 **no**
+batea .325 de por vida: batea .254. El AVG de la carrera sale de H/AB del total,
+el OBP de (H+BB+HBP)/(AB+BB+HBP+SF) del total, y la ERA de ER×27/outs.
+
+Se calcula en el **servidor**, no en el cliente, por la misma razón que
+`lateralidad.py`: son dos plataformas, y una fórmula implementada dos veces es
+una fórmula que un día diverge. La suite lo comprueba comparando el número
+recompuesto contra el promedio ingenuo y exigiendo que **no** coincidan.
+
+Para poder recomponerlas, `v_batting_season` expone `hbp` y `sf`, y
+`v_pitching_season` expone `outs`. Sin esas columnas el OBP de carrera no tiene
+denominador y la ERA habría que sacarla de entradas ya redondeadas a un decimal,
+que sumadas catorce veces arrastran error.
+
+### Los destacados de un equipo salen de la plantilla COMPLETA
+
+`GET /teams/{code}` devuelve `leaders` además de `batters` y `pitchers`. La
+plantilla va ordenada por uso —que es lo correcto para un roster— pero eso
+entierra al mejor: en Águilas 2025-26 el líder de OPS es la fila once.
+
+Dos cosas que no conviene deshacer:
+
+- **El SQL de la plantilla no lleva `LIMIT`.** Los líderes se calculan sobre
+  todas las filas y el recorte de `roster_limit` se aplica después, en Python.
+  Sacarlos de la lista ya recortada daría un líder de bases robadas equivocado
+  el día que el corredor emergente sea el 31ro en apariciones. Un
+  equipo-temporada son unas 45 filas: el `LIMIT` no ahorraba nada.
+- **El mínimo aplica a las tasas y NO a las acumuladas** — regla 10, comprobada
+  ahora sobre la respuesta y no solo sobre la intención. Aplicarlo a los
+  jonrones escondería al suplente que conectó seis en treinta turnos, que es
+  justo lo que la gente abre una ficha para encontrar. El campo `qualified` de
+  cada líder dice cuál es cuál, y la web lo marca con un asterisco.
+
+El mínimo se calcula sobre los juegos que jugó **ese** equipo **esa** temporada
+(`team_games_played`), no sobre un 50 fijo: 2020-21 y 2021-22 fueron campañas
+recortadas por la pandemia.
+
+### El buscador es la única puerta a las fichas
+
+`components/PlayerSearch.tsx`, en la barra superior. Con 2.253 jugadores no hay
+listado que sirva de índice.
+
+Tres cosas aprendidas construyéndolo:
+
+- **Los resultados y la consulta a la que pertenecen viven en UN estado.** Con
+  dos estados separados hace falta un `setState` síncrono dentro del efecto para
+  mantenerlos a la par, y `react-hooks/set-state-in-effect` lo marca — la misma
+  familia de reglas que encontró el bug real de `PlayByPlay.tsx`. Lo que se
+  pinta se **deriva**: `buscando` es "lo que tengo no corresponde a lo escrito".
+- **250 ms de espera y `AbortController`.** Sin lo primero, escribir "munguia"
+  dispara siete peticiones; sin lo segundo, la respuesta lenta de "mun" puede
+  llegar después de la de "munguia" y pisarla.
+- **Un fallo de red no vacía el panel.** Un resultado de hace un segundo es más
+  útil que un panel en blanco.
+
+### La edad se calcula en el servidor y la fecha se parte a mano
+
+`edad()` toma `hoy` como parámetro para que la suite pueda fijarla: una
+comprobación de edad con `date.today()` cambia de resultado el día del
+cumpleaños del jugador y falla sola una vez al año.
+
+En el cliente, `fechaEs()` parte el string ISO a mano en vez de usar
+`new Date("1988-02-08")`: esa forma se interpreta como UTC, y en UTC-4 devuelve
+el **día anterior**. Un jugador nacido el 1ro aparecería nacido el 31.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

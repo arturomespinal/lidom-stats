@@ -113,6 +113,56 @@ check("AVG coincide con lo ya validado", p["batting"][0]["avg"], 0.368)
 check("no es lanzador", p["is_pitcher"], False)
 check("player_id inexistente → 404", c.get("/players/no-existe-1990-01-01").status_code, 404)
 
+print("\n━━━ La carrera: totales recompuestos, NO promediados ━━━")
+# Gustavo Nunez es el caso completo: 14 temporadas, 4 equipos y ambidiestro.
+veterano = call("/players/gustavo-nunez-1988-02-08")
+car = veterano["career_batting"]
+print(f"  {veterano['player']['full_name']}, {veterano['player']['age']} años: "
+      f"{car['seasons']} temporadas con {car['teams']} equipos | "
+      f"{car['h']}-{car['ab']} .{str(car['avg']).split('.')[1]} "
+      f"OBP {car['obp']} SLG {car['slg']} OPS {car['ops']}")
+
+from src.carrera import carrera_bateo, edad  # noqa: E402
+from datetime import date  # noqa: E402
+
+# La comprobación que justifica el módulo entero. El promedio simple de los
+# AVG de cada temporada da un número plausible y equivocado; si algún día
+# alguien "simplifica" carrera.py a un mean(), esto se pone rojo.
+promedio_ingenuo = round(
+    sum(t["avg"] for t in veterano["batting"]) / len(veterano["batting"]), 3
+)
+check("el AVG de la carrera NO es el promedio de los AVG anuales",
+      car["avg"] == promedio_ingenuo, False)
+print(f"    recompuesto {car['avg']} contra promedio ingenuo {promedio_ingenuo}")
+
+check("AVG de carrera = H / AB", car["avg"], round(car["h"] / car["ab"], 3))
+check("OBP de carrera = (H+BB+HBP) / (AB+BB+HBP+SF)", car["obp"],
+      round((car["h"] + car["bb"] + car["hbp"])
+            / (car["ab"] + car["bb"] + car["hbp"] + car["sf"]), 3))
+check("SLG de carrera = TB / AB", car["slg"], round(car["tb"] / car["ab"], 3))
+check("OPS = OBP + SLG", car["ops"], round(car["obp"] + car["slg"], 3))
+check("los turnos suman los de cada temporada", car["ab"],
+      sum(t["ab"] for t in veterano["batting"]))
+check("14 temporadas en la carrera", car["seasons"], 14)
+check("y cuatro camisetas", car["teams"], 4)
+
+# Los equipos, en orden cronológico inverso y con el rango de cada uno.
+print(f"    equipos: {[(e['team_code'], e['first_season'], e['last_season']) for e in veterano['teams']]}")
+check("el equipo más reciente va primero", veterano["teams"][0]["team_code"], "LIC")
+check("una estancia de varios años guarda el rango",
+      [e for e in veterano["teams"] if e["team_code"] == "TOR"][0]["seasons"], 2)
+check("sin temporadas de pitcheo no hay bloque de pitcheo",
+      veterano["career_pitching"], None)
+check("un jugador sin nada devuelve None, no un bloque en cero",
+      carrera_bateo([]), None)
+
+# La edad se fija la fecha a propósito: con date.today() la comprobación
+# cambiaría de resultado el día del cumpleaños del jugador y fallaría sola.
+check("edad el día antes del cumpleaños", edad("1988-02-08", date(2026, 2, 7)), 37)
+check("edad el día del cumpleaños", edad("1988-02-08", date(2026, 2, 8)), 38)
+check("sin fecha de nacimiento, sin edad", edad(None), None)
+check("fecha corrupta no revienta", edad("no-es-fecha"), None)
+
 print("\n━━━ /players/{player_id}/gamelog ━━━")
 gl = call(f"/players/{pid}/gamelog?season=2025&limit=5")
 print(f"  {len(gl['batting'])} juegos (últimos 5):")
@@ -160,6 +210,111 @@ check("K NO aplica calificación aunque qualified=true", ks["qualification_appli
 check("K sin mínimo de IP", ks["min_ip"], 0.0)
 print(f"  líderes de K: {[(r['full_name'], r['so']) for r in ks['data']]}")
 check("K ordena descendente", ks["data"][0]["so"] >= ks["data"][1]["so"], True)
+
+print("\n━━━ /teams/{code} — la ficha del equipo ━━━")
+agu = call("/teams/AGU")
+print(f"  {agu['team_name']} ({agu['city']}, {agu['founded_year']}): "
+      f"{agu['seasons_count']} temporadas, {len(agu['batters'])} bateadores, "
+      f"{len(agu['pitchers'])} lanzadores")
+check("catálogo canónico, no el código pelado", agu["team_name"], "Águilas Cibaeñas")
+check("nombre corto para pantallas angostas", agu["short_name"], "Águilas")
+check("las 14 temporadas de la base", agu["seasons_count"], 14)
+check("historial de la más reciente a la más vieja",
+      (agu["history"][0]["season_id"], agu["history"][-1]["season_id"]),
+      ("2025-26", "2012-13"))
+check("equipo inválido → 400", c.get("/teams/XXX").status_code, 400)
+check("roster_limit recorta la plantilla", len(call("/teams/AGU?roster_limit=5")["batters"]), 5)
+
+# La comprobación que de verdad vale: este historial se calcula juego a juego
+# desde `games`, y la tabla plana `standings` viene del endpoint /stats de la
+# MLB por un camino que no toca ni una línea del mismo código. Si las dos
+# coinciden al dígito en los seis equipos, es que las dos están bien.
+for fila_plana in call("/standings?season=2025")["data"]:
+    codigo = fila_plana["team_id"]
+    reciente = call(f"/teams/{codigo}")["history"][0]
+    check(f"{codigo}: G-P y carreras cuadran con la tabla plana",
+          (reciente["wins"], reciente["losses"],
+           reciente["runs_for"], reciente["runs_against"]),
+          (fila_plana["wins"], fila_plana["losses"],
+           fila_plana["runs_scored"], fila_plana["runs_allowed"]))
+
+# Cuadre interno del historial, temporada por temporada. Un error de signo en
+# el CASE del SQL —confundir local con visitante— pasaría las comprobaciones de
+# arriba en un equipo y reventaría aquí.
+for fila in agu["history"]:
+    check(f"{fila['season_id']}: G + P == juegos", fila["wins"] + fila["losses"],
+          fila["games_played"])
+    check(f"{fila['season_id']}: PCT = G / (G+P)", fila["win_pct"],
+          round(fila["wins"] / fila["games_played"], 3))
+    check(f"{fila['season_id']}: diferencial = AF − EC", fila["run_diff"],
+          fila["runs_for"] - fila["runs_against"])
+
+# Y el cuadre de liga: en un torneo cerrado, cada victoria de alguien es la
+# derrota de otro y cada carrera anotada es una permitida. Los totales de los
+# seis equipos tienen que sumar cero en las dos cosas.
+temporada = [call(f"/teams/{cod}")["history"][0]
+             for cod in ("AGU", "TOR", "EST", "GIG", "ESC", "LIC")]
+check("las victorias de la liga igualan las derrotas",
+      sum(f["wins"] for f in temporada), sum(f["losses"] for f in temporada))
+check("los diferenciales de carreras suman cero",
+      sum(f["run_diff"] for f in temporada), 0)
+
+print("\n━━━ Destacados del equipo ━━━")
+d = agu["leaders"]
+print(f"  Águilas 2025-26: {agu['team_games']} juegos → mínimos {agu['min_pa']} AP / {agu['min_ip']} IP")
+for l in d["batting"] + d["pitching"]:
+    print(f"    {l['label']:<12} {l['full_name']:<22} {l['value']}"
+          + ("  (con mínimo)" if l["qualified"] else ""))
+
+check("el mínimo sale de los juegos del equipo, no de un 50 fijo",
+      (agu["team_games"], agu["min_pa"], agu["min_ip"]), (49, 152, 29.4))
+
+# Regla 10 de CLAUDE.md, comprobada sobre la respuesta: el mínimo rige en las
+# tasas y NO en las acumuladas. Si alguien se lo aplica a los jonrones, el
+# líder cambia en silencio y esto se pone rojo.
+tasas = {"avg", "ops", "era", "whip"}
+for l in d["batting"] + d["pitching"]:
+    check(f"{l['stat']}: el mínimo aplica solo si es tasa", l["qualified"],
+          l["stat"] in tasas)
+
+# Los líderes se calculan sobre la plantilla COMPLETA, no sobre la lista
+# recortada que se muestra: `roster_limit` no puede mover un líder.
+recortado = call("/teams/AGU?roster_limit=3")
+# Se comparan los nombres y no el diccionario entero: si falla, la línea tiene
+# que caber en la consola.
+resumen = lambda x: [(l["stat"], l["full_name"], l["value"])
+                     for l in x["batting"] + x["pitching"]]
+check("roster_limit no cambia los destacados",
+      resumen(recortado["leaders"]), resumen(d))
+check("pero sí recorta lo que se muestra", len(recortado["batters"]), 3)
+
+# El líder de una acumulada tiene que ser de verdad el máximo de la plantilla.
+for campo, etiqueta in [("hr", "Jonrones"), ("rbi", "Impulsadas"), ("sb", "Robadas")]:
+    lider = next(l for l in d["batting"] if l["stat"] == campo)
+    check(f"líder de {etiqueta} es el máximo real",
+          lider["value"], max(j[campo] for j in call("/teams/AGU?roster_limit=60")["batters"]))
+
+# Y el de una tasa, el mejor ENTRE LOS CALIFICADOS. El truco de la
+# comprobación: el mejor OPS sin calificar es mayor que el del líder, o el
+# mínimo no estaría haciendo nada.
+todos = call("/teams/AGU?roster_limit=60")["batters"]
+lider_ops = next(l for l in d["batting"] if l["stat"] == "ops")
+mejor_sin_filtrar = max(j["ops"] for j in todos if j["ops"] is not None)
+check("el mínimo deja fuera a alguien con mejor OPS",
+      mejor_sin_filtrar > lider_ops["value"], True)
+print(f"    mejor OPS sin mínimo {mejor_sin_filtrar} contra {lider_ops['value']} del líder calificado")
+
+check("los calificados son muchos menos que la plantilla",
+      d["qualified_batters"] < len(todos), True)
+
+# La plantilla es de ESE equipo y de ESA temporada, no del catálogo entero.
+plantilla_2019 = call("/teams/LIC?season=2019")
+check("la plantilla sigue a la temporada pedida", plantilla_2019["season_id"], "2019-20")
+check("y trae jugadores", len(plantilla_2019["batters"]) > 0, True)
+check("bateadores ordenados por apariciones al plato",
+      agu["batters"][0]["pa"] >= agu["batters"][1]["pa"], True)
+check("lanzadores ordenados por entradas",
+      agu["pitchers"][0]["innings_pitched"] >= agu["pitchers"][1]["innings_pitched"], True)
 
 print("\n━━━ /teams/{code}/h2h/{rival} ━━━")
 h2h = call("/teams/LIC/h2h/AGU?season=2025")

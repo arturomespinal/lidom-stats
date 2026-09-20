@@ -347,6 +347,12 @@ VIEW_STATEMENTS = {
             SUM(bl.walks)                              AS bb,
             SUM(bl.strikeouts)                         AS so,
             SUM(bl.stolen_bases)                       AS sb,
+            -- hbp y sf se exponen aunque casi ninguna pantalla los pinte: sin
+            -- ellos no se puede recomponer el OBP de la CARRERA, porque el
+            -- denominador es (AB + BB + HBP + SF) y promediar los OBP de cada
+            -- temporada no da el mismo número. Ver src/carrera.py.
+            SUM(bl.hit_by_pitch)                       AS hbp,
+            SUM(bl.sacrifice_flies)                    AS sf,
             -- AVG = H / AB
             CASE WHEN SUM(bl.at_bats) > 0
                 THEN ROUND(CAST(SUM(bl.hits) AS REAL) / SUM(bl.at_bats), 3)
@@ -390,6 +396,10 @@ VIEW_STATEMENTS = {
             SUM(CASE WHEN pl.decision = 'L' THEN 1 ELSE 0 END)    AS losses,
             SUM(CASE WHEN pl.decision = 'SV' THEN 1 ELSE 0 END)   AS saves,
             ROUND(CAST(SUM(pl.outs_recorded) AS REAL) / 3.0, 1)   AS innings_pitched,
+            -- Los outs en crudo, además de las entradas. `innings_pitched` va
+            -- redondeado a un decimal y sumar catorce valores redondeados
+            -- arrastra error; la ERA de la carrera se calcula sobre esto.
+            SUM(pl.outs_recorded)                                 AS outs,
             SUM(pl.hits_allowed)                                  AS h,
             SUM(pl.earned_runs)                                   AS er,
             SUM(pl.strikeouts)                                    AS so,

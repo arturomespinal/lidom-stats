@@ -19,7 +19,8 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
-from src.constants import LIDOM_TEAMS
+from src.carrera import carrera_bateo, carrera_pitcheo, edad, equipos_de_la_carrera
+from src.constants import LIDOM_TEAMS, LIDOM_TEAMS_BY_CODE
 from src.lateralidad import anotar_lateralidad
 from src.models.database import get_engine
 from src.qualification import qualifying_ip, qualifying_pa
@@ -317,7 +318,7 @@ def get_player_profile(player_id: str):
     batting = query_db(
         """
         SELECT season_id, team_code, games, games_batted, pa, ab, h, doubles,
-               triples, hr, r, rbi, bb, so, sb, avg, obp, slg,
+               triples, hr, r, rbi, bb, so, sb, hbp, sf, avg, obp, slg,
                ROUND(obp + slg, 3) AS ops
         FROM v_batting_season WHERE player_id = :pid
         ORDER BY season_id DESC, team_code
@@ -327,18 +328,28 @@ def get_player_profile(player_id: str):
     pitching = query_db(
         """
         SELECT season_id, team_code, games, games_started, wins, losses, saves,
-               innings_pitched, h, er, so, bb, era, whip
+               innings_pitched, outs, h, er, so, bb, era, whip
         FROM v_pitching_season WHERE player_id = :pid
         ORDER BY season_id DESC, team_code
         """,
         {"pid": player_id},
     )
 
+    # La edad y los totales se componen aquí, no en el cliente. Promediar los
+    # promedios de cada temporada da un número plausible y equivocado —ver la
+    # cabecera de src/carrera.py— y tenerlo mal en dos plataformas distintas,
+    # cada una a su manera, es peor que tenerlo mal en una.
+    bio = anotar_lateralidad(players[0])
+    bio["age"] = edad(bio.get("birth_date"))
+
     return {
         # Con `bats_label` y `throws_label` ya compuestos: ver src/lateralidad.py.
-        "player": anotar_lateralidad(players[0]),
+        "player": bio,
         "batting": batting,
         "pitching": pitching,
+        "career_batting": carrera_bateo(batting),
+        "career_pitching": carrera_pitcheo(pitching),
+        "teams": equipos_de_la_carrera(batting, pitching),
         "is_pitcher": bool(pitching),
     }
 
@@ -521,6 +532,202 @@ def leaderboard_pitching(
 # ─────────────────────────────────────────────────────────────────────────────
 # Equipos
 # ─────────────────────────────────────────────────────────────────────────────
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Destacados de un equipo
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Qué se considera "los mejores" de un equipo. La lista es declarativa para que
+# añadir una categoría sea una línea y no un bloque de código más.
+#
+# La columna `tasa` decide si se aplica el mínimo de calificación, y sigue la
+# regla 10 de CLAUDE.md al pie de la letra: el mínimo existe para las tasas,
+# donde pocas apariciones inflan el número —de 1-1 se batea 1.000—, y NO para
+# las acumuladas, porque nadie exige un mínimo para liderar jonrones. Aplicarlo
+# a los jonrones escondería al suplente que conectó seis en treinta turnos, que
+# es justo el tipo de dato que la gente abre una ficha para encontrar.
+LIDERES_BATEO = [
+    # (campo, etiqueta, mayor_es_mejor, es_tasa)
+    ("hr", "Jonrones", True, False),
+    ("rbi", "Impulsadas", True, False),
+    ("sb", "Robadas", True, False),
+    ("avg", "Promedio", True, True),
+    ("ops", "OPS", True, True),
+]
+
+LIDERES_PITCHEO = [
+    ("wins", "Ganados", True, False),
+    ("saves", "Salvados", True, False),
+    ("so", "Ponches", True, False),
+    ("era", "Efectividad", False, True),
+    ("whip", "WHIP", False, True),
+]
+
+
+def _lider(filas: list[dict], campo: str, mayor_es_mejor: bool) -> dict | None:
+    """El mejor de `filas` en `campo`, o None si nadie tiene el dato.
+
+    El desempate es por el propio valor y luego por nombre: sin un criterio
+    estable, dos jugadores empatados en 8 jonrones se alternarían en la ficha
+    de una carga a otra según el orden que devolviera SQLite.
+    """
+    candidatos = sorted(
+        (f for f in filas if f.get(campo) is not None), key=lambda f: f["full_name"]
+    )
+    if not candidatos:
+        return None
+    # max() y min() devuelven el PRIMER extremo que encuentran, así que ordenar
+    # por nombre antes convierte el empate en alfabético en vez de dejarlo al
+    # orden que devuelva SQLite.
+    mejor = (max if mayor_es_mejor else min)(candidatos, key=lambda f: f[campo])
+    return {
+        "player_id": mejor["player_id"],
+        "full_name": mejor["full_name"],
+        "value": mejor[campo],
+    }
+
+
+def destacados_del_equipo(
+    bateadores: list[dict], lanzadores: list[dict], juegos_equipo: int
+) -> dict:
+    """Los líderes del equipo en cada categoría, listos para pintar.
+
+    Se calcula en el servidor y no en el cliente por la misma razón que los
+    totales de carrera: son dos plataformas, y un criterio de calificación
+    implementado dos veces es un criterio que un día diverge.
+    """
+    min_pa = qualifying_pa(juegos_equipo)
+    min_ip = qualifying_ip(juegos_equipo)
+
+    calificados_bat = [f for f in bateadores if (f.get("pa") or 0) >= min_pa]
+    # El mínimo de pitcheo se compara en OUTS y no en las entradas ya
+    # redondeadas: `innings_pitched` viene a un decimal, y 29.96 entradas se
+    # muestra como 30.0 pero no alcanza el listón de 30.
+    calificados_pit = [f for f in lanzadores if (f.get("outs") or 0) >= min_ip * 3]
+
+    def bloque(filas_todas, filas_calificadas, definiciones):
+        salida = []
+        for campo, etiqueta, mayor, es_tasa in definiciones:
+            fuente = filas_calificadas if es_tasa else filas_todas
+            lider = _lider(fuente, campo, mayor)
+            if lider:
+                salida.append({"stat": campo, "label": etiqueta, "qualified": es_tasa, **lider})
+        return salida
+
+    return {
+        "batting": bloque(bateadores, calificados_bat, LIDERES_BATEO),
+        "pitching": bloque(lanzadores, calificados_pit, LIDERES_PITCHEO),
+        "qualified_batters": len(calificados_bat),
+        "qualified_pitchers": len(calificados_pit),
+    }
+
+
+@router.get("/teams/{team_code}", tags=["Equipos"])
+def team_profile(
+    team_code: str,
+    season: str = Query("2025", description="Temporada de la plantilla"),
+    roster_limit: int = Query(30, ge=1, le=60),
+):
+    """Perfil del equipo: historial por temporada, plantilla y líderes.
+
+    El historial sale de `games` y no de la tabla plana `standings` por un
+    motivo concreto: la plana guarda el agregado que devuelve /stats, mientras
+    que esto se calcula juego a juego y de paso deja salir el diferencial de
+    carreras por temporada, que la plana no trae.
+
+    Va en UNA respuesta y no en tres endpoints porque la pantalla los pinta
+    juntos: partirlo obligaría al cliente a encadenar tres viajes para dibujar
+    una sola vista.
+    """
+    team = validate_team(team_code, "team_code")
+    season_id = normalize_season_id(season)
+
+    # Historial completo, una fila por temporada. Los forfeits quedan fuera
+    # (status != 'final'); es la deuda documentada en CLAUDE.md.
+    historial = query_db(
+        """
+        SELECT g.season_id,
+               COUNT(*) AS games_played,
+               SUM(CASE WHEN (g.home_team_code = :team AND g.home_score > g.away_score)
+                          OR (g.away_team_code = :team AND g.away_score > g.home_score)
+                        THEN 1 ELSE 0 END) AS wins,
+               SUM(CASE WHEN (g.home_team_code = :team AND g.home_score < g.away_score)
+                          OR (g.away_team_code = :team AND g.away_score < g.home_score)
+                        THEN 1 ELSE 0 END) AS losses,
+               SUM(CASE WHEN g.home_team_code = :team THEN g.home_score
+                        ELSE g.away_score END) AS runs_for,
+               SUM(CASE WHEN g.home_team_code = :team THEN g.away_score
+                        ELSE g.home_score END) AS runs_against
+        FROM games g
+        WHERE g.status = 'final' AND g.stage = 'regular'
+          AND (g.home_team_code = :team OR g.away_team_code = :team)
+        GROUP BY g.season_id
+        ORDER BY g.season_id DESC
+        """,
+        {"team": team},
+    )
+    for fila in historial:
+        jugados = fila["wins"] + fila["losses"]
+        # El porcentaje se divide por G+P, no por juegos jugados: un empate
+        # —raro pero posible en invernal— no debe contar como medio juego.
+        fila["win_pct"] = round(fila["wins"] / jugados, 3) if jugados else None
+        fila["run_diff"] = (fila["runs_for"] or 0) - (fila["runs_against"] or 0)
+
+    # Sin LIMIT en el SQL, a propósito: los destacados se calculan sobre la
+    # plantilla COMPLETA. Sacarlos de una lista ya recortada a los 30 de más
+    # uso daría un líder de bases robadas equivocado el día que el corredor
+    # emergente del equipo sea el 31ro en apariciones. Un equipo-temporada son
+    # unas 45 filas, así que el LIMIT no ahorraba nada; el recorte se aplica
+    # después, solo a lo que se muestra.
+    plantilla = query_db(
+        """
+        SELECT player_id, full_name, games, games_batted, pa, ab, h, hr, rbi,
+               sb, bb, so, avg, obp, slg, ROUND(obp + slg, 3) AS ops
+        FROM v_batting_season
+        WHERE team_code = :team AND season_id = :season_id
+        ORDER BY pa DESC
+        """,
+        {"team": team, "season_id": season_id},
+    )
+    cuerpo = query_db(
+        """
+        SELECT player_id, full_name, games, games_started, wins, losses, saves,
+               innings_pitched, outs, so, bb, era, whip
+        FROM v_pitching_season
+        WHERE team_code = :team AND season_id = :season_id
+        ORDER BY innings_pitched DESC
+        """,
+        {"team": team, "season_id": season_id},
+    )
+
+    if not historial and not plantilla:
+        raise HTTPException(404, f"No hay datos del equipo {team}")
+
+    # El mínimo se calcula sobre los juegos que jugó ESTE equipo ESA temporada
+    # —con la misma función que usan las tablas de líderes de la liga— y no
+    # sobre un 50 fijo: 2020-21 y 2021-22 fueron campañas recortadas por la
+    # pandemia, de 91 y 120 juegos.
+    juegos_equipo = team_games_played(season_id, team)
+    destacados = destacados_del_equipo(plantilla, cuerpo, juegos_equipo)
+
+    info = LIDOM_TEAMS_BY_CODE.get(team, {})
+    return {
+        "team_code": team,
+        "team_name": info.get("full_name", team),
+        "short_name": info.get("short_name", team),
+        "city": info.get("city"),
+        "founded_year": info.get("founded_year"),
+        "season_id": season_id,
+        "history": historial,
+        "seasons_count": len(historial),
+        "team_games": juegos_equipo,
+        "min_pa": qualifying_pa(juegos_equipo),
+        "min_ip": qualifying_ip(juegos_equipo),
+        "leaders": destacados,
+        "batters": plantilla[:roster_limit],
+        "pitchers": cuerpo[:roster_limit],
+    }
 
 
 @router.get("/teams/{team_code}/h2h/{opponent_code}", tags=["Equipos"])

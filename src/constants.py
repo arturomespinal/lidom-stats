@@ -89,6 +89,17 @@ TEAM_CODE_TO_MLB_ID: dict[str, int] = {
     info["team_code"]: mlb_id for mlb_id, info in LIDOM_TEAMS.items()
 }
 
+# El mismo catálogo indexado por nuestro código, que es la clave con la que
+# viajan los equipos por toda la aplicación: `games.home_team_code`, las vistas,
+# la URL de la ficha (/teams/AGU) y TEAM_STYLES en los dos clientes. El id de
+# MLB solo aparece al hablar con la API; nada de lo que sirve la nuestra lo usa.
+#
+# Se deriva, no se escribe a mano: un segundo diccionario literal con los mismos
+# seis equipos se desincroniza el día que alguien corrija un nombre en uno solo.
+LIDOM_TEAMS_BY_CODE: dict[str, dict[str, str]] = {
+    info["team_code"]: info for info in LIDOM_TEAMS.values()
+}
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Tipos de juego MLB API

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import PlayerSearch from "@/components/PlayerSearch";
+
 const TABS = [
   { label: "En Vivo", href: "/live" },
   { label: "Posiciones", href: "/" },
@@ -60,9 +62,12 @@ export default function Navbar({ season }: Props) {
           })}
         </div>
 
-        {/* Season label */}
-        <div className="ml-auto shrink-0 pl-2">
-          <span className="text-xs text-dim bg-header px-2 py-1 rounded">
+        {/* Buscador y temporada. El buscador es la única puerta a las fichas
+            de jugador: con 2.253 nombres en la base no hay listado que sirva
+            de índice. */}
+        <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
+          <PlayerSearch />
+          <span className="hidden rounded bg-header px-2 py-1 text-xs text-dim sm:inline">
             {season}
           </span>
         </div>

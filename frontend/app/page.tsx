@@ -26,7 +26,7 @@ export default async function StandingsPage(props: Props) {
           <EmptyState />
         ) : (
           <>
-            <StandingsTable data={standings} />
+            <StandingsTable data={standings} season={season} />
             {/* Una columna nueva sin explicación es una columna que nadie usa. */}
             <p className="mt-3 text-xs leading-relaxed text-dim">
               <span className="font-bold text-fg">GB</span> — juegos de

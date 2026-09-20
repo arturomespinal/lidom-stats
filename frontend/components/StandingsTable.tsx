@@ -1,13 +1,16 @@
 "use client";
 
 import { Fragment } from "react";
+import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
 import { TEAM_STYLES } from "@/lib/constants";
 import { StandingRow } from "@/lib/types";
 
-const POS = "text-emerald-400";
-const NEG = "text-red-400";
-const EVEN = "text-amber-400";
+/* Tokens de la paleta, no colores crudos de Tailwind: `pos`, `neg` y `warn`
+   significan algo y sobreviven a un cambio de paleta. Ver globals.css. */
+const POS = "text-pos";
+const NEG = "text-neg";
+const EVEN = "text-warn";
 
 const fmt = {
   pct: (v: number | null) => (v != null ? v.toFixed(3).replace(/^0/, "") : "—"),
@@ -61,7 +64,14 @@ function CutlineRow({ span }: { span: number }) {
   );
 }
 
-export default function StandingsTable({ data }: { data: StandingRow[] }) {
+export default function StandingsTable({
+  data,
+  season,
+}: {
+  data: StandingRow[];
+  /** Viaja en el enlace a la ficha para no perder la temporada que se mira. */
+  season: string;
+}) {
   // No se reordena aquí: la API ordena por PCT y calcula playoff_spot sobre ese
   // orden. Reordenar en el cliente correría el corte de equipo en silencio.
   const cutIndex = data.findIndex((r) => !r.playoff_spot) - 1;
@@ -121,8 +131,15 @@ export default function StandingsTable({ data }: { data: StandingRow[] }) {
                           TEAM_STYLES[row.team_id]?.primary ?? "rgb(var(--line))",
                       }}
                     />
-                    <TeamBadge code={row.team_id} />
-                    <span className="font-medium">{row.team_name}</span>
+                    {/* El equipo lleva a su ficha: es el gesto natural
+                        después de leer una tabla de posiciones. */}
+                    <Link
+                      href={`/teams/${row.team_id}?season=${season}`}
+                      className="flex items-center gap-3 underline-offset-2 hover:underline"
+                    >
+                      <TeamBadge code={row.team_id} />
+                      <span className="font-medium">{row.team_name}</span>
+                    </Link>
                   </div>
                 </td>
                 <td className="px-3 py-3 text-center text-dim tabular-nums">

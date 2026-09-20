@@ -3,7 +3,10 @@ import {
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
+  PlayerProfile,
+  PlayerSearchHit,
   StandingRow,
+  TeamProfile,
 } from "@/lib/types";
 
 /* Se exporta porque el marcador en vivo arma la URL del EventSource a mano:
@@ -104,6 +107,55 @@ export async function fetchGameDetail(
   return apiFetch<LiveDetailResponse>(
     `/live/games/${gamePk}/detail?plays=${plays}`
   );
+}
+
+/* ── Fichas ──────────────────────────────────────────────────────────────── */
+
+/**
+ * Ficha de un jugador: biografía, todas sus temporadas y los totales de
+ * carrera ya compuestos por el servidor.
+ *
+ * Devuelve `null` en vez de lanzar, como el resto de este módulo: la página
+ * decide si eso es un 404 o un backend caído, y la diferencia no se puede
+ * hacer aquí sin duplicar el manejo de errores en cada llamada.
+ */
+export async function fetchPlayerProfile(
+  playerId: string
+): Promise<PlayerProfile | null> {
+  return apiFetch<PlayerProfile>(`/players/${encodeURIComponent(playerId)}`);
+}
+
+export async function searchPlayers(
+  query: string,
+  limit = 20
+): Promise<PlayerSearchHit[]> {
+  // La API exige 2 caracteres y devuelve 422 con uno solo. Cortar aquí evita
+  // un viaje garantizado a fallar mientras alguien escribe la primera letra.
+  if (query.trim().length < 2) return [];
+  const params = new URLSearchParams({ q: query.trim(), limit: String(limit) });
+  const data = await apiFetch<{ data: PlayerSearchHit[] }>(
+    `/players/search?${params}`
+  );
+  return data?.data ?? [];
+}
+
+/**
+ * Ficha de un equipo: historial por temporada, plantilla y cuerpo de lanzadores.
+ *
+ * Es UNA llamada y no tres a propósito: la pantalla pinta las tres cosas a la
+ * vez, y encadenar tres viajes para dibujar una sola vista es justo lo que
+ * hace que una ficha tarde en aparecer.
+ */
+export async function fetchTeamProfile(
+  code: string,
+  season: string,
+  rosterLimit = 30
+): Promise<TeamProfile | null> {
+  const params = new URLSearchParams({
+    season,
+    roster_limit: String(rosterLimit),
+  });
+  return apiFetch<TeamProfile>(`/teams/${code}?${params}`);
 }
 
 // crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son

@@ -65,13 +65,5 @@ export async function fetchGameDetail(
   return get<LiveDetailResponse>(`/live/games/${gamePk}/detail?plays=${plays}`);
 }
 
-/**
- * URL del escudo de un equipo.
- *
- * Los archivos los sirve el backend desde static/crests/. Si no existe, la
- * petición da 404 y TeamBadge cae a las siglas — por eso esto nunca comprueba
- * nada antes de devolver la URL.
- */
-export function crestUrl(code: string): string {
-  return `${API_BASE}/static/crests/${code}.png`;
-}
+// crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son
+// propias y se dibujan en TeamBadge — no hay archivo que pedirle al backend.

@@ -155,9 +155,10 @@ la 2015-16. No cambiar esa clave.
 | `src/constants.py` | `LIDOM_TEAMS` (IDs MLB → códigos), `LIDOM_LEAGUE_ID`, `LIDOM_SPORT_ID` |
 | `src/qualification.py` | Mínimos de calificación (PA/IP), compartidos por las dos capas |
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
+| `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 205 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 210 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -549,6 +550,25 @@ Cinco cosas que no conviene deshacer:
   pantalla de un juego recién terminado se quedaría vacía justo cuando más gente
   la abre. Son 42 KB en vez de un mega, y ya no va a cambiar. El endpoint
   devuelve `is_updating` para que el cliente sepa cuándo dejar de refrescar.
+
+**Cada jugador del detalle lleva a su ficha.** En las filas del detalle,
+`player_id` es el **número de la MLB** (688005), no el slug que usa el resto
+de la API, y no sirve para enlazar. La ruta añade `profile_id` —el slug— a
+bateadores, lanzadores, bullpen y banca con `anotar_fichas()`
+(`src/fichas.py`), una sola consulta a `players` por `mlb_id` para los dos
+equipos. El relato no: sus `batter` y `pitcher` son solo nombres.
+
+- El cruce vive en la **ruta**, no en `detail.py`: el parser sigue siendo una
+  función pura sobre el GUMBO, sin base de datos.
+- `profile_id` en `null` es normal: un debutante en su primer juego todavía no
+  está en `players`. Se pinta el nombre, sin enlace. En el juego inaugural
+  enlazan 100 de 101 (el que falta estaba en el bullpen y nunca jugó).
+- Se cachean los aciertos (un slug no cambia nunca) y **no los fallos**: el
+  debutante tiene que enlazar en cuanto se ingeste, sin reiniciar la API.
+- En el móvil las filas del boxscore y las alineaciones pasaron a 44 pt, porque
+  ahora son tocables. El bullpen y la banca, que eran un párrafo de nombres
+  separados por "·", son fichas sueltas: un toque sobre una palabra dentro de
+  un renglón no se acierta con el pulgar.
 
 El relato viene recortado (`?plays=25` por defecto, el más reciente primero):
 un juego completo son 71 jugadas y 42 KB, contra 23 KB con las 25 últimas. El

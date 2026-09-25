@@ -478,6 +478,47 @@ era = call("/pitching?season=2025&sort_by=era")["data"]
 check("/pitching sigue ordenando la EFE ascendente",
       era[0]["era"] <= era[-1]["era"], True)
 
+print("\n━━━ /live/.../detail: cada jugador lleva a su ficha ━━━")
+# El feed identifica con el número de la MLB; la ruta añade `profile_id`, el
+# slug. Se siembra la caché con las capturas del juego inaugural, igual que
+# dev_live_offline.py. Sin fixtures/ (ignorada en git) se salta, no falla.
+import glob as _glob, json as _json
+_capturas = sorted(_glob.glob("fixtures/826343_2*.json"))
+if not _capturas:
+    print("  (sin fixtures/826343_*: se salta — corre capture_gumbo.py)")
+else:
+    from src.live.gumbo import parse_live_feed
+    from src.live.store import store as _store
+    for _ruta in _capturas:
+        with open(_ruta, encoding="utf-8") as _f:
+            _doc = _json.load(_f)
+        _e = parse_live_feed(_doc)
+        _store.update(_e.game_pk, _doc, _e)
+    _det = call("/live/games/826343/detail?plays=0")["data"]
+    _filas = [f for lado in ("away", "home")
+              for lista in ("batters", "pitchers", "bench", "bullpen")
+              for f in _det[lado][lista]]
+    check("todas las filas traen la clave profile_id",
+          all("profile_id" in f for f in _filas), True)
+    _con = [f for f in _filas if f["profile_id"]]
+    check(f"enlazan {len(_con)} de {len(_filas)} (el que falta nunca jugó)",
+          len(_filas) - len(_con), 1)
+    # El slug es del MISMO hombre: en `players` ese slug tiene ese mlb_id.
+    _map = {r["player_id"]: r["mlb_id"] for r in query_db(
+        "SELECT player_id, mlb_id FROM players WHERE mlb_id IS NOT NULL")}
+    check("cada slug corresponde a su número de la MLB",
+          [f["name"] for f in _con if _map.get(f["profile_id"]) != f["player_id"]], [])
+    _abridor = next(f for f in _det["away"]["pitchers"] if f["is_starter"])
+    _ficha = call(f"/players/{_abridor['profile_id']}")
+    check(f"  el abridor visitante ({_abridor['name']}) abre su ficha",
+          _ficha["player"]["mlb_id"], _abridor["player_id"])
+    # Los fallos no se cachean: un debutante tiene que enlazar en cuanto se
+    # ingeste, sin reiniciar la API.
+    from src.fichas import _cache as _cache_fichas
+    _sin = next(f for f in _filas if not f["profile_id"])
+    check("un id sin ficha no queda cacheado como 'sin ficha'",
+          _sin["player_id"] in _cache_fichas, False)
+
 print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:

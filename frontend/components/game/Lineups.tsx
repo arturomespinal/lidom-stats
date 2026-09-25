@@ -1,4 +1,6 @@
+import { Fragment } from "react";
 import TeamBadge from "@/components/TeamBadge";
+import NombreJugador from "@/components/game/NombreJugador";
 import { TeamDetail } from "@/lib/types";
 
 /**
@@ -47,7 +49,9 @@ function Block({ team }: { team: TeamDetail }) {
                 <span className="w-7 shrink-0 text-[10px] font-bold text-dim">
                   {b.position ?? ""}
                 </span>
-                <span className="flex-1 truncate text-fg2">{b.name}</span>
+                <span className="flex-1 truncate text-fg2">
+                  <NombreJugador nombre={b.name} profileId={b.profile_id} />
+                </span>
                 {!!b.summary && (
                   <span className="shrink-0 tabular-nums text-xs text-dim">
                     {b.summary}
@@ -76,7 +80,7 @@ function Block({ team }: { team: TeamDetail }) {
                   {p.is_starter ? "AB" : "RL"}
                 </span>
                 <span className="flex-1 truncate text-fg2">
-                  {p.name}
+                  <NombreJugador nombre={p.name} profileId={p.profile_id} />
                   {!!p.note && (
                     <span className="text-xs font-bold text-pos"> {p.note}</span>
                   )}
@@ -94,7 +98,12 @@ function Block({ team }: { team: TeamDetail }) {
         <p className="px-4 pb-2 text-xs leading-relaxed text-dim">
           {team.bullpen.length === 0
             ? "Sin brazos disponibles."
-            : team.bullpen.map((a) => a.name).join(" · ")}
+            : team.bullpen.map((a, i) => (
+                <Fragment key={a.player_id}>
+                  {i > 0 && " · "}
+                  <NombreJugador nombre={a.name} profileId={a.profile_id} />
+                </Fragment>
+              ))}
         </p>
       </Section>
 
@@ -102,7 +111,12 @@ function Block({ team }: { team: TeamDetail }) {
         <p className="px-4 pb-4 text-xs leading-relaxed text-dim">
           {team.bench.length === 0
             ? "Sin sustitutos disponibles."
-            : team.bench.map((a) => a.name).join(" · ")}
+            : team.bench.map((a, i) => (
+                <Fragment key={a.player_id}>
+                  {i > 0 && " · "}
+                  <NombreJugador nombre={a.name} profileId={a.profile_id} />
+                </Fragment>
+              ))}
         </p>
       </Section>
     </section>

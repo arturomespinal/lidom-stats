@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
 import { BatterLine, PitcherLine, TeamDetail } from '../types';
 import TeamBadge from './TeamBadge';
+import { useFichas } from '../navigation';
 
 /**
  * Boxscore: los números de HOY, no el acumulado de temporada.
@@ -11,7 +12,36 @@ import TeamBadge from './TeamBadge';
  * cada sustituto justo debajo del titular al que relevó (100, 101, 200, …).
  * Aquí se refleja con sangría: el orden ya carga la información, la sangría
  * solo la hace visible.
+ *
+ * Cada fila abre la ficha del jugador (`profile_id`, el slug que pone la
+ * API; `player_id` aquí es el número de la MLB y no sirve para enlazar).
+ * Por eso las filas miden 44 pt: son área táctil, y las reglas no bajan de
+ * ahí. Un debutante sin ficha tiene su fila igual, pero quieta.
  */
+
+/** Fila que abre la ficha si el jugador tiene una. */
+function Fila({
+  profileId,
+  nombre,
+  children,
+}: {
+  profileId: string | null;
+  nombre: string;
+  children: React.ReactNode;
+}) {
+  const nav = useFichas();
+  return (
+    <Pressable
+      disabled={!profileId}
+      onPress={() => profileId && nav.push('Jugador', { playerId: profileId, nombre })}
+      style={({ pressed }) => [styles.row, styles.rowTactil, pressed && styles.rowPressed]}
+      accessibilityRole={profileId ? 'button' : undefined}
+      accessibilityHint={profileId ? 'Abre su ficha' : undefined}
+    >
+      {children}
+    </Pressable>
+  );
+}
 
 function TeamHeader({ team }: { team: TeamDetail }) {
   return (
@@ -29,7 +59,7 @@ function TeamHeader({ team }: { team: TeamDetail }) {
 
 function BatterRow({ b }: { b: BatterLine }) {
   return (
-    <View style={styles.row}>
+    <Fila profileId={b.profile_id} nombre={b.name}>
       <View style={[styles.nameCell, !b.is_starter && styles.sub]}>
         <Text style={styles.pos}>{b.position ?? ''}</Text>
         <Text
@@ -45,13 +75,13 @@ function BatterRow({ b }: { b: BatterLine }) {
       <Text style={styles.n}>{b.rbi}</Text>
       <Text style={styles.n}>{b.walks}</Text>
       <Text style={styles.n}>{b.strikeouts}</Text>
-    </View>
+    </Fila>
   );
 }
 
 function PitcherRow({ p }: { p: PitcherLine }) {
   return (
-    <View style={styles.row}>
+    <Fila profileId={p.profile_id} nombre={p.name}>
       <View style={styles.nameCell}>
         <Text style={styles.pos}>{p.is_starter ? 'AB' : 'RL'}</Text>
         <View style={{ flex: 1, minWidth: 0 }}>
@@ -69,7 +99,7 @@ function PitcherRow({ p }: { p: PitcherLine }) {
       <Text style={styles.n}>{p.earned_runs}</Text>
       <Text style={styles.n}>{p.walks}</Text>
       <Text style={styles.n}>{p.strikeouts}</Text>
-    </View>
+    </Fila>
   );
 }
 
@@ -156,6 +186,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  rowTactil: { minHeight: 44 },
+  rowPressed: { backgroundColor: COLORS.bgRaised },
   headRow: { backgroundColor: COLORS.bgHeader, paddingVertical: 6 },
   head: {
     color: COLORS.textSecondary,

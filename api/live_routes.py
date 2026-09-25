@@ -31,6 +31,7 @@ from typing import AsyncIterator, Optional
 from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
+from src.fichas import anotar_fichas
 from src.live.poller import LivePoller
 from src.live.store import store, titular_recorrido
 from src.utils.logger import logger
@@ -164,7 +165,10 @@ def live_game_detail(
         # `false` avisa al cliente de que esto ya no va a cambiar y puede dejar
         # de refrescar.
         "is_updating": entry.raw is not None,
-        "data": detail.model_dump(mode="json"),
+        # Cada jugador sale con `profile_id`, el slug de su ficha, para que los
+        # nombres del boxscore y las alineaciones lleven a ella. None si no
+        # tiene: un debutante en su primer juego todavía no está en la base.
+        "data": anotar_fichas(detail.model_dump(mode="json")),
     }
 
 

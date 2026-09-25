@@ -185,8 +185,11 @@ export interface DetailInning {
 }
 
 export interface BatterLine {
+  /** Número de la MLB, NO el slug de la ficha: no sirve para enlazar. */
   player_id: number;
   name: string;
+  /** Slug de la ficha (/players/{id}), o null si todavía no tiene. */
+  profile_id: string | null;
   position: string | null;
   /** 100, 200… titulares; 101, 102… quienes los relevaron. */
   batting_order: number | null;
@@ -206,8 +209,9 @@ export interface BatterLine {
 }
 
 export interface PitcherLine {
-  player_id: number;
+  player_id: number;  // número de la MLB (ver BatterLine)
   name: string;
+  profile_id: string | null;
   order: number;
   is_starter: boolean;
   note: string | null;
@@ -225,8 +229,9 @@ export interface PitcherLine {
 }
 
 export interface BullpenArm {
-  player_id: number;
+  player_id: number;  // número de la MLB (ver BatterLine)
   name: string;
+  profile_id: string | null;
 }
 
 export interface TeamDetail {

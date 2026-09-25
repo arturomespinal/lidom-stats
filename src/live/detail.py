@@ -166,8 +166,12 @@ class InningLine(BaseModel):
 class BatterLine(BaseModel):
     """Línea de bateo de HOY, no del acumulado de temporada."""
 
+    # OJO: aquí `player_id` es el número de la MLB, no el slug de la ficha
+    # que usa el resto de la API. El slug lo pone la ruta en `profile_id`
+    # (src/fichas.py): el parser no toca la base de datos.
     player_id: int
     name: str
+    profile_id: Optional[str] = None
     position: Optional[str] = None
     batting_order: Optional[int] = None      # 100, 200… ; los sustitutos 101, 102
     is_starter: bool = False
@@ -189,8 +193,9 @@ class BatterLine(BaseModel):
 class PitcherLine(BaseModel):
     """Línea de pitcheo de HOY."""
 
-    player_id: int
+    player_id: int                           # número de la MLB (ver BatterLine)
     name: str
+    profile_id: Optional[str] = None
     order: int = 0                           # en qué turno entró al juego
     is_starter: bool = False
     note: Optional[str] = None               # "(W, 1-0)" cuando la MLB la pone
@@ -208,10 +213,11 @@ class PitcherLine(BaseModel):
 
 
 class BullpenArm(BaseModel):
-    """Alguien del bullpen que todavía no ha entrado."""
+    """Alguien del bullpen —o del banco— que todavía no ha entrado."""
 
-    player_id: int
+    player_id: int                           # número de la MLB (ver BatterLine)
     name: str
+    profile_id: Optional[str] = None
 
 
 class TeamDetail(BaseModel):

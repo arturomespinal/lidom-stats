@@ -1,8 +1,9 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
-import { TeamDetail } from '../types';
+import { BullpenArm, TeamDetail } from '../types';
 import TeamBadge from './TeamBadge';
+import { useFichas } from '../navigation';
 
 /**
  * Quién está en el terreno, quién ya lanzó y quién queda disponible.
@@ -11,7 +12,61 @@ import TeamBadge from './TeamBadge';
  * esas listas cuando entran al juego. Por eso el bullpen encoge a medida que
  * avanza el juego, y eso mismo es la información útil — cuántos brazos le
  * quedan al manager.
+ *
+ * Todos los nombres abren la ficha (`profile_id`). Las filas miden 44 pt; el
+ * bullpen y la banca, que eran un párrafo de nombres separados por "·",
+ * pasan a fichas sueltas: un toque sobre una palabra dentro de un renglón no
+ * se acierta con el pulgar.
  */
+
+/** Una fila de 44 pt que abre la ficha, si el jugador tiene una. */
+function Fila({
+  profileId,
+  nombre,
+  children,
+}: {
+  profileId: string | null;
+  nombre: string;
+  children: React.ReactNode;
+}) {
+  const nav = useFichas();
+  return (
+    <Pressable
+      disabled={!profileId}
+      onPress={() => profileId && nav.push('Jugador', { playerId: profileId, nombre })}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      accessibilityRole={profileId ? 'button' : undefined}
+      accessibilityHint={profileId ? 'Abre su ficha' : undefined}
+    >
+      {children}
+    </Pressable>
+  );
+}
+
+/**
+ * Bullpen o banca: nombres en fichas que se envuelven. 36 pt de alto más 4
+ * de `hitSlop` arriba y abajo llegan a los 44 sin pisar a la de al lado — el
+ * hueco entre filas es de 8.
+ */
+function Disponibles({ lista }: { lista: BullpenArm[] }) {
+  const nav = useFichas();
+  return (
+    <View style={styles.chips}>
+      {lista.map(a => (
+        <Pressable
+          key={a.player_id}
+          disabled={!a.profile_id}
+          onPress={() => a.profile_id && nav.push('Jugador', { playerId: a.profile_id, nombre: a.name })}
+          hitSlop={{ top: 4, bottom: 4 }}
+          style={({ pressed }) => [styles.chip, pressed && styles.pressed]}
+          accessibilityRole={a.profile_id ? 'button' : undefined}
+        >
+          <Text style={styles.chipText}>{a.name}</Text>
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
@@ -40,14 +95,14 @@ function Block({ team }: { team: TeamDetail }) {
           <Text style={styles.none}>Sin publicar.</Text>
         ) : (
           titulares.map((b, i) => (
-            <View key={b.player_id} style={styles.row}>
+            <Fila key={b.player_id} profileId={b.profile_id} nombre={b.name}>
               <Text style={styles.order}>{i + 1}</Text>
               <Text style={styles.pos}>{b.position ?? ''}</Text>
               <Text style={styles.name} numberOfLines={1}>
                 {b.name}
               </Text>
               {!!b.summary && <Text style={styles.aside}>{b.summary}</Text>}
-            </View>
+            </Fila>
           ))
         )}
       </Section>
@@ -57,7 +112,7 @@ function Block({ team }: { team: TeamDetail }) {
           <Text style={styles.none}>Ninguno todavía.</Text>
         ) : (
           usados.map(p => (
-            <View key={p.player_id} style={styles.row}>
+            <Fila key={p.player_id} profileId={p.profile_id} nombre={p.name}>
               <Text style={styles.order}>{p.order}</Text>
               <Text style={styles.pos}>{p.is_starter ? 'AB' : 'RL'}</Text>
               <Text style={styles.name} numberOfLines={1}>
@@ -67,7 +122,7 @@ function Block({ team }: { team: TeamDetail }) {
               <Text style={styles.aside}>
                 {p.innings_pitched ?? '—'} IP · {p.pitches} lan.
               </Text>
-            </View>
+            </Fila>
           ))
         )}
       </Section>
@@ -76,9 +131,7 @@ function Block({ team }: { team: TeamDetail }) {
         {team.bullpen.length === 0 ? (
           <Text style={styles.none}>Sin brazos disponibles.</Text>
         ) : (
-          <Text style={styles.list}>
-            {team.bullpen.map(a => a.name).join(' · ')}
-          </Text>
+          <Disponibles lista={team.bullpen} />
         )}
       </Section>
 
@@ -86,9 +139,7 @@ function Block({ team }: { team: TeamDetail }) {
         {team.bench.length === 0 ? (
           <Text style={styles.none}>Sin sustitutos disponibles.</Text>
         ) : (
-          <Text style={styles.list}>
-            {team.bench.map(a => a.name).join(' · ')}
-          </Text>
+          <Disponibles lista={team.bench} />
         )}
       </Section>
     </View>
@@ -134,6 +185,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   row: {
+    minHeight: 44,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 7,
@@ -157,14 +209,26 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontVariant: ['tabular-nums'],
   },
-  list: {
-    color: COLORS.textSecondary,
-    fontSize: 12,
-    lineHeight: 19,
+  pressed: { backgroundColor: COLORS.bgRaised },
+  chips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
     paddingHorizontal: 14,
-    paddingBottom: 12,
+    paddingTop: 4,
+    paddingBottom: 16,
     backgroundColor: COLORS.bgCard,
   },
+  chip: {
+    height: 36,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  chipText: { color: COLORS.textSupport, fontSize: 13 },
   none: {
     color: COLORS.textSecondary,
     fontSize: 12,

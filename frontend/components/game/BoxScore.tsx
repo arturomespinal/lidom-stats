@@ -1,4 +1,5 @@
 import TeamBadge from "@/components/TeamBadge";
+import NombreJugador from "@/components/game/NombreJugador";
 import { BatterLine, PitcherLine, TeamDetail } from "@/lib/types";
 
 /**
@@ -23,7 +24,7 @@ function BatterRow({ b }: { b: BatterLine }) {
             {b.position ?? ""}
           </span>
           <span className={`truncate ${b.is_starter ? "text-fg2" : "text-dim"}`}>
-            {b.name}
+            <NombreJugador nombre={b.name} profileId={b.profile_id} />
           </span>
         </span>
       </td>
@@ -50,7 +51,7 @@ function PitcherRow({ p }: { p: PitcherLine }) {
             {p.is_starter ? "AB" : "RL"}
           </span>
           <span className="truncate text-fg2">
-            {p.name}
+            <NombreJugador nombre={p.name} profileId={p.profile_id} />
             {!!p.note && <span className="text-xs font-bold text-pos"> {p.note}</span>}
           </span>
         </span>

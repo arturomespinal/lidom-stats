@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { TeamRosterBatter, TeamRosterPitcher } from "@/lib/types";
+import { entradas } from "@/lib/formato";
 
 function pct(v: number | null | undefined): string {
   if (v == null) return "—";
@@ -123,7 +124,7 @@ export function Pitchers({ data }: { data: TeamRosterPitcher[] }) {
                 <td className="num px-2 py-2 text-right text-fg2">{j.losses}</td>
                 <td className="num px-2 py-2 text-right text-fg2">{j.saves}</td>
                 <td className="num px-2 py-2 text-right text-fg2">
-                  {num(j.innings_pitched, 1)}
+                  {entradas(j.innings_pitched)}
                 </td>
                 <td className="num px-2 py-2 text-right text-fg2">{j.so}</td>
                 <td className="num px-2 py-2 text-right font-medium text-fg">

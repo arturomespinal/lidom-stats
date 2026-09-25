@@ -1,6 +1,7 @@
 import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
 import { DEFAULT_SEASON } from "@/lib/constants";
+import { entradas } from "@/lib/formato";
 import {
   CareerBatting,
   CareerPitching,
@@ -63,7 +64,7 @@ const COLS_PITCHEO: Col<FilaPitcheo>[] = [
   { k: "G", t: "Ganados", val: (f) => String(f.wins) },
   { k: "P", t: "Perdidos", val: (f) => String(f.losses) },
   { k: "SV", t: "Salvados", val: (f) => String(f.saves) },
-  { k: "IP", t: "Entradas lanzadas", val: (f) => num(f.innings_pitched, 1) },
+  { k: "IP", t: "Entradas lanzadas", val: (f) => entradas(f.innings_pitched) },
   { k: "H", t: "Hits permitidos", val: (f) => String(f.h) },
   { k: "CL", t: "Carreras limpias", val: (f) => String(f.er) },
   { k: "BB", t: "Bases por bolas", val: (f) => String(f.bb) },

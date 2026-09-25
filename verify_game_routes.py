@@ -427,6 +427,57 @@ bb9 = call("/leaderboards/pitching?season=2025&sort_by=walks_per_nine")
 check("BB/9 ordena ascendente (menos es mejor)",
       bb9["data"][0]["walks_per_nine"] <= bb9["data"][1]["walks_per_nine"], True)
 
+print("\n━━━ is_pitcher por volumen ━━━")
+# Un jugador de posición que lanzó una vez en un juego roto NO es lanzador:
+# su ficha tiene que abrir con el bateo.
+v = call("/players/jordany-valdespin-1987-12-23")
+check("Valdespin (340 J al bate, 1 lanzando) no es lanzador", v["is_pitcher"], False)
+check("  pero su pitcheo sigue en la ficha", len(v["pitching"]) > 0, True)
+o = call("/players/wirfin-obispo-1984-09-26")
+check("Wirfin Obispo sí es lanzador", o["is_pitcher"], True)
+# Sobre la base entera: de los 1.300 que lanzaron alguna vez, 17 son jugadores
+# de posición de un juego roto. Y el corte es limpio — ningún lanzador de
+# verdad tiene 5 juegos al bate —, que es lo que justifica no usar un umbral.
+from api.main import query_db
+_b = {r["player_id"]: r["g"] for r in query_db(
+    "SELECT player_id, SUM(games_batted) AS g FROM v_batting_season GROUP BY player_id")}
+_p = {r["player_id"]: r["g"] for r in query_db(
+    "SELECT player_id, SUM(games) AS g FROM v_pitching_season GROUP BY player_id")}
+check("de quienes lanzaron, 17 pasan a jugador de posición",
+      sum(1 for k, g in _p.items() if g <= (_b.get(k) or 0)), 17)
+check("ningún lanzador por volumen tiene 5+ juegos al bate",
+      [k for k, g in _p.items() if g > (_b.get(k) or 0) and (_b.get(k) or 0) >= 5], [])
+
+print("\n━━━ /batting y /pitching llevan a la ficha ━━━")
+# Las filas de líderes salen de las tablas planas, que solo guardan el nombre.
+# El cruce por mlb_id les da el slug para enlazar a /players/{id}.
+for ruta, campo in [("/batting?season=2025&limit=200&qualified=false", "player"),
+                    ("/pitching?season=2025&limit=200&qualified=false", "player")]:
+    filas = call(ruta)["data"]
+    con_id = [f for f in filas if f.get("player_id")]
+    check(f"{ruta.split('?')[0]}: toda fila trae la clave player_id",
+          all("player_id" in f for f in filas), True)
+    check(f"{ruta.split('?')[0]}: todas las filas enlazan ({len(filas)})",
+          len(con_id), len(filas))
+    # El cruce no duplica: una fila por jugador, igual que sin el JOIN.
+    check(f"{ruta.split('?')[0]}: el cruce no duplica jugadores",
+          len({f["player_id"] for f in con_id}), len(con_id))
+    # El slug lleva al MISMO hombre: la ficha tiene su nombre y una temporada
+    # 2025-26 con el mismo equipo.
+    f0 = con_id[0]
+    ficha = call(f"/players/{f0['player_id']}")
+    temporadas = ficha["batting"] if "batting" in ruta else ficha["pitching"]
+    check(f"  la ficha de {f0['player']} es la suya",
+          ficha["player"]["full_name"] == f0["player"]
+          and any(t["season_id"] == "2025-26" and t["team_code"] == f0["team_id"]
+                  for t in temporadas), True)
+# El filtro por equipo sigue funcionando con los alias del JOIN.
+lic = call("/batting?season=2025&team=LIC&qualified=false&limit=200")["data"]
+check("/batting?team=LIC solo trae Licey", {f["team_id"] for f in lic}, {"LIC"})
+era = call("/pitching?season=2025&sort_by=era")["data"]
+check("/pitching sigue ordenando la EFE ascendente",
+      era[0]["era"] <= era[-1]["era"], True)
+
 print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:

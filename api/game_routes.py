@@ -19,7 +19,13 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
-from src.carrera import carrera_bateo, carrera_pitcheo, edad, equipos_de_la_carrera
+from src.carrera import (
+    carrera_bateo,
+    carrera_pitcheo,
+    edad,
+    equipos_de_la_carrera,
+    es_lanzador,
+)
 from src.constants import LIDOM_TEAMS, LIDOM_TEAMS_BY_CODE
 from src.lateralidad import anotar_lateralidad
 from src.models.database import get_engine
@@ -350,7 +356,7 @@ def get_player_profile(player_id: str):
         "career_batting": carrera_bateo(batting),
         "career_pitching": carrera_pitcheo(pitching),
         "teams": equipos_de_la_carrera(batting, pitching),
-        "is_pitcher": bool(pitching),
+        "is_pitcher": es_lanzador(batting, pitching),
     }
 
 

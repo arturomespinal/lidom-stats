@@ -157,7 +157,7 @@ la 2015-16. No cambiar esa clave.
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 190 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 205 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -171,6 +171,13 @@ si todo pasa.
 `/standings` · `/batting` · `/pitching` · `/player/{name}` · `/seasons`
 
 Parámetro `season` en formato crudo de la MLB API (`"2025"`).
+
+`/batting` y `/pitching` devuelven además `player_id`, el slug de la ficha: la
+tabla plana solo guarda el nombre, así que se cruza con `players` por
+`mlb_id` (**LEFT JOIN**: un jugador que no esté en el esquema de juego conserva
+su fila, con `player_id` en `null` y sin enlace). En 2025-26 enlazan 413 de 413
+bateadores y 498 de 498 lanzadores. Es lo que hace que una fila de líderes
+lleve a la ficha, en las dos plataformas.
 
 `/standings` ordena por PCT y añade, sobre lo que guarda la tabla: `short_name`
 (del catálogo canónico, para pantallas angostas), `playoff_spot`, `playoff_games`
@@ -933,10 +940,39 @@ El mínimo se calcula sobre los juegos que jugó **ese** equipo **esa** temporad
 (`team_games_played`), no sobre un 50 fijo: 2020-21 y 2021-22 fueron campañas
 recortadas por la pandemia.
 
+### `is_pitcher` se decide por volumen
+
+Era `bool(pitching)`: cualquiera con una aparición en el montículo. Eso metía a
+**17 jugadores de posición** que lanzaron una vez en un juego roto —Jordany
+Valdespin: 340 juegos al bate, 1 lanzando— y su ficha abría con "Carrera ·
+pitcheo, EFE 0.00" en vez de su bateo, en la web y en el móvil.
+
+`es_lanzador()` en `src/carrera.py` compara juegos lanzados contra juegos **con
+aparición al plato** (`games_batted`). El corte en la base real es limpio:
+ningún lanzador pasa de 4 juegos al bate —en LIDOM batea el designado—, y la
+suite comprueba las dos cosas sobre la base entera.
+
+### Las entradas lanzadas se pintan en notación de béisbol
+
+Las dos capas guardan las entradas en **decimal** (36.33 en la plana, 36.3 en
+las vistas), que es lo correcto para calcular EFE y WHIP. Pero en béisbol
+"36.3" no existe: después del punto van los outs (0, 1 ó 2). Las fichas lo
+pintaban tal cual, y el mismo lanzador salía **36.1 en Pitcheo y 36.3 en su
+ficha**.
+
+`entradas()` —`frontend/lib/formato.ts` y `mobile/src/formato.ts`, la misma
+función— pasa por los outs: `round(ip × 3)`. Funciona igual con 36.33 que con
+36.3, y reemplazó a dos copias de `fmtIP` que redondeaban la parte decimal (con
+36.99 daban "36.3"). Comprobada contra las 3.175 temporadas-lanzador de las
+vistas: devuelve exactamente sus outs en todas. **Nunca pintar
+`innings_pitched` con `toFixed(1)`.** El boxscore en vivo es otra cosa: ahí la
+MLB ya manda el string en notación de béisbol ("0.2").
+
 ### El buscador es la única puerta a las fichas
 
 `components/PlayerSearch.tsx`, en la barra superior. Con 2.253 jugadores no hay
-listado que sirva de índice.
+listado que sirva de índice. (Ya no es la única: las filas de Bateo, Pitcheo y
+Posiciones llevan a las fichas en las dos plataformas.)
 
 Tres cosas aprendidas construyéndolo:
 
@@ -960,6 +996,47 @@ cumpleaños del jugador y falla sola una vez al año.
 En el cliente, `fechaEs()` parte el string ISO a mano en vez de usar
 `new Date("1988-02-08")`: esa forma se interpreta como UTC, y en UTC-4 devuelve
 el **día anterior**. Un jugador nacido el 1ro aparecería nacido el 31.
+
+### Las fichas en el móvil
+
+`screens/PlayerScreen.tsx`, `screens/TeamScreen.tsx` y `screens/SearchScreen.tsx`,
+sobre los mismos endpoints que la web.
+
+**Cada pestaña es una pila.** Las cinco declaran las rutas `Equipo` y `Jugador`
+(`FichasParamList` en `src/navigation.ts`), así que se puede ir de posiciones a
+equipo a jugador a su equipo de 2016 sin salir de la pestaña, y el gesto de
+volver deshace ese camino. Las cuatro que no son En Vivo se fabrican con
+`crearPila()` en `App.tsx`: cuatro copias de la misma pila acabarían distintas.
+`useFichas()` navega a una ficha desde cualquier pantalla.
+
+**Una sola cabecera.** El `Tab.Navigator` ya no dibuja la suya
+(`headerShown: false`); la pone la pila. Con las dos, una ficha abría con el
+logotipo arriba y el nombre debajo: 100 pt para dos títulos. La raíz de cada
+pila lleva el logotipo; lo apilado, su título y la flecha.
+
+**El buscador es una pestaña, no una lupa arriba.** Las reglas de diseño ponen
+la navegación en el 40% inferior; una lupa arriba a la derecha es el punto más
+lejano del pulgar en un teléfono grande.
+
+Lo que cambia respecto a la web:
+
+- **Jugador:** la carrera va ARRIBA, en una franja navy (la firma del kit), y
+  no al pie de la tabla: en un teléfono eso la dejaba a dos pantallas. La
+  tabla de temporadas tiene la columna de temporada **fija** y las cifras se
+  desplazan —React Native no tiene `sticky` horizontal: son dos columnas con
+  filas de la misma altura fija—. Tocar la celda fija abre el equipo **en esa
+  temporada**, no en la actual.
+- **Equipo:** la temporada se elige con pestañas pegadas arriba (la web solo
+  la recibe por la URL). Al cambiarla, lo anterior se queda atenuado hasta que
+  llega lo nuevo, y cada petición lleva número: solo la última escribe el
+  estado. Los destacados van en carrusel; la plantilla muestra 12 filas y el
+  resto a un toque, para no enterrar el año a año bajo 1.700 pt de lista.
+- **Esqueletos, no spinners** (`components/Esqueleto.tsx`), como piden las
+  reglas: la forma de la ficha aparece al instante y no salta al llegar el dato.
+- `components/Pestanas.tsx` es la pestaña de subrayado genérica; `GameTabs` la
+  usa por debajo. Una sola implementación, una sola altura (44 pt).
+- Escala de las fichas: 28 / 22 / 14 / 11. Sin Bebas en las tablas: sus cifras
+  no son tabulares y en una columna alineada a la derecha no cuadran.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

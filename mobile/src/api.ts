@@ -4,13 +4,16 @@ import {
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
+  PlayerProfile,
+  PlayerSearchHit,
   StandingRow,
+  TeamProfile,
   WinProbResponse,
 } from './types';
 
-async function get<T>(path: string): Promise<T | null> {
+async function get<T>(path: string, signal?: AbortSignal): Promise<T | null> {
   try {
-    const res = await fetch(`${API_BASE}${path}`);
+    const res = await fetch(`${API_BASE}${path}`, { signal });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
   } catch {
@@ -72,6 +75,49 @@ export async function fetchGameDetail(
  */
 export async function fetchWinProb(gamePk: number): Promise<WinProbResponse | null> {
   return get<WinProbResponse>(`/live/games/${gamePk}/winprob`);
+}
+
+/* ── Fichas ──────────────────────────────────────────────────────────────── */
+
+export async function fetchPlayerProfile(playerId: string): Promise<PlayerProfile | null> {
+  return get<PlayerProfile>(`/players/${encodeURIComponent(playerId)}`);
+}
+
+/**
+ * `season` acepta "2025" o "2025-26": la API normaliza. `roster_limit` en 30
+ * igual que la web — los destacados se calculan sobre la plantilla ENTERA en
+ * el servidor, así que recortar la lista no cambia quién lidera.
+ */
+export async function fetchTeamProfile(
+  code: string,
+  season = DEFAULT_SEASON,
+  rosterLimit = 30,
+): Promise<TeamProfile | null> {
+  return get<TeamProfile>(
+    `/teams/${encodeURIComponent(code)}?season=${season}&roster_limit=${rosterLimit}`,
+  );
+}
+
+/**
+ * Buscador. La API exige dos caracteres y responde 422 con uno: cortar aquí
+ * evita un viaje garantizado a fallar mientras se escribe la primera letra.
+ * `signal` deja cancelar la búsqueda anterior — sin eso la respuesta lenta de
+ * "mun" puede llegar después de la de "munguia" y pisarla.
+ */
+export async function searchPlayers(
+  query: string,
+  signal?: AbortSignal,
+  limit = 20,
+): Promise<PlayerSearchHit[] | null> {
+  const q = query.trim();
+  if (q.length < 2) return [];
+  const data = await get<{ data: PlayerSearchHit[] }>(
+    `/players/search?q=${encodeURIComponent(q)}&limit=${limit}`,
+    signal,
+  );
+  // null = falló (red o cancelada), [] = no hubo resultados. La pantalla
+  // trata distinto las dos cosas: un fallo no vacía la lista que ya había.
+  return data ? data.data : null;
 }
 
 // crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son

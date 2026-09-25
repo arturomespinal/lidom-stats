@@ -132,7 +132,7 @@ export default function TeamHistory({ history, teamCode }: Props) {
 
       <p className="mt-2 text-[11px] text-faint">
         Solo temporada regular. Las barras se escalan contra la mejor campaña
-        del propio equipo, no contra .1000.
+        del propio equipo, no contra 1.000.
       </p>
     </section>
   );

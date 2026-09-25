@@ -9,11 +9,14 @@ import { BebasNeue_400Regular, useFonts } from '@expo-google-fonts/bebas-neue';
 import * as SplashScreen from 'expo-splash-screen';
 import LiveScreen from './src/screens/LiveScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
-import type { LiveStackParamList } from './src/navigation';
+import type { LiveStackParamList, PilaParamList } from './src/navigation';
 import StandingsScreen from './src/screens/StandingsScreen';
 import BattingScreen from './src/screens/BattingScreen';
 import PitchingScreen from './src/screens/PitchingScreen';
-import { COLORS, FONTS } from './src/constants';
+import SearchScreen from './src/screens/SearchScreen';
+import TeamScreen from './src/screens/TeamScreen';
+import PlayerScreen from './src/screens/PlayerScreen';
+import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
 
 // La pantalla de arranque se queda hasta que Bebas Neue esté cargada. Sin
 // esto, la primera pantalla aparece un instante con la fuente del sistema y
@@ -24,31 +27,45 @@ SplashScreen.preventAutoHideAsync().catch(() => {
 
 const Tab = createBottomTabNavigator();
 const LiveStack = createNativeStackNavigator<LiveStackParamList>();
+const Pila = createNativeStackNavigator<PilaParamList>();
+
+/** Cabecera común a todas las pilas. */
+const OPCIONES_PILA = {
+  headerStyle: { backgroundColor: COLORS.bgCard },
+  headerTintColor: COLORS.textPrimary,
+  headerTitleStyle: { fontWeight: '700' as const, fontSize: 15 },
+  headerShadowVisible: false,
+  contentStyle: { backgroundColor: COLORS.bgPage },
+  // Solo el chevron. Con el texto, iOS 26 dibuja una cápsula gris que pesa
+  // más que el propio título.
+  headerBackButtonDisplayMode: 'minimal' as const,
+};
 
 /**
- * La pestaña "En Vivo" es una PILA, no una pantalla suelta: tocar un juego
- * empuja el detalle encima, con el gesto de volver y el botón de atrás que el
- * usuario ya espera. Un Modal habría evitado la dependencia, pero también el
- * deslizar para volver, y en iOS eso se nota.
+ * Cada pestaña es una PILA, no una pantalla suelta.
+ *
+ * Antes solo "En Vivo" lo era; ahora las cinco, porque las fichas de equipo y
+ * de jugador se abren desde cualquiera: posiciones → equipo → jugador →
+ * equipo de 2016… El gesto de volver deshace ese camino paso a paso, dentro
+ * de la misma pestaña.
+ *
+ * ── Una sola cabecera ────────────────────────────────────────────────────
+ * Las pestañas ya no dibujan cabecera propia (`headerShown: false` en el
+ * Tab.Navigator): la pone la pila. Con las dos, una ficha abría con el
+ * logotipo arriba y el nombre del jugador debajo — 100 pt de pantalla para
+ * dos títulos. Ahora la raíz de cada pila lleva el logotipo y lo que se apila
+ * encima lleva su título y la flecha de volver.
  *
  * `@react-navigation/native-stack` es JavaScript sobre `react-native-screens`,
- * que ya estaba: no añade un módulo nativo nuevo ni obliga a salir de Expo Go.
+ * que ya estaba: no añade un módulo nativo ni obliga a salir de Expo Go.
  */
 function LiveTab() {
   return (
-    <LiveStack.Navigator
-      screenOptions={{
-        headerStyle: { backgroundColor: COLORS.bgCard },
-        headerTintColor: COLORS.textPrimary,
-        headerTitleStyle: { fontWeight: '700', fontSize: 15 },
-        headerShadowVisible: false,
-        contentStyle: { backgroundColor: COLORS.bgPage },
-      }}
-    >
+    <LiveStack.Navigator screenOptions={OPCIONES_PILA}>
       <LiveStack.Screen
         name="LiveList"
         component={LiveScreen}
-        options={{ headerShown: false }}
+        options={{ headerTitle: () => <Logotipo /> }}
       />
       <LiveStack.Screen
         name="GameDetail"
@@ -57,14 +74,51 @@ function LiveTab() {
           // Del parámetro y no de la respuesta: así el título está puesto antes
           // del primer fetch y la cabecera no parpadea.
           title: `${route.params.awayCode} vs ${route.params.homeCode}`,
-          // Solo el chevron. Con el texto, iOS 26 dibuja una cápsula gris que
-          // pesa más que el propio título del juego.
-          headerBackButtonDisplayMode: 'minimal',
         })}
+      />
+      <LiveStack.Screen
+        name="Equipo"
+        component={TeamScreen}
+        options={({ route }) => ({ title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+      />
+      <LiveStack.Screen
+        name="Jugador"
+        component={PlayerScreen}
+        options={({ route }) => ({ title: route.params.nombre ?? 'Jugador' })}
       />
     </LiveStack.Navigator>
   );
 }
+
+/**
+ * Las otras cuatro pestañas: una raíz y las fichas encima. Se fabrican con la
+ * misma función para que no haya cuatro copias de la misma pila que un día
+ * dejen de coincidir.
+ */
+function crearPila(Raiz: React.ComponentType) {
+  return function PilaConFichas() {
+    return (
+      <Pila.Navigator screenOptions={OPCIONES_PILA}>
+        <Pila.Screen name="Raiz" component={Raiz} options={{ headerTitle: () => <Logotipo /> }} />
+        <Pila.Screen
+          name="Equipo"
+          component={TeamScreen}
+          options={({ route }) => ({ title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+        />
+        <Pila.Screen
+          name="Jugador"
+          component={PlayerScreen}
+          options={({ route }) => ({ title: route.params.nombre ?? 'Jugador' })}
+        />
+      </Pila.Navigator>
+    );
+  };
+}
+
+const PosicionesTab = crearPila(StandingsScreen);
+const BateoTab = crearPila(BattingScreen);
+const PitcheoTab = crearPila(PitchingScreen);
+const BuscarTab = crearPila(SearchScreen);
 
 /**
  * El tema de navegación sale de COLORS, así que sigue a la paleta sola: pasó a
@@ -90,6 +144,7 @@ const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> 
   Posiciones: { active: 'podium',         inactive: 'podium-outline' },
   Bateo:      { active: 'baseball',       inactive: 'baseball-outline' },
   Pitcheo:    { active: 'radio-button-on',inactive: 'radio-button-off' },
+  Buscar:     { active: 'search',         inactive: 'search-outline' },
 };
 
 /** DEPORTIV en Bebas Neue con el punto verde: el mismo logotipo que la web. */
@@ -123,12 +178,10 @@ export default function App() {
       <StatusBar style="dark" />
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          headerStyle: { backgroundColor: COLORS.bgCard },
-          headerTintColor: COLORS.textPrimary,
-          headerTitleStyle: { fontWeight: '700', fontSize: 16 },
-          // Decía "⚾ LIDOM Stats": el nombre viejo, que la guía legal marca
-          // como uso de marca ajena. El producto se llama Deportiv.
-          headerTitle: () => <Logotipo />,
+          // La cabecera la pone cada pila (ver LiveTab). El logotipo va en la
+          // raíz de cada una: antes decía "⚾ LIDOM Stats", el nombre viejo,
+          // que la guía legal marca como uso de marca ajena.
+          headerShown: false,
           tabBarStyle: {
             backgroundColor: COLORS.bgCard,
             borderTopColor: COLORS.border,
@@ -149,9 +202,10 @@ export default function App() {
         })}
       >
         <Tab.Screen name="En Vivo"    component={LiveTab} />
-        <Tab.Screen name="Posiciones" component={StandingsScreen} />
-        <Tab.Screen name="Bateo"      component={BattingScreen} />
-        <Tab.Screen name="Pitcheo"    component={PitchingScreen} />
+        <Tab.Screen name="Posiciones" component={PosicionesTab} />
+        <Tab.Screen name="Bateo"      component={BateoTab} />
+        <Tab.Screen name="Pitcheo"    component={PitcheoTab} />
+        <Tab.Screen name="Buscar"     component={BuscarTab} />
       </Tab.Navigator>
     </NavigationContainer>
   );

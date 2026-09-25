@@ -23,6 +23,12 @@ export interface StandingRow {
 
 export interface BattingRow {
   player: string;
+  /**
+   * Slug de la ficha (/players/{id}). La tabla plana solo guarda el nombre;
+   * la API lo cruza por mlb_id. null si el jugador no está en el esquema de
+   * juego: la fila se muestra igual, sin enlace.
+   */
+  player_id: string | null;
   team_id: string;
   games: number;
   plate_appearances: number;
@@ -44,6 +50,8 @@ export interface BattingRow {
 
 export interface PitchingRow {
   player: string;
+  /** Slug de la ficha. Ver BattingRow. */
+  player_id: string | null;
   team_id: string;
   wins: number;
   losses: number;

@@ -2,6 +2,7 @@ import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -12,6 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBatting } from '../api';
 import { COLORS, FONTS } from '../constants';
+import { useFichas } from '../navigation';
 import { BattingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
@@ -64,9 +66,27 @@ function SortChips({ active, onChange }: { active: SortKey; onChange: (k: SortKe
   );
 }
 
-function PlayerRow({ item, rank, sortOpt }: { item: BattingRow; rank: number; sortOpt: SortOption }) {
+function PlayerRow({
+  item,
+  rank,
+  sortOpt,
+  onPress,
+}: {
+  item: BattingRow;
+  rank: number;
+  sortOpt: SortOption;
+  /** null cuando el jugador no está en el esquema de juego: no hay ficha. */
+  onPress: (() => void) | null;
+}) {
   return (
-    <View style={styles.row}>
+    // La fila abre la ficha. El slug llega en `player_id` porque /batting y
+    // /pitching lo cruzan por mlb_id; si no hay, la fila queda quieta.
+    <Pressable
+      onPress={onPress ?? undefined}
+      disabled={!onPress}
+      style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+      accessibilityRole={onPress ? 'button' : undefined}
+    >
       <Text style={styles.rank}>{rank}</Text>
       <View style={styles.info}>
         <View style={styles.nameRow}>
@@ -91,11 +111,12 @@ function PlayerRow({ item, rank, sortOpt }: { item: BattingRow; rank: number; so
         <Text style={styles.primaryVal}>{sortOpt.fmt(item)}</Text>
         <Text style={styles.primaryKey}>{sortOpt.label}</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export default function BattingScreen() {
+  const nav = useFichas();
   const [data, setData] = useState<BattingRow[]>([]);
   const [sortKey, setSortKey] = useState<SortKey>('ops');
   const [loading, setLoading] = useState(true);
@@ -129,9 +150,18 @@ export default function BattingScreen() {
       ) : (
         <FlatList
           data={data}
-          keyExtractor={(item, i) => `${item.player}-${i}`}
+          keyExtractor={(item, i) => item.player_id ?? `${item.player}-${i}`}
           renderItem={({ item, index }) => (
-            <PlayerRow item={item} rank={index + 1} sortOpt={sortOpt} />
+            <PlayerRow
+              item={item}
+              rank={index + 1}
+              sortOpt={sortOpt}
+              onPress={
+                item.player_id
+                  ? () => nav.push('Jugador', { playerId: item.player_id!, nombre: item.player })
+                  : null
+              }
+            />
           )}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           refreshControl={
@@ -160,6 +190,7 @@ const styles = StyleSheet.create({
   chipActive: { borderColor: COLORS.accent, backgroundColor: COLORS.accent },
   chipLabel: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
   chipLabelActive: { color: COLORS.accentOn },
+  rowPressed: { backgroundColor: COLORS.bgRaised },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -175,7 +206,9 @@ const styles = StyleSheet.create({
   statsRow: { flexDirection: 'row', alignItems: 'center' },
   statLabel: { color: COLORS.textSecondary, fontSize: 12 },
   statVal: { color: COLORS.textSecondary, fontSize: 12 },
-  dot: { color: COLORS.border, fontSize: 12 },
+  // Separador en textFaint, no en `border`: los tokens de borde dan 1.4:1
+  // y nunca son color de texto.
+  dot: { color: COLORS.textFaint, fontSize: 12 },
   primaryStat: { alignItems: 'flex-end', minWidth: 58 },
   // Bebas Neue, sin fontWeight (ver FONTS).
   primaryVal: { color: COLORS.accent, fontSize: 28, fontFamily: FONTS.display, fontVariant: ['tabular-nums'] },

@@ -1,8 +1,10 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
 import { PitchingRow } from "@/lib/types";
+import { entradas } from "@/lib/formato";
 
 type SortKey =
   | "era"
@@ -27,13 +29,6 @@ const COLUMNS: { key: SortKey; label: string; title: string; asc?: boolean }[] =
 
 function fmt2(v: number | null) {
   return v != null ? v.toFixed(2) : "—";
-}
-
-function fmtIP(v: number | null) {
-  if (v == null) return "—";
-  const whole = Math.floor(v);
-  const thirds = Math.round((v - whole) * 3);
-  return thirds === 0 ? `${whole}.0` : `${whole}.${thirds}`;
 }
 
 interface SortBtnProps {
@@ -114,12 +109,31 @@ export default function PitchingTable({ data }: { data: PitchingRow[] }) {
         <tbody>
           {sorted.map((row, i) => (
             <tr
-              key={`${row.player}-${i}`}
+              key={row.player_id ?? `${row.player}-${i}`}
               className="border-t border-line bg-card hover:bg-raised transition-colors"
             >
-              <td className="px-4 py-2.5 font-medium">{row.player}</td>
+              <td className="px-4 py-2.5 font-medium">
+                {/* El nombre lleva a la ficha: las catorce temporadas del
+                    hombre, no solo esta. Sin slug, texto quieto. */}
+                {row.player_id ? (
+                  <Link
+                    href={`/players/${row.player_id}`}
+                    className="text-fg underline-offset-2 hover:underline"
+                  >
+                    {row.player}
+                  </Link>
+                ) : (
+                  row.player
+                )}
+              </td>
               <td className="px-3 py-2.5 text-center">
-                <TeamBadge code={row.team_id} />
+                <Link
+                  href={`/teams/${row.team_id}`}
+                  className="inline-block"
+                  aria-label={`Ver ${row.team_id}`}
+                >
+                  <TeamBadge code={row.team_id} />
+                </Link>
               </td>
               <td className="px-3 py-2.5 text-center text-dim">
                 {row.games}
@@ -138,7 +152,7 @@ export default function PitchingTable({ data }: { data: PitchingRow[] }) {
                 {fmt2(row.whip)}
               </td>
               <td className="px-3 py-2.5 text-center text-dim">
-                {fmtIP(row.innings_pitched)}
+                {entradas(row.innings_pitched)}
               </td>
               <td className="px-3 py-2.5 text-center">{row.strikeouts}</td>
               <td className="px-3 py-2.5 text-center font-mono text-dim">

@@ -213,16 +213,24 @@ def get_batting(
     if min_pa is None:
         min_pa = qualifying_pa(_season_team_games(season)) if applies else 0
 
-    team_filter = "AND team_id = :team" if team else ""
+    team_filter = "AND b.team_id = :team" if team else ""
+    # El LEFT JOIN a `players` trae el slug de la ficha (`player_id`). Sin él
+    # una fila de líderes no puede llevar a nada: la tabla plana solo guarda el
+    # nombre, y buscar por nombre es justo donde dos homónimos se confunden.
+    # `mlb_id` es único en `players`, así que el cruce nunca duplica filas; y
+    # es LEFT porque un jugador que no esté en el esquema de juego conserva su
+    # fila, solo que sin enlace (player_id en null).
     sql = f"""
-        SELECT player, team_id, games, plate_appearances, at_bats, runs,
-               hits, doubles, triples, home_runs, rbi, stolen_bases,
-               walks, strikeouts, batting_avg, on_base_pct, slugging_pct, ops
-        FROM batting_stats
-        WHERE season = :season
-          AND plate_appearances >= :min_pa
+        SELECT b.player, p.player_id, b.team_id, b.games, b.plate_appearances,
+               b.at_bats, b.runs, b.hits, b.doubles, b.triples, b.home_runs,
+               b.rbi, b.stolen_bases, b.walks, b.strikeouts, b.batting_avg,
+               b.on_base_pct, b.slugging_pct, b.ops
+        FROM batting_stats b
+        LEFT JOIN players p ON p.mlb_id = b.mlb_player_id
+        WHERE b.season = :season
+          AND b.plate_appearances >= :min_pa
           {team_filter}
-        ORDER BY {safe_sort} DESC NULLS LAST
+        ORDER BY b.{safe_sort} DESC NULLS LAST
         LIMIT :limit
     """
 
@@ -264,16 +272,19 @@ def get_pitching(
     if min_ip is None:
         min_ip = qualifying_ip(_season_team_games(season)) if applies else 0.0
 
-    team_filter = "AND team_id = :team" if team else ""
+    team_filter = "AND s.team_id = :team" if team else ""
+    # Mismo cruce que en /batting: el slug de la ficha, sin perder filas.
     sql = f"""
-        SELECT player, team_id, wins, losses, era, games, games_started,
-               saves, innings_pitched, hits, earned_runs, walks, strikeouts,
-               whip, strikeouts_per_nine, walks_per_nine
-        FROM pitching_stats
-        WHERE season = :season
-          AND (innings_pitched IS NULL OR innings_pitched >= :min_ip)
+        SELECT s.player, p.player_id, s.team_id, s.wins, s.losses, s.era,
+               s.games, s.games_started, s.saves, s.innings_pitched, s.hits,
+               s.earned_runs, s.walks, s.strikeouts, s.whip,
+               s.strikeouts_per_nine, s.walks_per_nine
+        FROM pitching_stats s
+        LEFT JOIN players p ON p.mlb_id = s.mlb_player_id
+        WHERE s.season = :season
+          AND (s.innings_pitched IS NULL OR s.innings_pitched >= :min_ip)
           {team_filter}
-        ORDER BY {safe_sort} {order} NULLS LAST
+        ORDER BY s.{safe_sort} {order} NULLS LAST
         LIMIT :limit
     """
 

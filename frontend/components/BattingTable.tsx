@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
 import { BattingRow } from "@/lib/types";
 
@@ -105,12 +106,31 @@ export default function BattingTable({ data }: { data: BattingRow[] }) {
         <tbody>
           {sorted.map((row, i) => (
             <tr
-              key={`${row.player}-${i}`}
+              key={row.player_id ?? `${row.player}-${i}`}
               className="border-t border-line bg-card hover:bg-raised transition-colors"
             >
-              <td className="px-4 py-2.5 font-medium">{row.player}</td>
+              <td className="px-4 py-2.5 font-medium">
+                {/* El nombre lleva a la ficha: las catorce temporadas del
+                    hombre, no solo esta. Sin slug, texto quieto. */}
+                {row.player_id ? (
+                  <Link
+                    href={`/players/${row.player_id}`}
+                    className="text-fg underline-offset-2 hover:underline"
+                  >
+                    {row.player}
+                  </Link>
+                ) : (
+                  row.player
+                )}
+              </td>
               <td className="px-3 py-2.5 text-center">
-                <TeamBadge code={row.team_id} />
+                <Link
+                  href={`/teams/${row.team_id}`}
+                  className="inline-block"
+                  aria-label={`Ver ${row.team_id}`}
+                >
+                  <TeamBadge code={row.team_id} />
+                </Link>
               </td>
               <td className="px-3 py-2.5 text-center text-dim">
                 {row.games}

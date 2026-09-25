@@ -98,6 +98,25 @@ def carrera_pitcheo(temporadas: list[dict]) -> dict[str, Any] | None:
     return total
 
 
+def es_lanzador(bateo: list[dict], pitcheo: list[dict]) -> bool:
+    """
+    ¿Es un lanzador? Por VOLUMEN, no por haber lanzado alguna vez.
+
+    Antes era `bool(pitcheo)`: cualquiera con una aparición en el montículo.
+    Eso metía a 17 jugadores de posición que lanzaron una sola vez en un juego
+    roto —Jordany Valdespin: 340 juegos al bate, 1 lanzando— y su ficha abría
+    con "Carrera · pitcheo, EFE 0.00" en vez de su bateo.
+
+    Se comparan juegos lanzados contra juegos CON aparición al plato
+    (`games_batted`, no `games`: un corredor emergente no batea). En la base
+    real el corte es limpio: ningún lanzador pasa de 4 juegos al bate —en
+    LIDOM batea el designado—, así que no hace falta un umbral fino.
+    """
+    juegos_lanzando = sum(t.get("games") or 0 for t in pitcheo)
+    juegos_bateando = sum(t.get("games_batted") or 0 for t in bateo)
+    return juegos_lanzando > juegos_bateando
+
+
 def equipos_de_la_carrera(*bloques: list[dict]) -> list[dict[str, Any]]:
     """Los equipos por los que pasó, con el rango de temporadas en cada uno.
 

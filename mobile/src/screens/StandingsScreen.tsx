@@ -2,6 +2,7 @@ import React, { useCallback, useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
+  Pressable,
   RefreshControl,
   StyleSheet,
   Text,
@@ -10,6 +11,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchStandings } from '../api';
 import { COLORS, TEAM_STYLES } from '../constants';
+import { useFichas } from '../navigation';
 import { StandingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
@@ -72,7 +74,15 @@ function Cutline() {
   );
 }
 
-function TeamRow({ item, rank }: { item: StandingRow; rank: number }) {
+function TeamRow({
+  item,
+  rank,
+  onPress,
+}: {
+  item: StandingRow;
+  rank: number;
+  onPress: () => void;
+}) {
   const diff = item.run_differential;
   const diffColor =
     diff == null ? COLORS.textSecondary : diff >= 0 ? POS : NEG;
@@ -83,7 +93,18 @@ function TeamRow({ item, rank }: { item: StandingRow; rank: number }) {
   const accent = TEAM_STYLES[item.team_id]?.primary ?? COLORS.border;
 
   return (
-    <View style={[styles.row, !item.playoff_spot && styles.rowOut]}>
+    // La fila entera abre la ficha del equipo. Es la entrada natural: quien
+    // mira la tabla y ve a su equipo quinto quiere saber por qué.
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.row,
+        !item.playoff_spot && styles.rowOut,
+        pressed && styles.rowPressed,
+      ]}
+      accessibilityRole="button"
+      accessibilityLabel={`${rank}. ${item.short_name ?? item.team_name}, ${item.wins} ganados, ${item.losses} perdidos. Abrir equipo`}
+    >
       <View style={[styles.teamStripe, { backgroundColor: accent }]} />
 
       <Text
@@ -122,11 +143,12 @@ function TeamRow({ item, rank }: { item: StandingRow; rank: number }) {
       >
         {fmtClas(item.playoff_games)}
       </Text>
-    </View>
+    </Pressable>
   );
 }
 
 export default function StandingsScreen() {
+  const nav = useFichas();
   const [data, setData] = useState<StandingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -169,7 +191,11 @@ export default function StandingsScreen() {
       ListHeaderComponent={Header}
       renderItem={({ item, index }) => (
         <>
-          <TeamRow item={item} rank={index + 1} />
+          <TeamRow
+            item={item}
+            rank={index + 1}
+            onPress={() => nav.push('Equipo', { code: item.team_id })}
+          />
           {index === cutIndex && <Cutline />}
         </>
       )}
@@ -242,6 +268,7 @@ const styles = StyleSheet.create({
   },
   // Quien está fuera se hunde un tono contra el fondo de la página.
   rowOut: { backgroundColor: COLORS.bgPage },
+  rowPressed: { backgroundColor: COLORS.bgRaised },
   teamStripe: {
     position: 'absolute',
     left: 0,

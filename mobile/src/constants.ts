@@ -51,6 +51,21 @@ export const TEAM_STYLES: Record<string, TeamStyle> = {
 };
 
 /**
+ * Nombre corto de cada club, los mismos que la web (TEAM_SHORT_NAMES en
+ * frontend/lib/constants.ts). Sirve para títulos y subtítulos ANTES de que
+ * llegue la respuesta: la cabecera de una ficha de equipo no tiene que abrir
+ * diciendo "LIC" para cambiar a "Licey" medio segundo después.
+ */
+export const TEAM_SHORT_NAMES: Record<string, string> = {
+  AGU: 'Águilas',
+  TOR: 'Toros',
+  EST: 'Estrellas',
+  GIG: 'Gigantes',
+  ESC: 'Escogido',
+  LIC: 'Licey',
+};
+
+/**
  * Paleta de Deportiv — fuente única para el móvil. Los MISMOS valores que
  * frontend/app/globals.css; la tabla de contraste completa vive allá.
  *

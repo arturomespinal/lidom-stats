@@ -3,13 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { fetchGameDetail } from "@/lib/api";
-import { LiveGameDetail } from "@/lib/types";
+import { fetchGameDetail, fetchWinProb } from "@/lib/api";
+import { LiveGameDetail, WinProbResponse } from "@/lib/types";
 import TeamBadge from "@/components/TeamBadge";
+import StatusBadge from "@/components/StatusBadge";
 import PlayByPlay from "@/components/game/PlayByPlay";
 import InningGrid from "@/components/game/InningGrid";
 import BoxScore from "@/components/game/BoxScore";
 import Lineups from "@/components/game/Lineups";
+import WinProbBand from "@/components/game/WinProbBand";
 
 /**
  * Detalle de un juego en la web.
@@ -46,6 +48,7 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
   const tab: TabKey = TABS.some((t) => t.key === raw) ? (raw as TabKey) : "relato";
 
   const [detail, setDetail] = useState<LiveGameDetail | null>(null);
+  const [wp, setWp] = useState<WinProbResponse | null>(null);
   const [updating, setUpdating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -68,8 +71,18 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
     let cancelled = false;
 
     async function load() {
-      const res = await fetchGameDetail(gamePk, PLAYS);
+      // El recorrido va en el MISMO ciclo que el detalle, en paralelo: un solo
+      // ritmo de sondeo. Dos bucles independientes acabarían desfasados y la
+      // curva podría mostrar una carrera que el marcador todavía no tiene.
+      const [res, prob] = await Promise.all([
+        fetchGameDetail(gamePk, PLAYS),
+        fetchWinProb(gamePk),
+      ]);
       if (cancelled) return;
+
+      // Un fallo del recorrido no toca lo que ya se mostraba, igual que el
+      // detalle: se queda la última curva buena.
+      if (prob) setWp(prob);
 
       if (res) {
         setDetail(res.data);
@@ -120,7 +133,6 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
     );
   }
 
-  const live = detail.status === "live";
   const awayWin = detail.away.runs > detail.home.runs;
   const homeWin = detail.home.runs > detail.away.runs;
 
@@ -128,16 +140,7 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
     <article className="overflow-hidden rounded-lg border border-line bg-card">
       <header className="border-b border-line px-4 py-3">
         <div className="mb-3 flex items-center gap-2">
-          {live ? (
-            <span className="flex items-center gap-1.5 rounded border border-live/30 bg-live/[.125] px-2 py-0.5 text-[10px] font-bold text-live">
-              <span className="h-1.5 w-1.5 rounded-full bg-live" />
-              EN VIVO
-            </span>
-          ) : (
-            <span className="rounded border border-line bg-header px-2 py-0.5 text-[10px] font-bold text-dim">
-              {detail.status === "final" ? "FINAL" : "PREVIA"}
-            </span>
-          )}
+          <StatusBadge status={detail.status} />
           {failed && <span className="text-[10px] text-warn">sin señal</span>}
           {!updating && detail.status === "final" && (
             <span className="text-[10px] text-dim">resultado definitivo</span>
@@ -160,6 +163,18 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
             reverse
           />
         </div>
+
+        {/* La franja. Necesita al menos dos puntos para ser una curva; en la
+            previa no hay estado que simular y no se pinta nada. */}
+        {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
+          <WinProbBand
+            points={wp.points}
+            current={wp.current}
+            homeCode={detail.home.team_code}
+            awayCode={detail.away.team_code}
+            final={detail.status === "final"}
+          />
+        )}
       </header>
 
       <nav

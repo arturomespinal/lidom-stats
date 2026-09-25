@@ -88,7 +88,12 @@ from src.live.gumbo import ordinal_es  # noqa: E402
 check("ordinales de la 1ra a la 10ma",
       [ordinal_es(i) for i in range(1, 11)],
       ["1ro", "2do", "3ro", "4to", "5to", "6to", "7mo", "8vo", "9no", "10mo"])
-check("entradas extra pasadas la décima", ordinal_es(12), "12vo")
+# Esta comprobación decía "12vo" y protegía el error: "doceavo" es un
+# partitivo, no un ordinal. El ordinal es duodécimo → 12mo.
+check("entradas extra pasadas la décima",
+      [ordinal_es(i) for i in range(11, 21)],
+      ["11mo", "12mo", "13ro", "14to", "15to", "16to", "17mo", "18vo", "19no", "20mo"])
+check("pasado el 20 manda la unidad", (ordinal_es(21), ordinal_es(23)), ("21ro", "23ro"))
 check("sin entrada no inventa ordinal", ordinal_es(None), None)
 check("una entrada inválida tampoco", ordinal_es(0), None)
 check("bateador presente en vivo", mid.batter, "Magneuris Sierra")

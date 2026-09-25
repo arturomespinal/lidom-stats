@@ -61,7 +61,20 @@ def ordinal_es(inning: Optional[int]) -> Optional[str]:
     """
     if not isinstance(inning, int) or inning < 1:
         return None
-    return _ORDINALES_ES.get(inning, f"{inning}vo")
+    if inning in _ORDINALES_ES:
+        return _ORDINALES_ES[inning]
+    # Entradas extra. Aquí vivía un `f"{inning}vo"` que daba "11vo", "12vo",
+    # "13vo"… Eso viene de "onceavo", que es un PARTITIVO —una onceava
+    # parte—, no un ordinal; la RAE lo marca como error. Los ordinales son
+    # undécimo (11mo), duodécimo (12mo), decimotercero (13ro), decimocuarto
+    # (14to)… A partir del 13 el sufijo lo pone la unidad, igual que del 1 al
+    # 9: decimoTERCERO → "ro", vigésimo PRIMERO → "ro". Y en las decenas
+    # redondas —vigésimo, trigésimo— es "mo".
+    if inning in (11, 12):
+        return f"{inning}mo"
+    unidad = inning % 10
+    sufijo = "mo" if unidad == 0 else _ORDINALES_ES[unidad][1:]
+    return f"{inning}{sufijo}"
 
 
 def _team_code(team: dict) -> str:

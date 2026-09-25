@@ -21,7 +21,7 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * El fondo es #08090C. El azul oficial de Licey (#003DA5) y el verde de
+ * El fondo es #06152B. El azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
  */

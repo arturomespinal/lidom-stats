@@ -45,9 +45,17 @@ export default function TeamBadge({
   };
 
   const dim =
+    size === "sm" ? "w-8 h-8 text-[11px]" : "w-10 h-10 text-[13px]";
+
+  // La perfilada no puede llevar `clip-path`: el recorte cortaría el borde
+  // justo en la diagonal y dejaría la marca sin trazo en esa arista. Lleva el
+  // mismo eco que el móvil —la esquina inferior derecha con casi el doble de
+  // radio— y así las dos plataformas dibujan la misma teja. Los valores son
+  // los de mobile/src/components/TeamBadge.tsx: 0.22 y 0.42 del lado.
+  const radio =
     size === "sm"
-      ? "w-8 h-8 text-[11px] rounded-lg"
-      : "w-10 h-10 text-[13px] rounded-[10px]";
+      ? "rounded-[7px] rounded-br-[13px]"
+      : "rounded-[9px] rounded-br-[17px]";
 
   if (variant === "solid") {
     return (
@@ -68,7 +76,7 @@ export default function TeamBadge({
 
   return (
     <span
-      className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.03em] ${dim}`}
+      className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.03em] ${dim} ${radio}`}
       style={{
         backgroundColor: style.tint,
         border: `1.5px solid ${style.primary}`,

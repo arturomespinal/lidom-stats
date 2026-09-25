@@ -7,6 +7,7 @@ import {
   PlayerSearchHit,
   StandingRow,
   TeamProfile,
+  WinProbResponse,
 } from "@/lib/types";
 
 /* Se exporta porque el marcador en vivo arma la URL del EventSource a mano:
@@ -107,6 +108,16 @@ export async function fetchGameDetail(
   return apiFetch<LiveDetailResponse>(
     `/live/games/${gamePk}/detail?plays=${plays}`
   );
+}
+
+/**
+ * El recorrido de la probabilidad de ganar. La pantalla de juego lo pide en
+ * el MISMO ciclo que el detalle: un solo ritmo de sondeo, no dos.
+ */
+export async function fetchWinProb(
+  gamePk: number
+): Promise<WinProbResponse | null> {
+  return apiFetch<WinProbResponse>(`/live/games/${gamePk}/winprob`);
 }
 
 /* ── Fichas ──────────────────────────────────────────────────────────────── */

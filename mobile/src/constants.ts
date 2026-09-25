@@ -21,7 +21,7 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * El fondo es #08090C. El azul oficial de Licey (#003DA5) y el verde de
+ * El fondo es #06152B. El azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
  *
@@ -53,32 +53,42 @@ export const TEAM_STYLES: Record<string, TeamStyle> = {
  * sobre card", va a desaparecer: un fondo al 12% del acento sobre la tarjeta
  * es literalmente invisible.
  *
- * ── Dónde vive la marca ───────────────────────────────────────────────────
- * `brand` y `brandNavy` son SOLO para el cascarón: icono, splash, logotipo de
- * cabecera, estados vacíos. El verde de Deportiv y el de Estrellas son el
- * mismo tono, y el navy choca con Licey: si el verde entrara en las tablas,
- * cada fila de Estrellas parecería destacada y cada dato destacado parecería
- * de Estrellas.
+ * ── El navy es la SUPERFICIE ──────────────────────────────────────────────
+ * La regla prohíbe un ACENTO de marca, no una superficie. El navy de
+ * Deportiv es el fondo de toda la app: un fondo no compite con el texto de
+ * ningún club. Con el negro neutro anterior la app era correcta y anónima.
+ * `brand` (el verde) sigue siendo SOLO cascarón: es el tono de Estrellas.
+ *
+ * ── Contraste medido ──────────────────────────────────────────────────────
+ * Todo token de texto pasa 4.5:1 sobre bgCard. `textFaint` era el que
+ * fallaba (2.9:1 en la paleta negra) y es el de las micro-etiquetas: el
+ * texto más chico, el que más lo necesita. Tabla completa en
+ * frontend/app/globals.css — los valores son los MISMOS.
+ *
+ * ── El color de club NUNCA identifica solo ────────────────────────────────
+ * Toros, Escogido y Gigantes caen los tres en la familia roja-magenta
+ * (Gigantes↔Toros ΔE 7.4, bajo el piso de 15 con visión normal). Es
+ * estructural: toda marca de color de club va con su código de tres letras.
  *
  * Ningún componente escribe un hex a mano. Si un color no está aquí, o es de
  * equipo (TEAM_STYLES) o falta un token.
  */
 export const COLORS = {
-  bgPage:   '#08090C',
-  bgSunken: '#050608',   // filas hundidas (equipos fuera de la clasificación)
-  bgCard:   '#12151B',
-  bgRaised: '#1A1E26',   // superficie elevada, presionada
-  bgHeader: '#1A1E26',
-  border:   '#252A34',
-  borderSoft: '#14171D', // separadores de fila, más tenues que el borde
+  bgPage:   '#06152B',
+  bgSunken: '#041022',   // filas hundidas (equipos fuera de la clasificación)
+  bgCard:   '#0B2038',
+  bgRaised: '#112A48',   // superficie elevada, presionada
+  bgHeader: '#0E2340',
+  border:   '#1B3A5C',
+  borderSoft: '#12294A', // separadores de fila, más tenues que el borde
 
-  textPrimary:   '#F1F3F7',
-  textSupport:   '#A6AEBC',  // texto de apoyo: nombres de equipo, líneas
-  textSecondary: '#6B7382',  // etiquetas, datos menores
-  textFaint:     '#565E6B',  // micro-etiquetas en versalitas
+  textPrimary:   '#EAF0F8',
+  textSupport:   '#B9C8DB',  // texto de apoyo: nombres de equipo, líneas
+  textSecondary: '#8FA6C2',  // etiquetas, datos menores
+  textFaint:     '#7C94B2',  // micro-etiquetas en versalitas (5.1:1)
 
-  accent:   '#F1F3F7',   // = textPrimary. Ver la nota de arriba.
-  accentOn: '#08090C',   // = bgPage. Texto sobre relleno claro.
+  accent:   '#EAF0F8',   // = textPrimary. El acento sigue sin ser color.
+  accentOn: '#06152B',   // = bgPage. Texto sobre relleno claro.
 
   // Semánticos. Significan algo, así que no cambian con la paleta.
   positive: '#3DDC97',   // bueno, ventaja, clasifica
@@ -86,7 +96,7 @@ export const COLORS = {
   warning:  '#FFC53D',   // base ocupada, out consumido, dato viejo
   live:     '#FF3B30',   // en vivo, ahora mismo
 
-  // Marca. SOLO cascarón — ver la nota de arriba.
+  // Marca. El verde, SOLO cascarón. El navy ya es la superficie.
   brand:     '#03DA58',
   brandNavy: '#091C3A',
 };

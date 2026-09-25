@@ -237,7 +237,7 @@ const styles = StyleSheet.create({
   },
   codeText: { color: COLORS.textSecondary, fontSize: 11, fontFamily: 'monospace' },
   emptyHint: {
-    color: COLORS.border,
+    color: COLORS.textFaint,
     fontSize: 11,
     lineHeight: 16,
     textAlign: 'center',

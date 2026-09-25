@@ -12,7 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail } from '../api';
-import { COLORS, ALPHA } from '../constants';
+import { COLORS } from '../constants';
 import { LiveGameDetail } from '../types';
 import type { LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
@@ -20,6 +20,7 @@ import PlayByPlay from '../components/PlayByPlay';
 import InningGrid from '../components/InningGrid';
 import BoxScore from '../components/BoxScore';
 import Lineups from '../components/Lineups';
+import StatusBadge from '../components/StatusBadge';
 import TeamBadge from '../components/TeamBadge';
 
 /**
@@ -168,25 +169,13 @@ function ScoreHeader({
   updating: boolean;
   failed: boolean;
 }) {
-  const live = detail.status === 'live';
   const ganaVisitante = detail.away.runs > detail.home.runs;
   const ganaLocal = detail.home.runs > detail.away.runs;
 
   return (
     <View style={styles.header}>
       <View style={styles.headerTop}>
-        {live ? (
-          <View style={styles.pillLive}>
-            <View style={styles.dot} />
-            <Text style={styles.pillLiveText}>EN VIVO</Text>
-          </View>
-        ) : (
-          <View style={styles.pill}>
-            <Text style={styles.pillText}>
-              {detail.status === 'final' ? 'FINAL' : 'PREVIA'}
-            </Text>
-          </View>
-        )}
+        <StatusBadge status={detail.status} />
         {failed && <Text style={styles.stale}>sin señal</Text>}
         {!updating && detail.status === 'final' && (
           <Text style={styles.frozen}>resultado definitivo</Text>
@@ -267,28 +256,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   headerTop: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 12 },
-  pill: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: COLORS.border,
-    backgroundColor: COLORS.bgHeader,
-  },
-  pillText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '700' },
-  pillLive: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: ALPHA.live30,
-    backgroundColor: ALPHA.live15,
-  },
-  pillLiveText: { color: COLORS.live, fontSize: 10, fontWeight: '700' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.live },
   stale: { color: COLORS.warning, fontSize: 10 },
   frozen: { color: COLORS.textSecondary, fontSize: 10 },
 

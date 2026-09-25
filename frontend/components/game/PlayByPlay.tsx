@@ -53,7 +53,7 @@ function Play({ play, away, home }: { play: PlayLine; away: string; home: string
         {!!play.batter && (
           <p className="truncate text-xs text-dim">
             {play.batter}
-            {!!play.pitcher && <span className="text-line"> ante </span>}
+            {!!play.pitcher && <span className="text-faint"> ante </span>}
             {play.pitcher}
           </p>
         )}

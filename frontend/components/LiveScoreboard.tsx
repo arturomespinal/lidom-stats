@@ -2,6 +2,7 @@ import Link from "next/link";
 import { LiveGameState, LiveTeamLine } from "@/lib/types";
 import TeamBadge from "@/components/TeamBadge";
 import BaseDiamond from "@/components/BaseDiamond";
+import StatusBadge from "@/components/StatusBadge";
 
 interface Props {
   state: LiveGameState;
@@ -13,32 +14,20 @@ interface Props {
 }
 
 function StatusPill({ state }: { state: LiveGameState }) {
-  if (state.status === "live") {
-    return (
-      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[11px] font-semibold bg-live/[.125] text-neg border border-live/30">
-        <span className="relative flex h-1.5 w-1.5">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-neg opacity-75" />
-          <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-neg" />
-        </span>
-        EN VIVO
-      </span>
-    );
-  }
-  if (state.status === "final") {
-    return (
-      <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-header text-dim border border-line">
-        FINAL
-        {state.inning && state.inning !== state.scheduled_innings
-          ? ` (${state.inning})`
-          : ""}
-      </span>
-    );
-  }
-  return (
-    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-accent/[.125] text-accent border border-accent/30">
-      {state.detailed_status || "PREVIA"}
-    </span>
-  );
+  // Las entradas extra van en la etiqueta: "FINAL (10)".
+  const extra =
+    state.status === "final" &&
+    state.inning &&
+    state.inning !== state.scheduled_innings
+      ? ` (${state.inning})`
+      : "";
+  const label =
+    state.status === "preview" || state.status === "other"
+      ? state.detailed_status || undefined
+      : state.status === "final"
+        ? `FINAL${extra}`
+        : undefined;
+  return <StatusBadge status={state.status} label={label} />;
 }
 
 function TeamRow({

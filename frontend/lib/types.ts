@@ -255,6 +255,34 @@ export interface LiveDetailResponse {
   data: LiveGameDetail;
 }
 
+/* ── Probabilidad de ganar ───────────────────────────────────────────────
+   Lo que devuelve /live/games/{pk}/winprob. Va aparte de /detail porque se
+   refresca en cada sondeo y pesa unos cientos de bytes, contra los 19 KB del
+   detalle. */
+
+export interface WinProbPoint {
+  inning: number;
+  is_top: boolean;
+  /** Marcador en ese momento. */
+  away: number;
+  home: number;
+  /** Probabilidad de que gane el LOCAL, 0..1. */
+  wp: number;
+  /** "Alta del 3ro", compuesto en el backend. El cliente no lo arma. */
+  label: string;
+}
+
+export interface WinProbResponse {
+  age_seconds: number;
+  is_updating: boolean;
+  home_team: string | null;
+  away_team: string | null;
+  /** La de ahora mismo. `null` en previa y en final: ahí hay resultado. */
+  current: number | null;
+  points: WinProbPoint[];
+  points_count: number;
+}
+
 /* ── Fichas: jugador y equipo ─────────────────────────────────────────────
    Vienen del esquema de granularidad de juego (api/game_routes.py), no de las
    tablas planas. Es la diferencia entre "el líder de esta temporada" y "las

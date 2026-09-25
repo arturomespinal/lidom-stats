@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   names: { color: COLORS.textSecondary, fontSize: 12, marginTop: 2 },
-  vs: { color: COLORS.border },
+  vs: { color: COLORS.textFaint },
 
   score: { alignItems: 'flex-end', minWidth: 42 },
   scoreNum: {

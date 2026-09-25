@@ -45,6 +45,9 @@ python main.py ingest-games 2025 --refresh    # re-procesa juegos ya ingestados
 uvicorn api.main:app --reload          # http://localhost:8000
 # Docs interactivas: http://localhost:8000/docs
 
+# La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
+python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
+
 # Las siete suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
@@ -156,6 +159,7 @@ la 2015-16. No cambiar esa clave.
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
 | `verify_game_routes.py` | 190 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
+| `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
 Las siete suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
@@ -287,69 +291,97 @@ Las cinco páginas se compararon en captura antes y después de migrar. Posicion
 Bateo y Pitcheo salen idénticas píxel a píxel; las dos de En Vivo difieren solo
 porque la repetición avanzó entre una captura y otra.
 
-## Escudos de los equipos
+## Marcas de equipo: no hay escudos
 
-`static/crests/{CODIGO}.png`, servidos por el backend en
-`/static/crests/AGU.png`. **No se empaquetan en los clientes**, por tres razones:
+Los escudos oficiales se quitaron (ver "Antes de monetizar"). `TeamBadge`, en
+las dos plataformas, dibuja el código de tres letras en una teja del color del
+club — marca propia, sin archivo que pedirle al backend. `static/crests/` y el
+montaje `/static` pueden desaparecer sin tocar ningún cliente.
 
-1. Un solo lugar para los seis archivos, compartido por la web y el móvil.
-2. Cambiar un escudo no obliga a recompilar ni a publicar versión nueva en Expo.
-3. En React Native, `require()` de un archivo que no existe **revienta el
-   empaquetado de Metro**. Por URL, un escudo que falta simplemente no carga.
-
-`TeamBadge` cae a las siglas sobre el color del equipo cuando el escudo no está,
-así que la carpeta puede estar vacía o a medias sin que nada se rompa.
-
-**En la web, `onError` NO basta.** El HTML llega renderizado desde el servidor,
-así que el navegador empieza a cargar la imagen antes de que React hidrate: si
-da 404 en esa ventana, el evento se dispara sin manejador escuchando y se
-pierde — se veía el icono de imagen rota en vez del respaldo. El `ref` comprueba
-al montar si la imagen ya terminó con `naturalWidth === 0`, que es la única
-forma de enterarse de ese caso. En el móvil no pasa: no hay render de servidor.
-
-Los archivos están en `.gitignore` (ver `static/crests/README.md`): son marcas
-registradas de los seis clubes y el repositorio es público. Quitar esas dos
-líneas es una decisión de una sola edición.
-
-**Los colores de equipo se ajustaron al escudo, pero no ciegamente.**
-`TEAM_STYLES.primary` pinta la franja de 3 px de la fila; con los escudos
-puestos, Águilas tenía franja amarilla y escudo naranja, y Gigantes franja azul
-y escudo magenta. Solo esos dos cambiaron.
-
-En los otros cuatro el tono dominante del escudo es **más oscuro** que el color
-del uniforme —el verde de Estrellas sale #004818, el azul de Licey casi
-negro— y no se ve como franja sobre `#0B0B0C`. Ahí gana el color del club. Por
-eso los valores llevan un piso de luminosidad y no salen tal cual del PNG.
-
-Toros es monocromo: el escudo no tiene ningún color del que extraer, y conserva
-su rojo.
+Los colores de club viven en `TEAM_STYLES` (web `frontend/lib/constants.ts`,
+móvil `mobile/src/constants.ts`, **los mismos valores**) y llevan un piso de
+luminosidad: el azul oficial de Licey (#003DA5) y el verde de Estrellas
+(#00713B) se leen como negro sobre el fondo, así que se subieron.
 
 ## La paleta
 
-**La app no tiene color de marca.** Los seis equipos ya ocupan el amarillo, el
-rojo, el verde y el azul —casi todo el círculo cromático útil— y cualquier
-acento que eligiéramos competiría con alguno: las filas se leerían como si
-pertenecieran a un equipo. El acento es el mismo blanco del texto (`#F4F4F5`) y
-la jerarquía la cargan el tamaño y el peso.
+**El navy es la superficie; el acento sigue sin ser color.** Dos reglas que se
+escriben parecido y no son lo mismo:
 
-Fuente única por plataforma. **Ningún componente escribe un hex a mano**; si un
-color no está en estos archivos, o es de equipo o falta un token:
+- **Sin ACENTO de marca.** Los seis equipos ocupan el amarillo, el rojo, el
+  verde, el azul y el magenta; un acento competiría con alguno y las filas se
+  leerían como si fueran de ese equipo. El acento es el blanco del texto, y lo
+  seleccionado se **invierte** —relleno claro, texto `--accent-on`— en vez de
+  teñirse. Un fondo tenue del acento sobre una tarjeta es invisible.
+- **Con SUPERFICIE de marca.** El fondo de toda la app es el navy de Deportiv
+  (`#06152B` página, `#0B2038` tarjeta). Un fondo no compite con el texto de
+  ningún club —ni con el azul de Licey— porque no está al mismo nivel que la
+  tinta. Con el negro neutro anterior la app era correcta y anónima: se veía
+  como cualquier app de deportes en modo oscuro. Decidido el 25-sep-2026, en
+  toda la app y no solo en las pantallas de juego — una sola identidad.
+
+El verde de marca (`--brand`) sigue siendo **solo cascarón**: el punto del
+logotipo, el splash, el icono. Es el tono de Estrellas.
+
+### Contraste medido, no a ojo
+
+Todo token de texto pasa 4.5:1 sobre `--card`, que es donde vive casi todo:
+
+| Token | sobre `--bg` | sobre `--card` |
+|-------|-------------|----------------|
+| `fg` | 15.9 | 14.3 |
+| `fg2` | 10.7 | 9.7 |
+| `dim` | 7.3 | 6.6 |
+| `faint` | 5.7 | 5.1 |
+
+`faint` era el que fallaba: 2.9:1 en la paleta negra y 3.6:1 en el primer
+intento en navy — y es el de las micro-etiquetas de 10 px, el texto más chico.
+
+**Los tokens de borde (`--line`, `COLORS.border`) no son color de texto**:
+dan 1.4:1. Seis sitios los usaban así; la palabra "ante" del relato, el guion
+de una media entrada no jugada y el comando del estado vacío pasaron a tokens
+de texto. Los separadores puramente decorativos ("·", el "—" entre marcadores)
+se quedaron.
+
+### El color de club NUNCA identifica solo
+
+Validado con el script de la skill de visualización sobre el navy:
+**Gigantes↔Toros da ΔE 7.4 y Escogido↔Gigantes 10.7**, por debajo del piso de
+15 incluso con visión normal. Se probaron seis tonos para Toros y ninguno pasa:
+mover uno empuja el choque al siguiente par, porque tres clubes viven en la
+familia roja-magenta. Es estructural, y la respuesta es una regla y no un
+color: toda marca de club lleva su código escrito (`TeamBadge`), y en la franja
+de probabilidad cada equipo tiene su lado de la línea del 50%. El color
+refuerza; la posición y el texto identifican.
+
+### La esquina cortada es la firma, y está reservada
+
+Vive en **dos** sitios: las tejas de equipo (`TeamBadge`) y los estados de
+juego (`StatusBadge` — EN VIVO, FINAL, PREVIA). Repetida en cada tarjeta
+dejaría de significar algo.
+
+- En la web, la teja sólida y el estado llevan `clip-path` con un corte de
+  6 px **fijos** (`calc`), no un porcentaje: "FINAL (10)" mide el doble que
+  "FINAL" y con porcentaje la diagonal crecería con el texto.
+- La teja perfilada no puede llevar `clip-path` —cortaría el borde justo en la
+  diagonal— y usa el eco del móvil: la esquina inferior derecha con casi el
+  doble de radio (0.42 del lado contra 0.22).
+- React Native no tiene `clip-path`: el móvil usa ese mismo radio asimétrico
+  en todo.
+
+Antes había **cuatro** copias de la píldora de estado entre las dos
+plataformas, y la web usaba un rojo distinto en cada una (`text-neg` en una,
+`text-live` en otra). Ahora hay un `StatusBadge` por plataforma.
+
+Fuente única por plataforma. **Ningún componente escribe un hex a mano**:
 
 | Plataforma | Dónde | Cómo |
 |-----------|-------|------|
-| Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 21 21 23`), expuestas como `rgb(var(--card) / <alpha-value>)`. Así `bg-card/50` compone opacidad sobre el token, cosa que con un hex no se puede. Se usan por nombre: `bg-card`, `text-dim`, `border-line`. |
-| Móvil | `mobile/src/constants.ts` | `COLORS` y `ALPHA`. |
+| Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 11 32 56`), expuestas como `rgb(var(--card) / <alpha-value>)`, para que `bg-card/50` componga opacidad. Se usan por nombre: `bg-card`, `text-dim`, `border-line`. |
+| Móvil | `mobile/src/constants.ts` | `COLORS` y `ALPHA`, con los mismos valores. |
 
-**Corolario que no se puede olvidar: el color ya no distingue lo activo de lo
-inactivo.** Un fondo tenue del acento sobre una tarjeta es invisible cuando el
-acento es el blanco del texto. Lo seleccionado se **invierte** —relleno claro,
-texto `accentOn` / `--accent-on`— o se marca con una regla, como la columna
-ordenada de las tablas web (`shadow-[inset_0_-2px_0_rgb(var(--accent))]`). Si
-algún día una pestaña activa vuelve a ser "accent sobre card", va a desaparecer.
-
-Los semánticos (`pos`, `neg`, `warn`, `live`) están **separados del acento** a
-propósito: significan algo, así que sobreviven a cualquier cambio de paleta. Los
-de equipo viven aparte (`TEAM_STYLES`) porque son de los clubes.
+Los semánticos (`pos`, `neg`, `warn`, `live`) están separados del acento a
+propósito: significan algo y sobreviven a cualquier cambio de paleta.
 
 ### Un mínimo explícito MANDA sobre el calculado
 
@@ -392,6 +424,14 @@ python replay_game.py 826343       # reproduce un juego contra la API real
 string — y el parser expone `inning_ordinal_es` junto al crudo. Los clientes
 pintan el segundo. Misma regla que con `games_back`: el dato de la MLB se
 conserva, la presentación es nuestra.
+
+**Pasada la décima, los ordinales tenían un error de español** que la suite
+protegía: el respaldo era `f"{n}vo"` y daba "11vo", "12vo". Eso viene de
+"onceavo", que es un **partitivo** (una onceava parte), no un ordinal. Ahora:
+11mo (undécimo), 12mo (duodécimo), 13ro (decimotercero), 14to… — a partir del
+13 el sufijo lo pone la unidad, y en las decenas redondas es "mo". La
+comprobación vieja decía `ordinal_es(12) == "12vo"`: una prueba que protege la
+respuesta equivocada es peor que no tener prueba.
 
 El feed de pre-juego ya expone la alineación publicada — primer bateador y abridor — así que sirve para la pantalla previa.
 
@@ -550,6 +590,18 @@ TypeError: Cannot assign to property 'protocol' which has only a getter
 
 No borrar `index.js` pensando que sobra.
 
+### La pantalla de arranque
+
+`app.json` usa el plugin `expo-splash-screen` con `assets/splash-icon.png`
+sobre `#06152B` — **el mismo navy que la primera pantalla**. Si el fondo del
+arranque y el de la app no coinciden, se ve un parpadeo en la transición. Era
+`#091C3A` (el navy de marca) hasta que el navy pasó a ser la superficie.
+
+El paquete `expo-splash-screen` tiene que estar en `package.json`
+(`npx expo install expo-splash-screen`). En Expo Go su ausencia no se nota —ahí
+la pantalla de arranque nunca aparece—, pero un build de desarrollo o de
+producción falla al resolver el plugin.
+
 ### Pantalla en vivo
 
 `src/screens/LiveScreen.tsx` **sondea**, no usa SSE: React Native no trae
@@ -701,6 +753,47 @@ cada diez segundos para mover una curva.
 
 `current` viene en `None` cuando el juego terminó. No es un hueco: ahí ya no hay
 probabilidad, hay resultado.
+
+### La franja en la web
+
+`components/game/WinProbBand.tsx`, en la cabecera del detalle de juego, entre
+el marcador y las pestañas. Es la pantalla que justifica el navy: el único dato
+que ningún otro producto de LIDOM tiene va arriba y grande.
+
+- **Una serie contra la línea del 50%.** La curva es la probabilidad del local,
+  en tinta, 2 px. El área entre la curva y el 50% se tiñe al 16% con el color
+  del equipo favorecido en ese tramo. La maqueta del canvas pintaba la franja
+  entera a saturación completa y con el 50% punteado; la skill de
+  visualización marca las dos cosas como anti-patrón y el código las corrige.
+- **El local va SIEMPRE arriba**, y los dos lados llevan su código escrito. En
+  un Toros–Gigantes los dos lavados son casi iguales y no importa.
+- **El eje X es el juego, no el reloj.** Los puntos llegan cuando la
+  probabilidad se mueve; cada uno se coloca en su media entrada. El eje mide
+  nueve entradas aunque el juego vaya por la tercera: el hueco a la derecha es
+  lo que falta por jugar.
+- **Se pide en el MISMO ciclo que el detalle** (`Promise.all`), no con un
+  sondeo propio: dos bucles se desfasan y la curva podría mostrar una carrera
+  que el marcador todavía no tiene.
+- **El titular lo escribe el dato**, solo en juegos terminados: "Estrellas
+  nunca estuvo por debajo del 56%", o "llegó a estar en 23% y remontó".
+- Tooltip con la mira, flechas del teclado para recorrerla, lector de pantalla
+  con `aria-live`, y una tabla en `<details>`: el tooltip mejora, nunca es la
+  única puerta al dato.
+- Cada punto trae `label` ("Baja del 3ro") compuesto en el backend con
+  `ordinal_es()`. El cliente no lo arma.
+
+### Trabajar la pantalla de juego sin red
+
+```bash
+python dev_live_offline.py                    # 826343 hasta el final
+python dev_live_offline.py 826343 --hasta 5   # a medias: EN VIVO
+```
+
+Carga las capturas de `fixtures/` en la caché por el mismo camino que el poller
+(`parse_live_feed` → `store.update`) y levanta la API. A diferencia de
+`LIDOM_LIVE_REPLAY`, no toca la MLB API. La curva sale con la densidad de las
+capturas —diez instantáneas, ocho puntos— y no con la del poller, que acumula
+40-80: la forma es real, la resolución no.
 
 ### Dos decisiones de producto dentro del modelo
 

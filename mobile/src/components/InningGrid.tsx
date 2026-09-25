@@ -139,7 +139,7 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontVariant: ['tabular-nums'],
   },
-  cellEmpty: { color: COLORS.border },
+  cellEmpty: { color: COLORS.textFaint },
   headText: {
     color: COLORS.textSecondary,
     fontSize: 10,

@@ -1,17 +1,39 @@
 {
   "expo": {
-    "name": "LIDOM Stats",
+    "name": "Deportiv",
     "slug": "lidom-stats",
     "version": "1.0.0",
     "orientation": "portrait",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "resizeMode": "contain",
-      "backgroundColor": "#0d1117"
+    "icon": "./assets/icon.png",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.arturomespinal.deportiv"
     },
-    "ios": { "supportsTablet": false },
     "android": {
-      "adaptiveIcon": { "backgroundColor": "#0d1117" }
-    }
+      "package": "com.arturomespinal.deportiv",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#E6E3EA"
+      }
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#06152B",
+          "dark": {
+            "image": "./assets/splash-icon.png",
+            "backgroundColor": "#06152B"
+          }
+        }
+      ]
+    ]
   }
 }

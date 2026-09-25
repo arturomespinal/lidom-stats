@@ -24,5 +24,5 @@ const styles = StyleSheet.create({
   },
   icon: { fontSize: 48, marginBottom: 16 },
   msg: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', marginBottom: 8 },
-  hint: { color: COLORS.border, fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
+  hint: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
 });

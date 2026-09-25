@@ -1,54 +1,24 @@
-import React, { useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import React from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { ALPHA, COLORS } from '../constants';
 import { LiveGameState, LiveTeamLine } from '../types';
 import BaseDiamond from './BaseDiamond';
+import StatusBadge from './StatusBadge';
 import TeamBadge from './TeamBadge';
 
-/* El punto rojo que late junto a "EN VIVO". Animated corre en el hilo nativo
-   con useNativeDriver, así que no compite con el sondeo ni con el scroll. */
-function PulsingDot() {
-  const opacity = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(opacity, { toValue: 0.25, duration: 700, useNativeDriver: true }),
-        Animated.timing(opacity, { toValue: 1, duration: 700, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [opacity]);
-
-  return <Animated.View style={[styles.dot, { opacity }]} />;
-}
-
 function StatusPill({ state }: { state: LiveGameState }) {
-  if (state.status === 'live') {
-    return (
-      <View style={[styles.pill, styles.pillLive]}>
-        <PulsingDot />
-        <Text style={styles.pillLiveText}>EN VIVO</Text>
-      </View>
-    );
-  }
-  if (state.status === 'final') {
-    const extra =
-      state.inning && state.inning !== state.scheduled_innings ? ` (${state.inning})` : '';
-    return (
-      <View style={[styles.pill, styles.pillFinal]}>
-        <Text style={styles.pillFinalText}>FINAL{extra}</Text>
-      </View>
-    );
-  }
-  return (
-    <View style={[styles.pill, styles.pillPreview]}>
-      <Text style={styles.pillPreviewText}>
-        {state.detailed_status || 'PREVIA'}
-      </Text>
-    </View>
-  );
+  // Las entradas extra van en la etiqueta: "FINAL (10)".
+  const extra =
+    state.status === 'final' && state.inning && state.inning !== state.scheduled_innings
+      ? ` (${state.inning})`
+      : '';
+  const label =
+    state.status === 'preview' || state.status === 'other'
+      ? state.detailed_status || undefined
+      : state.status === 'final'
+        ? `FINAL${extra}`
+        : undefined;
+  return <StatusBadge status={state.status} label={label} />;
 }
 
 function TeamRow({
@@ -330,22 +300,6 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
     borderBottomWidth: 1,
   },
-  pill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 4,
-    borderWidth: 1,
-  },
-  pillLive: { backgroundColor: ALPHA.live15, borderColor: ALPHA.live30 },
-  pillLiveText: { color: COLORS.live, fontSize: 10, fontWeight: '700' },
-  pillFinal: { backgroundColor: COLORS.bgHeader, borderColor: COLORS.border },
-  pillFinalText: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '700' },
-  pillPreview: { backgroundColor: ALPHA.neutral15, borderColor: ALPHA.neutral30 },
-  pillPreviewText: { color: COLORS.accent, fontSize: 10, fontWeight: '700' },
-  dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.live },
   inning: { color: COLORS.textSupport, fontSize: 12 },
   stale: { color: COLORS.warning, fontSize: 10 },
   venue: {

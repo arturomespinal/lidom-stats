@@ -96,7 +96,7 @@ print("\n━━━ el store acumula el recorrido ━━━")
 import glob  # noqa: E402
 import json  # noqa: E402
 from src.live.gumbo import parse_live_feed  # noqa: E402
-from src.live.store import LiveStore, MAX_PUNTOS_WP, UMBRAL_WP  # noqa: E402
+from src.live.store import LiveStore, MAX_PUNTOS_WP, UMBRAL_WP, WinProbPoint  # noqa: E402
 
 st = LiveStore()
 instantaneas = 0
@@ -128,6 +128,16 @@ subidas = [abs(track[i]["wp"] - track[i - 1]["wp"]) for i in range(1, len(track)
 check("ningún salto guardado es menor que el umbral, salvo el cierre",
       all(d >= UMBRAL_WP for d in subidas[:-1]), True)
 check("el tope está por encima de cualquier juego real", MAX_PUNTOS_WP > len(track) * 10, True)
+
+# La etiqueta de cada punto la compone el backend con ordinal_es(): la franja
+# de la web la pinta en el tooltip tal cual. Si alguien la arma en el cliente,
+# vuelve el "Baja del 3rd".
+check("cada punto trae su etiqueta en español",
+      all(p["label"].startswith(("Alta del ", "Baja del ")) for p in track), True)
+check("la etiqueta usa el ordinal en español, no el de la MLB",
+      WinProbPoint(3, False, 0, 3, 0.9, 0).as_dict()["label"], "Baja del 3ro")
+check("también en entradas extra",
+      WinProbPoint(11, True, 4, 4, 0.5, 0).as_dict()["label"], "Alta del 11mo")
 
 print()
 if fallos:

@@ -35,7 +35,7 @@ function Row({
         <td
           key={i}
           className={`px-2 py-2 text-center tabular-nums ${
-            v === null ? "text-line" : "text-fg2"
+            v === null ? "text-faint" : "text-fg2"
           }`}
         >
           {v === null ? "·" : v}

@@ -27,7 +27,7 @@ import time
 from typing import Any, Optional
 
 from src.live.detail import LiveGameDetail, parse_game_detail
-from src.live.gumbo import LiveGameState
+from src.live.gumbo import LiveGameState, ordinal_es
 
 
 class WinProbPoint:
@@ -59,6 +59,10 @@ class WinProbPoint:
         return {
             "inning": self.inning, "is_top": self.is_top,
             "away": self.away, "home": self.home, "wp": self.wp,
+            # "Alta del 3ro", ya compuesto. El cliente lo pinta en el tooltip
+            # de la franja y NO lo arma: la regla de ordinal_es — un solo
+            # lugar donde traducir es un solo lugar donde equivocarse.
+            "label": f"{'Alta' if self.is_top else 'Baja'} del {ordinal_es(self.inning)}",
         }
 
 

@@ -5,6 +5,7 @@ import {
   LiveGameState,
   PitchingRow,
   StandingRow,
+  WinProbResponse,
 } from './types';
 
 async function get<T>(path: string): Promise<T | null> {
@@ -63,6 +64,14 @@ export async function fetchGameDetail(
   plays = 25,
 ): Promise<LiveDetailResponse | null> {
   return get<LiveDetailResponse>(`/live/games/${gamePk}/detail?plays=${plays}`);
+}
+
+/**
+ * El recorrido de la probabilidad de ganar. La pantalla de juego lo pide en
+ * el MISMO ciclo que el detalle: un solo ritmo de sondeo, no dos.
+ */
+export async function fetchWinProb(gamePk: number): Promise<WinProbResponse | null> {
+  return get<WinProbResponse>(`/live/games/${gamePk}/winprob`);
 }
 
 // crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son

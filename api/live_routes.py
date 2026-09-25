@@ -32,7 +32,7 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import StreamingResponse
 
 from src.live.poller import LivePoller
-from src.live.store import store
+from src.live.store import store, titular_recorrido
 from src.utils.logger import logger
 
 router = APIRouter(prefix="/live", tags=["En vivo"])
@@ -195,6 +195,11 @@ def live_win_prob(game_pk: int):
         "away_team": estado.away.team_code if estado else None,
         # La probabilidad de AHORA, para la barra; el recorrido, para la curva.
         "current": estado.win_prob_home if estado else None,
+        # Solo en juegos terminados: en vivo, los porcentajes ya lo dicen todo.
+        "headline": (
+            titular_recorrido(track, estado.home.team_code, estado.away.team_code)
+            if estado and estado.status == "final" else None
+        ),
         "points": track,
         "points_count": len(track),
     }

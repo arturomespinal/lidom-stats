@@ -9,8 +9,14 @@ van al ritmo de la transmisión. Esto no: carga las instantáneas que
 `capture_gumbo.py` ya dejó en disco, en orden, por el MISMO camino que usa el
 poller (parse_live_feed → store.update), y levanta uvicorn con la caché llena.
 
-    python dev_live_offline.py                # juego 826343, hasta el final
+    python dev_live_offline.py                    # juego 826343, hasta el final
     python dev_live_offline.py 826343 --hasta 5   # solo 5 instantáneas: EN VIVO
+    python dev_live_offline.py --host 0.0.0.0     # para probar desde el TELÉFONO
+
+Por defecto escucha solo en 127.0.0.1, que alcanza para la web en la misma
+máquina. El teléfono con Expo Go llega por la IP de la red WiFi
+(mobile/src/config.ts), y a 127.0.0.1 no puede: para él hace falta
+`--host 0.0.0.0`, que abre la API a la red local mientras corre.
 
 Con --hasta el juego queda a medias y la pantalla se ve EN VIVO, con la
 probabilidad actual. Sin él se aplican todas y se cierra con store.drop(),
@@ -61,7 +67,7 @@ def sembrar(game_pk: int, hasta: int | None) -> None:
         f"–{estado.home.runs} {estado.home.team_code} ({estado.status}), "
         f"{puntos} puntos de probabilidad"
     )
-    print(f"  Pantalla: http://localhost:3000/live/{game_pk}")
+    print(f"  Web: http://localhost:3000/live/{game_pk}")
 
 
 def main() -> None:
@@ -70,6 +76,8 @@ def main() -> None:
     ap.add_argument("--hasta", type=int, default=None,
                     help="aplicar solo las N primeras instantáneas (juego en vivo)")
     ap.add_argument("--port", type=int, default=8000)
+    ap.add_argument("--host", default="127.0.0.1",
+                    help="0.0.0.0 para que llegue el teléfono por la red WiFi")
     args = ap.parse_args()
 
     sembrar(args.game_pk, args.hasta)
@@ -81,7 +89,7 @@ def main() -> None:
     import uvicorn
     from api.main import app
 
-    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
+    uvicorn.run(app, host=args.host, port=args.port, log_level="warning")
 
 
 if __name__ == "__main__":

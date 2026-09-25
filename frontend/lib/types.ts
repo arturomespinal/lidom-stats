@@ -279,6 +279,11 @@ export interface WinProbResponse {
   away_team: string | null;
   /** La de ahora mismo. `null` en previa y en final: ahí hay resultado. */
   current: number | null;
+  /**
+   * "Estrellas nunca estuvo por debajo del 56%." Solo en juegos terminados.
+   * Lo compone el backend (titular_recorrido) para las dos plataformas.
+   */
+  headline: string | null;
   points: WinProbPoint[];
   points_count: number;
 }

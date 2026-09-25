@@ -611,8 +611,10 @@ respuesta —no con `setInterval`, para que no se apilen— y se detiene cuando 
 pantalla pierde el foco o la app pasa a segundo plano.
 
 El diamante (`components/BaseDiamond.tsx`) usa `View` rotadas 45°, no SVG:
-`react-native-svg` no está en las dependencias y no vale añadir una librería
-nativa por tres cuadrados.
+no valía añadir una librería nativa por tres cuadrados. `react-native-svg` sí
+entró después, para la franja de probabilidad — una curva no se dibuja con
+`View` —, y viene incluido en Expo Go, así que no obliga a salir de él. El
+diamante se quedó como estaba: funciona y no hay razón para tocarlo.
 
 ### Detalle de un juego
 
@@ -775,19 +777,65 @@ que ningún otro producto de LIDOM tiene va arriba y grande.
   sondeo propio: dos bucles se desfasan y la curva podría mostrar una carrera
   que el marcador todavía no tiene.
 - **El titular lo escribe el dato**, solo en juegos terminados: "Estrellas
-  nunca estuvo por debajo del 56%", o "llegó a estar en 23% y remontó".
+  nunca estuvo por debajo del 56%", o "llegó a estar en 23% y remontó". Lo
+  compone el **backend** (`titular_recorrido` en `src/live/store.py`) y viaja
+  en `/winprob` como `headline`. Estuvo un día en la web; al hacer la versión
+  del móvil se movió, porque dos implementaciones de la misma frase acaban
+  diciendo cosas distintas.
+- **El par de porcentajes SIEMPRE suma 100.** El visitante es 100 menos el
+  local, no un segundo redondeo: con wp = 0.885 redondear cada uno por su lado
+  da 89% + 12% = 101%, y la tabla de "Ver datos" lo mostraba. El backend usa la
+  misma regla para el titular, y redondea el medio hacia arriba como
+  `Math.round` (`_pct`), no al par como el `round()` de Python — si no, el
+  titular y la tabla de la misma pantalla podrían diferir en un punto.
 - Tooltip con la mira, flechas del teclado para recorrerla, lector de pantalla
   con `aria-live`, y una tabla en `<details>`: el tooltip mejora, nunca es la
   única puerta al dato.
 - Cada punto trae `label` ("Baja del 3ro") compuesto en el backend con
   `ordinal_es()`. El cliente no lo arma.
 
+### La franja en el móvil
+
+`mobile/src/components/WinProbBand.tsx`. La misma forma que la web y por las
+mismas razones; lo que cambia es cómo se toca.
+
+- **El dedo tapa la gráfica.** Un tooltip flotante quedaría debajo de la
+  yema, así que la lectura va ARRIBA, en la fila de la leyenda: al barrer, los
+  porcentajes pasan a ser los del momento tocado y la etiqueta dice "Baja del
+  3ro · 0–4". Al soltar vuelve al valor de ahora, como las gráficas de bolsa.
+- **Dentro de un ScrollView, cede el gesto.** Toma el toque al empezar pero
+  `onResponderTerminationRequest` devuelve `true`: un dedo que baja en vertical
+  termina desplazando la pantalla.
+- **Lo dibujado va en una capa con `pointerEvents="none"`.** `locationX` se
+  mide respecto al hijo que recibe el toque; un dedo sobre la etiqueta "EST"
+  corría el momento elegido.
+- **Margen interno de 7 px arriba y abajo.** Un juego terminado acaba en 100% o
+  0%, en el borde, y el recorte de las esquinas redondeadas cortaba el punto
+  final a la mitad.
+- **Lector de pantalla**: la franja es `adjustable`; deslizar arriba o abajo
+  recorre los momentos, como las flechas en la web.
+
+En `GameDetailScreen` el marcador y la franja pasaron **dentro** del scroll, y
+las pestañas se quedan pegadas arriba (`stickyHeaderIndices`). Con el marcador
+fijo, la franja dejaba al relato unos 300 px en un teléfono de 844. Las
+pestañas miden ~28 pt y llevan `hitSlop` hasta los 44 de las reglas de diseño
+sin cambiar cómo se ven.
+
+Para instalar la dependencia: `npx expo install react-native-svg` desde
+`mobile/`. Elige la versión que corresponde al SDK (15.15.4 en el 57, según
+`node_modules/expo/bundledNativeModules.json`).
+
 ### Trabajar la pantalla de juego sin red
 
 ```bash
 python dev_live_offline.py                    # 826343 hasta el final
 python dev_live_offline.py 826343 --hasta 5   # a medias: EN VIVO
+python dev_live_offline.py --host 0.0.0.0     # para probar desde el teléfono
 ```
+
+Por defecto escucha en `127.0.0.1`, que alcanza para la web. **El teléfono
+necesita `--host 0.0.0.0`**: Expo Go llega por la IP de la WiFi
+(`mobile/src/config.ts`) y a `127.0.0.1` de la PC no puede.
 
 Carga las capturas de `fixtures/` en la caché por el mismo camino que el poller
 (`parse_live_feed` → `store.update`) y levanta la API. A diferencia de

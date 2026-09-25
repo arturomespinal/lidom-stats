@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import { fetchGameDetail } from '../api';
+import { fetchGameDetail, fetchWinProb } from '../api';
 import { COLORS } from '../constants';
-import { LiveGameDetail } from '../types';
+import { LiveGameDetail, WinProbResponse } from '../types';
 import type { LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
 import PlayByPlay from '../components/PlayByPlay';
@@ -22,6 +22,7 @@ import BoxScore from '../components/BoxScore';
 import Lineups from '../components/Lineups';
 import StatusBadge from '../components/StatusBadge';
 import TeamBadge from '../components/TeamBadge';
+import WinProbBand from '../components/WinProbBand';
 
 /**
  * Detalle de un juego: relato, cuadro por entradas, boxscore y alineaciones.
@@ -45,6 +46,7 @@ export default function GameDetailScreen({ route }: Props) {
   const { gamePk, awayCode, homeCode } = route.params;
 
   const [detail, setDetail] = useState<LiveGameDetail | null>(null);
+  const [wp, setWp] = useState<WinProbResponse | null>(null);
   const [updating, setUpdating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -65,9 +67,18 @@ export default function GameDetailScreen({ route }: Props) {
     async (isRefresh = false) => {
       if (isRefresh) setRefreshing(true);
 
-      const res = await fetchGameDetail(gamePk, PLAYS);
+      // El recorrido va en el MISMO ciclo que el detalle, en paralelo: un solo
+      // ritmo de sondeo. Dos bucles se desfasan y la curva podría mostrar una
+      // carrera que el marcador todavía no tiene.
+      const [res, prob] = await Promise.all([
+        fetchGameDetail(gamePk, PLAYS),
+        fetchWinProb(gamePk),
+      ]);
 
       if (!active.current) return;
+
+      // Un fallo del recorrido no borra la última curva buena.
+      if (prob) setWp(prob);
 
       if (res) {
         setDetail(res.data);
@@ -135,14 +146,17 @@ export default function GameDetailScreen({ route }: Props) {
     );
   }
 
+  // Marcador y franja se desplazan con el contenido; las pestañas se quedan
+  // pegadas arriba (stickyHeaderIndices). Con el marcador FIJO, como estaba,
+  // la franja se comía la pantalla: en un teléfono de 844 px al relato le
+  // quedaban unos 300. Es el patrón de SofaScore: la cabecera se va, la
+  // navegación se queda.
   return (
     <View style={styles.page}>
-      <ScoreHeader detail={detail} updating={updating} failed={failed} />
-      <GameTabs active={tab} onChange={setTab} />
-
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
+        stickyHeaderIndices={[1]}
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -151,10 +165,14 @@ export default function GameDetailScreen({ route }: Props) {
           />
         }
       >
-        {tab === 'relato' && <PlayByPlay detail={detail} />}
-        {tab === 'linea' && <InningGrid detail={detail} />}
-        {tab === 'boxscore' && <BoxScore home={detail.home} away={detail.away} />}
-        {tab === 'alineaciones' && <Lineups home={detail.home} away={detail.away} />}
+        <ScoreHeader detail={detail} updating={updating} failed={failed} wp={wp} />
+        <GameTabs active={tab} onChange={setTab} />
+        <View>
+          {tab === 'relato' && <PlayByPlay detail={detail} />}
+          {tab === 'linea' && <InningGrid detail={detail} />}
+          {tab === 'boxscore' && <BoxScore home={detail.home} away={detail.away} />}
+          {tab === 'alineaciones' && <Lineups home={detail.home} away={detail.away} />}
+        </View>
       </ScrollView>
     </View>
   );
@@ -164,10 +182,12 @@ function ScoreHeader({
   detail,
   updating,
   failed,
+  wp,
 }: {
   detail: LiveGameDetail;
   updating: boolean;
   failed: boolean;
+  wp: WinProbResponse | null;
 }) {
   const ganaVisitante = detail.away.runs > detail.home.runs;
   const ganaLocal = detail.home.runs > detail.away.runs;
@@ -198,6 +218,18 @@ function ScoreHeader({
           reverse
         />
       </View>
+
+      {/* Dos puntos como mínimo para que sea una curva. En la previa no hay
+          estado que simular y no se pinta nada. */}
+      {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
+        <WinProbBand
+          points={wp.points}
+          current={wp.current}
+          homeCode={detail.home.team_code}
+          awayCode={detail.away.team_code}
+          headline={wp.headline}
+        />
+      )}
     </View>
   );
 }

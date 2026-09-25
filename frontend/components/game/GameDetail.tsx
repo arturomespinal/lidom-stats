@@ -172,7 +172,7 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
             current={wp.current}
             homeCode={detail.home.team_code}
             awayCode={detail.away.team_code}
-            final={detail.status === "final"}
+            headline={wp.headline}
           />
         )}
       </header>

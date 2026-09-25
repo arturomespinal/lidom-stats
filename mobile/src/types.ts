@@ -253,3 +253,32 @@ export interface LiveDetailResponse {
   is_updating: boolean;
   data: LiveGameDetail;
 }
+
+/* ── Probabilidad de ganar ───────────────────────────────────────────────
+   Lo que devuelve /live/games/{pk}/winprob. Mismos campos que en
+   frontend/lib/types.ts: el backend es uno solo. */
+
+export interface WinProbPoint {
+  inning: number;
+  is_top: boolean;
+  /** Marcador en ese momento. */
+  away: number;
+  home: number;
+  /** Probabilidad de que gane el LOCAL, 0..1. */
+  wp: number;
+  /** "Alta del 3ro", compuesto en el backend. El cliente no lo arma. */
+  label: string;
+}
+
+export interface WinProbResponse {
+  age_seconds: number;
+  is_updating: boolean;
+  home_team: string | null;
+  away_team: string | null;
+  /** La de ahora mismo. `null` en previa y en final: ahí hay resultado. */
+  current: number | null;
+  /** "Estrellas nunca estuvo por debajo del 56%." Solo en juegos terminados. */
+  headline: string | null;
+  points: WinProbPoint[];
+  points_count: number;
+}

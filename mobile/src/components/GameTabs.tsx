@@ -48,6 +48,12 @@ export default function GameTabs({
             ]}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
+            // La píldora mide ~28 pt de alto; el pulgar necesita 44. hitSlop
+            // agranda el área táctil sin cambiar lo que se ve: 8 arriba y 8
+            // abajo, justo lo que cabe en los 9 de padding de la fila. Hacia
+            // los lados, 3 — la mitad de los 6 de separación, para que dos
+            // pestañas vecinas no se pisen.
+            hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
           >
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
           </Pressable>

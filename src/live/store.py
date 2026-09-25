@@ -27,6 +27,7 @@ import time
 from typing import Any, Optional
 
 from src.live.detail import LiveGameDetail, parse_game_detail
+from src.constants import LIDOM_TEAMS_BY_CODE
 from src.live.gumbo import LiveGameState, ordinal_es
 
 
@@ -64,6 +65,53 @@ class WinProbPoint:
             # lugar donde traducir es un solo lugar donde equivocarse.
             "label": f"{'Alta' if self.is_top else 'Baja'} del {ordinal_es(self.inning)}",
         }
+
+
+def _pct(wp: float) -> int:
+    """Porcentaje entero con redondeo HACIA ARRIBA en el medio: 0.625 → 63.
+
+    `round()` de Python redondea al par (62.5 → 62) y `Math.round` de
+    JavaScript hacia arriba (63). La leyenda de la franja la calcula el
+    cliente con Math.round; si el titular usara round(), el mismo punto
+    podría decir 63% arriba y 62% abajo en la misma pantalla.
+    """
+    return int(wp * 100 + 0.5)
+
+
+def titular_recorrido(track: list[dict], home_code: str, away_code: str) -> Optional[str]:
+    """La frase que resume la curva de un juego TERMINADO.
+
+    "Estrellas nunca estuvo por debajo del 56%." o "Licey llegó a estar en
+    23% y remontó." Es lo que convierte la franja de un gráfico en una
+    noticia, y sale del dato: el mínimo que tuvo el ganador a lo largo del
+    recorrido.
+
+    Vive en el backend y no en los clientes por la misma regla que
+    carrera.py y lateralidad.py: son dos plataformas, y una frase compuesta
+    dos veces es una frase que un día dice cosas distintas en la web y en el
+    teléfono.
+
+    Devuelve None si no hay recorrido o si el juego terminó empatado —
+    suspendido—: ahí no hay ganador del que hablar.
+    """
+    if len(track) < 2:
+        return None
+    ultimo = track[-1]
+    if ultimo["home"] == ultimo["away"]:
+        return None
+
+    gana_local = ultimo["home"] > ultimo["away"]
+    codigo = home_code if gana_local else away_code
+    ganador = LIDOM_TEAMS_BY_CODE.get(codigo, {}).get("short_name", codigo)
+
+    # En enteros y con la MISMA regla del par que pintan los clientes: el
+    # visitante es 100 menos el local, no un segundo redondeo. Si no, con
+    # wp = 0.885 la tabla diría "11%" para el visitante y el titular "12%".
+    minimo = min(_pct(p["wp"]) if gana_local else 100 - _pct(p["wp"]) for p in track)
+
+    if minimo < 50:
+        return f"{ganador} llegó a estar en {minimo}% y remontó."
+    return f"{ganador} nunca estuvo por debajo del {minimo}%."
 
 
 # Un punto nuevo solo si la probabilidad se movió al menos esto. Sin el umbral

@@ -139,6 +139,38 @@ check("la etiqueta usa el ordinal en español, no el de la MLB",
 check("también en entradas extra",
       WinProbPoint(11, True, 4, 4, 0.5, 0).as_dict()["label"], "Alta del 11mo")
 
+# El titular lo compone el backend para los dos clientes. Sobre el juego real:
+from src.live.store import titular_recorrido  # noqa: E402
+titular = titular_recorrido(track, "EST", "TOR")
+print(f"    titular del juego real: {titular}")
+check("el titular nombra al ganador por su nombre corto",
+      titular.startswith("Estrellas "), True)
+check("sin remontada dice el piso del ganador", "nunca estuvo por debajo" in titular, True)
+
+# Remontada: el visitante gana tras estar abajo.
+remontada = [{"wp": .60, "home": 0, "away": 0}, {"wp": .77, "home": 3, "away": 0},
+             {"wp": 0.0, "home": 3, "away": 4}]
+check("una remontada se cuenta como tal",
+      titular_recorrido(remontada, "LIC", "AGU"), "Águilas llegó a estar en 23% y remontó.")
+check("un juego suspendido empatado no tiene titular",
+      titular_recorrido([{"wp": .5, "home": 2, "away": 2}] * 2, "LIC", "AGU"), None)
+check("sin recorrido no hay titular", titular_recorrido([], "LIC", "AGU"), None)
+# 0.625 → 62.5, un medio EXACTO en coma flotante: round() de Python da 62
+# (redondeo al par) y Math.round del cliente, 63. El titular tiene que decir
+# lo mismo que la leyenda que pinta el cliente. (Con 0.565 no se ve: en coma
+# flotante vale 56.4999… y los dos dan 56.)
+check("el porcentaje redondea como Math.round, no como round()",
+      titular_recorrido([{"wp": .625, "home": 0, "away": 0},
+                         {"wp": 1.0, "home": 1, "away": 0}], "LIC", "AGU"),
+      "Licey nunca estuvo por debajo del 63%.")
+# El par siempre suma 100: el visitante es el complemento del local. Con
+# wp = 0.875 (87.5 exacto) el local es 88 y el visitante 12 — no 13, que es
+# lo que daría redondear 12.5 por su lado.
+check("un ganador visitante usa el complemento, como la tabla del cliente",
+      titular_recorrido([{"wp": .875, "home": 0, "away": 0},
+                         {"wp": 0.0, "home": 0, "away": 1}], "LIC", "AGU"),
+      "Águilas llegó a estar en 12% y remontó.")
+
 print()
 if fallos:
     print(f"❌ {len(fallos)} fallaron:")

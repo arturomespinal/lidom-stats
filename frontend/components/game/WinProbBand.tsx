@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, KeyboardEvent, PointerEvent } from "react";
-import { TEAM_SHORT_NAMES, TEAM_STYLES } from "@/lib/constants";
+import { TEAM_STYLES } from "@/lib/constants";
 import { WinProbPoint } from "@/lib/types";
 
 interface Props {
@@ -10,7 +10,8 @@ interface Props {
   current: number | null;
   homeCode: string;
   awayCode: string;
-  final: boolean;
+  /** El titular del juego terminado, ya compuesto por el backend. */
+  headline: string | null;
 }
 
 /**
@@ -70,8 +71,17 @@ function posicionesX(points: WinProbPoint[]): number[] {
   return xs;
 }
 
-function pct(wp: number): string {
-  return `${Math.round(wp * 100)}%`;
+/**
+ * Los dos porcentajes del par, que SIEMPRE suman 100.
+ *
+ * Redondear cada uno por su lado da 89% + 12% = 101% cuando la probabilidad
+ * es 0.885 (88.5 → 89 y 11.5 → 12). En un resultado con dos salidas eso se
+ * lee como un error, así que el visitante es el complemento del local, no un
+ * segundo redondeo. Mismo cálculo que en el móvil.
+ */
+function par(wp: number): { local: string; visita: string } {
+  const n = Math.round(wp * 100);
+  return { local: `${n}%`, visita: `${100 - n}%` };
 }
 
 export default function WinProbBand({
@@ -79,7 +89,7 @@ export default function WinProbBand({
   current,
   homeCode,
   awayCode,
-  final,
+  headline,
 }: Props) {
   const [sel, setSel] = useState<number | null>(null);
 
@@ -110,26 +120,11 @@ export default function WinProbBand({
 
   const home = TEAM_STYLES[homeCode]?.primary ?? "rgb(var(--dim))";
   const away = TEAM_STYLES[awayCode]?.primary ?? "rgb(var(--dim))";
-  const nombreHome = TEAM_SHORT_NAMES[homeCode] ?? homeCode;
-  const nombreAway = TEAM_SHORT_NAMES[awayCode] ?? awayCode;
-
+  
   const ultimo = points[points.length - 1];
   // En final `current` es null a propósito —ya no hay probabilidad, hay
   // resultado— y el último punto del recorrido es el 100% / 0% real.
   const ahora = current ?? ultimo.wp;
-
-  // El titular lo escribe el dato. Solo en juegos terminados: en vivo, los
-  // porcentajes de arriba ya dicen todo lo que hay que decir.
-  let titular: string | null = null;
-  if (final && ultimo.home !== ultimo.away) {
-    const ganaLocal = ultimo.home > ultimo.away;
-    const ganador = ganaLocal ? nombreHome : nombreAway;
-    const minimo = Math.min(...points.map((p) => (ganaLocal ? p.wp : 1 - p.wp)));
-    titular =
-      minimo < 0.5
-        ? `${ganador} llegó a estar en ${pct(minimo)} y remontó.`
-        : `${ganador} nunca estuvo por debajo del ${pct(minimo)}.`;
-  }
 
   function elegirPorPuntero(e: PointerEvent<HTMLDivElement>) {
     const r = e.currentTarget.getBoundingClientRect();
@@ -177,14 +172,14 @@ export default function WinProbBand({
           <span className="font-cond text-[13px] font-bold tracking-[0.04em] text-fg2">
             {awayCode}
           </span>
-          <span className="num text-sm font-semibold text-fg">{pct(1 - ahora)}</span>
+          <span className="num text-sm font-semibold text-fg">{par(ahora).visita}</span>
         </span>
         <span className="flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-sm" style={{ background: home }} />
           <span className="font-cond text-[13px] font-bold tracking-[0.04em] text-fg2">
             {homeCode}
           </span>
-          <span className="num text-sm font-semibold text-fg">{pct(ahora)}</span>
+          <span className="num text-sm font-semibold text-fg">{par(ahora).local}</span>
         </span>
       </div>
 
@@ -291,12 +286,12 @@ export default function WinProbBand({
             <div className="mt-1 flex items-center gap-3">
               <span className="flex items-center gap-1.5">
                 <span className="h-0.5 w-2.5" style={{ background: home }} />
-                <span className="num text-sm font-semibold text-fg">{pct(p.wp)}</span>
+                <span className="num text-sm font-semibold text-fg">{par(p.wp).local}</span>
                 <span className="text-[11px] text-dim">{homeCode}</span>
               </span>
               <span className="flex items-center gap-1.5">
                 <span className="h-0.5 w-2.5" style={{ background: away }} />
-                <span className="num text-sm font-semibold text-fg">{pct(1 - p.wp)}</span>
+                <span className="num text-sm font-semibold text-fg">{par(p.wp).visita}</span>
                 <span className="text-[11px] text-dim">{awayCode}</span>
               </span>
             </div>
@@ -317,14 +312,14 @@ export default function WinProbBand({
         ))}
       </div>
 
-      {titular && (
-        <p className="mt-2 text-sm text-fg2">{titular}</p>
-      )}
+      {/* El titular lo escribe el dato y lo compone el backend
+          (titular_recorrido), para que la web y el teléfono digan lo mismo. */}
+      {headline && <p className="mt-2 text-sm text-fg2">{headline}</p>}
 
       {/* Lo que dice el lector de pantalla al recorrer con las flechas. */}
       <p className="sr-only" aria-live="polite">
         {sel !== null
-          ? `${p.label}: ${awayCode} ${p.away}, ${homeCode} ${p.home}. ${homeCode} ${pct(p.wp)}, ${awayCode} ${pct(1 - p.wp)}.`
+          ? `${p.label}: ${awayCode} ${p.away}, ${homeCode} ${p.home}. ${homeCode} ${par(p.wp).local}, ${awayCode} ${par(p.wp).visita}.`
           : ""}
       </p>
 
@@ -349,8 +344,8 @@ export default function WinProbBand({
                 <td className="num py-1 text-right text-fg2">
                   {q.away}–{q.home}
                 </td>
-                <td className="num py-1 text-right text-fg">{pct(q.wp)}</td>
-                <td className="num py-1 text-right text-fg">{pct(1 - q.wp)}</td>
+                <td className="num py-1 text-right text-fg">{par(q.wp).local}</td>
+                <td className="num py-1 text-right text-fg">{par(q.wp).visita}</td>
               </tr>
             ))}
           </tbody>

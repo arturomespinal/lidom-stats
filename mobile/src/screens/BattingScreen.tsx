@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchBatting } from '../api';
-import { COLORS } from '../constants';
+import { COLORS, FONTS } from '../constants';
 import { BattingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
@@ -177,7 +177,8 @@ const styles = StyleSheet.create({
   statVal: { color: COLORS.textSecondary, fontSize: 12 },
   dot: { color: COLORS.border, fontSize: 12 },
   primaryStat: { alignItems: 'flex-end', minWidth: 58 },
-  primaryVal: { color: COLORS.accent, fontSize: 22, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  // Bebas Neue, sin fontWeight (ver FONTS).
+  primaryVal: { color: COLORS.accent, fontSize: 28, fontFamily: FONTS.display, fontVariant: ['tabular-nums'] },
   primaryKey: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   sep: { height: 1, backgroundColor: COLORS.border },
 });

@@ -5,81 +5,78 @@
 /* ─────────────────────────────────────────────────────────────────────────
    Paleta de Deportiv — fuente única para la web.
 
-   Los valores son CANALES RGB separados por espacio, no hex. Así Tailwind
-   puede componer la opacidad sobre el token (`bg-card/50`, `text-live/30`)
-   mediante rgb(var(--x) / <alpha-value>), que con un hex no se puede.
+   Los valores son CANALES RGB separados por espacio, no hex, para que
+   Tailwind componga opacidad sobre el token (`bg-card/50`) con
+   rgb(var(--x) / <alpha-value>).
 
-   ── El contenido no lleva color de marca ──────────────────────────────────
-   Los seis equipos ya ocupan el amarillo, el rojo, el verde, el azul y el
-   magenta. Cualquier acento que eligiéramos competiría con alguno y haría que
-   las filas se leyeran como si pertenecieran a un equipo. El acento de la
-   interfaz es el mismo blanco del texto, y la jerarquía la cargan la escala,
-   el peso y el aire.
+   ── Tema claro, tinta navy (decidido el 25-sep-2026) ──────────────────────
+   La dirección visual sale de un kit de referencia de apps deportivas: fondos
+   claros, títulos en Bebas Neue, franjas oscuras de contexto y una diagonal
+   como firma. Ese kit tiñe su negro con su rojo de marca (#150000); aquí el
+   negro se tiñe con el navy de Deportiv. Misma lógica, nuestra marca.
 
-   Corolario que no se puede olvidar: el color NO distingue lo activo de lo
-   inactivo. Un elemento seleccionado se INVIERTE —relleno claro, texto oscuro
-   (--accent-on)— en vez de teñirse. Un fondo al 12% del acento sobre la
-   tarjeta es literalmente invisible.
+   ── Sin color de acento, todavía ─────────────────────────────────────────
+   El kit usa un coral (#FF5050) como acento, y se midió contra los clubes:
+   ΔE 3.3 contra Escogido — el mismo color —, 13.1 contra Toros y 12.7
+   contra Gigantes. Con ese acento cada botón se leería como de Escogido, y un
+   fanático del Licey abriría una app con los colores del rival. El acento es
+   la TINTA navy: lo activo es navy sobre claro, y ningún club se apropia de
+   la interfaz.
 
-   ── Dónde vive la marca: el navy es la SUPERFICIE ─────────────────────────
-   La regla de arriba prohíbe un ACENTO de marca, no una superficie. El navy de
-   Deportiv es el fondo de toda la app: un fondo no compite con el texto de
-   ningún equipo, ni siquiera con el azul de Licey, porque no está al mismo
-   nivel que la tinta. Con el negro neutro anterior la app era correcta y
-   anónima — se veía como cualquier app de deportes en modo oscuro. El navy es
-   lo que la vuelve reconocible sin romper la regla.
+   ── Contraste medido, no a ojo ───────────────────────────────────────────
+   Todo token de texto pasa 4.5:1 sobre las CUATRO superficies claras, incluida
+   la hundida (filas fuera de la clasificación), que es la más oscura:
 
-   El verde (--brand) sigue siendo SOLO cascarón: el punto del logotipo, el
-   splash, el icono. Es el mismo tono que Estrellas; dentro de una tabla haría
-   que cada fila de Estrellas pareciera destacada.
+     token   --bg   --card  --raised  --sunken
+     fg      16.2   17.7    15.5      14.9
+     fg2      9.0    9.8     8.6       8.3
+     dim      5.6    6.1     5.3       5.1
+     faint    5.1    5.6     4.9       4.7
 
-   ── Contraste medido, no a ojo ──────────────────────────────────────────
-   Cada token de texto pasa 4.5:1 sobre --card, que es donde vive casi todo.
-   --faint era el que fallaba: el de la paleta negra anterior daba 2.9:1 y el
-   primer intento en navy 3.6:1, y es el que lleva las micro-etiquetas de
-   10 px — justo el texto más chico, que es el que más lo necesita.
+   Los semánticos se oscurecieron hasta pasar sobre el fondo: el verde de
+   "positivo" de la paleta oscura daba 1.9:1 sobre blanco.
 
-     token    sobre --bg  sobre --card
-     fg         15.9        14.3
-     fg2        10.7         9.7
-     dim         7.3         6.6
-     faint       5.7         5.1
+   Sobre la franja navy (--ink) el texto va en --ink-fg (17:1) y lo secundario
+   en --ink-dim (8.3:1).
 
-   ── El color de club NUNCA identifica solo ──────────────────────────────
-   Toros, Escogido y Gigantes viven los tres en la familia roja-magenta.
-   Validado con dataviz/validate_palette.js sobre el navy: Gigantes↔Toros da
-   ΔE 7.4 y Escogido↔Gigantes 10.7, por debajo del piso de 15 incluso con
-   visión normal. Mover un tono solo empuja el choque al siguiente par: es
-   estructural. Por eso toda marca de color de club va acompañada del código
-   de tres letras (TeamBadge), y en la franja de probabilidad cada equipo
-   tiene su lado de la línea del 50%. El color refuerza; no identifica.
+   ── El color de club NUNCA identifica solo ───────────────────────────────
+   Toros, Escogido y Gigantes caen los tres en la familia roja-magenta y no se
+   distinguen ni con visión normal (Gigantes↔Toros ΔE 7.4). Toda marca de
+   club lleva su código escrito.
    ───────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg:         6  21  43;    /* #06152B — fondo de página            */
-  --sunken:     4  16  34;    /* #041022 — filas hundidas             */
-  --card:      11  32  56;    /* #0B2038 — superficie principal       */
-  --raised:    17  42  72;    /* #112A48 — hover / superficie elevada */
-  --header:    14  35  64;    /* #0E2340 — cabeceras de tabla         */
-  --line:      27  58  92;    /* #1B3A5C — bordes y separadores       */
-  --line-soft: 18  41  74;    /* #12294A — separadores de fila        */
+  --bg:        243 245 248;   /* #F3F5F8 — fondo de página            */
+  --sunken:    232 236 241;   /* #E8ECF1 — filas hundidas, fondo de gráfica */
+  --card:      255 255 255;   /* #FFFFFF — superficie principal       */
+  --raised:    237 240 244;   /* #EDF0F4 — hover / presionado         */
+  --header:    243 245 248;   /* #F3F5F8 — cabeceras de tabla         */
+  --line:      213 220 229;   /* #D5DCE5 — bordes y separadores       */
+  --line-soft: 231 235 240;   /* #E7EBF0 — separadores de fila        */
 
-  --fg:       234 240 248;    /* #EAF0F8 — texto principal            */
-  --fg2:      185 200 219;    /* #B9C8DB — texto de apoyo             */
-  --dim:      143 166 194;    /* #8FA6C2 — etiquetas, datos menores   */
-  --faint:    124 148 178;    /* #7C94B2 — micro-etiquetas (5.1:1)    */
+  --fg:         11  24  48;   /* #0B1830 — tinta: negro teñido de navy */
+  --fg2:        54  68  92;   /* #36445C — texto de apoyo             */
+  --dim:        86  99 122;   /* #56637A — etiquetas, datos menores   */
+  --faint:      92 105 127;   /* #5C697F — micro-etiquetas (≥4.7)     */
 
-  --accent:   234 240 248;    /* = --fg. El acento sigue sin ser color */
-  --accent-on:  6  21  43;    /* = --bg. Texto sobre relleno claro.   */
+  /* El acento es la tinta navy: lo seleccionado se rellena de navy. */
+  --accent:      9  28  58;   /* #091C3A — navy Deportiv              */
+  --accent-on: 255 255 255;   /* texto sobre relleno navy             */
 
-  /* Semánticos. Significan algo, así que no cambian con la paleta. */
-  --pos:       61 220 151;    /* #3DDC97 — bueno, ventaja, clasifica  */
-  --neg:      251 113 133;    /* #FB7185 — malo, atraso               */
-  --warn:     255 197  61;    /* #FFC53D — base ocupada, dato viejo   */
-  --live:     255  59  48;    /* #FF3B30 — en vivo, ahora mismo       */
+  /* La franja oscura de contexto (pie de tarjeta, cabecera de tabla por
+     equipo). Es el #150000 del kit de referencia, en navy. */
+  --ink:         9  28  58;   /* #091C3A                              */
+  --ink-fg:    255 255 255;   /* texto sobre la franja (17:1)         */
+  --ink-dim:   169 182 204;   /* #A9B6CC — secundario sobre la franja */
 
-  /* Marca. El verde, SOLO cascarón. El navy ya es la superficie. */
-  --brand:      3 218  88;    /* #03DA58 — verde Deportiv             */
-  --brand-navy: 9  28  58;    /* #091C3A — navy Deportiv              */
+  /* Semánticos, oscurecidos para fondo claro. Significan algo. */
+  --pos:        35 125  86;   /* #237D56 — bueno, ventaja, clasifica  */
+  --neg:       178  80  94;   /* #B2505E — malo, atraso               */
+  --warn:      138 106  33;   /* #8A6A21 — base ocupada, dato viejo   */
+  --live:      212  49  40;   /* #D43128 — en vivo, ahora mismo       */
+
+  /* Marca. El verde, SOLO cascarón: el punto del logotipo. */
+  --brand:       3 218  88;   /* #03DA58 — verde Deportiv             */
+  --brand-navy:  9  28  58;   /* #091C3A — navy Deportiv              */
 }
 
 * {
@@ -89,6 +86,13 @@
 body {
   background-color: rgb(var(--bg));
   color: rgb(var(--fg));
+}
+
+/* Bebas Neue tiene un solo peso. Sin esto, cada `font-bold` o `font-semibold`
+   que conviva con `font-cond` pediría una negrita que no existe y el
+   navegador la fabricaría engordando los trazos. */
+.font-cond {
+  font-synthesis: none;
 }
 
 /* Las cifras se comparan en columna: alineadas o no se pueden leer. */

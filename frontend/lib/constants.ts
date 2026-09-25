@@ -1,10 +1,16 @@
 export interface TeamStyle {
-  /** Color del club. Franja de fila, borde y relleno de la marca. */
+  /** Color del club. Relleno de la teja sólida, franja de fila, lavados. */
   primary: string;
-  /** El mismo color al 14%, para el relleno de la marca perfilada. */
+  /** El mismo color al 12%, para el relleno de la teja perfilada. */
   tint: string;
-  /** Versión aclarada, para texto sobre el fondo casi negro. */
+  /**
+   * Tinta del club para TEXTO y trazos finos sobre fondo claro: el primario
+   * oscurecido hasta pasar 4.5:1 sobre blanco. El amarillo de Águilas da
+   * 2.0:1 tal cual; como texto no se leería.
+   */
   text: string;
+  /** Color del texto ENCIMA de la teja sólida: el que más contraste da. */
+  on: string;
 }
 
 /**
@@ -21,17 +27,23 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * El fondo es #06152B. El azul oficial de Licey (#003DA5) y el verde de
+ * Sobre el navy oscuro de antes, El azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
+ * ── Tema claro (25-sep-2026) ──────────────────────────────────────────────
+ * `text` es ahora la tinta de cada club para fondo CLARO (≥4.5:1 sobre
+ * blanco) y `on` el texto que va encima de la teja sólida — tinta o blanco,
+ * el que más contraste dé. Gigantes pasó de #D6357F a #D2327C: visualmente
+ * igual (ΔE < 1), pero con el primero el blanco encima daba 4.49:1.
+ *
  */
 export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: "#F2A71B", tint: "rgba(242,167,27,0.14)", text: "#F5B94B" },
-  TOR: { primary: "#C7304F", tint: "rgba(199,48,79,0.14)", text: "#E0798F" },
-  EST: { primary: "#14B87A", tint: "rgba(20,184,122,0.14)", text: "#36D498" },
-  GIG: { primary: "#D6357F", tint: "rgba(214,53,127,0.14)", text: "#E7689F" },
-  ESC: { primary: "#EF4B4B", tint: "rgba(239,75,75,0.14)", text: "#F58080" },
-  LIC: { primary: "#4A8BF0", tint: "rgba(74,139,240,0.14)", text: "#7FAEF6" },
+  AGU: { primary: "#F2A71B", tint: "rgba(242,167,27,0.12)", text: "#9D6D12", on: "#0B1830" },
+  TOR: { primary: "#C7304F", tint: "rgba(199,48,79,0.12)",  text: "#C7304F", on: "#FFFFFF" },
+  EST: { primary: "#14B87A", tint: "rgba(20,184,122,0.12)", text: "#0F8659", on: "#0B1830" },
+  GIG: { primary: "#D2327C", tint: "rgba(210,50,124,0.12)", text: "#D2327C", on: "#FFFFFF" },
+  ESC: { primary: "#EF4B4B", tint: "rgba(239,75,75,0.12)",  text: "#D24242", on: "#0B1830" },
+  LIC: { primary: "#4A8BF0", tint: "rgba(74,139,240,0.12)", text: "#3E75CA", on: "#0B1830" },
 };
 
 export const TEAM_FULL_NAMES: Record<string, string> = {

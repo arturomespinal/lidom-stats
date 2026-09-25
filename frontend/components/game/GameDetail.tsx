@@ -177,10 +177,11 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
         )}
       </header>
 
+      {/* Pestañas con subrayado, como la barra superior y el kit de
+          referencia. Cada una mide 44 px de alto: es la zona que el pulgar
+          necesita en un teléfono. */}
       <nav
-        // gap y padding ajustados para que las CUATRO quepan en ancho de
-        // teléfono: con gap-1.5 y px-3.5 "Alineación" se salía por el borde.
-        className="flex gap-1 overflow-x-auto bg-header px-2.5 py-2"
+        className="flex overflow-x-auto border-b border-line bg-card px-2"
         aria-label="Secciones del juego"
       >
         {TABS.map((t) => {
@@ -191,10 +192,10 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
               type="button"
               onClick={() => setTab(t.key)}
               aria-pressed={on}
-              className={`whitespace-nowrap rounded-full border px-3 py-1 text-[13px] font-semibold transition-colors ${
+              className={`min-h-[44px] whitespace-nowrap px-3 text-[13px] font-semibold transition-colors ${
                 on
-                  ? "border-accent bg-accent text-accent-on"
-                  : "border-line bg-card text-dim hover:text-fg"
+                  ? "text-fg shadow-[inset_0_-2px_0_rgb(var(--accent))]"
+                  : "text-dim hover:text-fg"
               }`}
             >
               {t.label}
@@ -235,8 +236,9 @@ function TeamSide({
       <TeamBadge code={code ?? "—"} size="md" />
       <div className={`min-w-0 flex-1 ${reverse ? "text-right" : ""}`}>
         <p className="truncate text-xs text-dim">{name ?? "—"}</p>
+        {/* El marcador en Bebas Neue, como en el kit de referencia. */}
         <p
-          className={`text-2xl font-bold leading-tight tabular-nums ${
+          className={`num font-cond text-[40px] leading-none ${
             winning ? "text-fg" : "text-fg2"
           }`}
         >

@@ -29,7 +29,7 @@ export default function Navbar({ season }: Props) {
           href={`/?season=${season}`}
           className="flex items-baseline gap-1.5 mr-4 shrink-0"
         >
-          <span className="font-cond text-xl font-bold tracking-[0.015em] text-fg">
+          <span className="font-cond text-[26px] leading-none tracking-[0.02em] text-fg">
             DEPORTIV
           </span>
           <span
@@ -38,10 +38,12 @@ export default function Navbar({ season }: Props) {
           />
         </Link>
 
-        {/* Tabs. min-w-0 + overflow-x-auto: en pantalla angosta las pestañas
-            se desplazan dentro de su propia franja en vez de empujar la
+        {/* Pestañas con SUBRAYADO, como el kit de referencia, en vez de
+            píldoras. Ocupan todo el alto de la barra para que la raya caiga
+            sobre el borde inferior. min-w-0 + overflow-x-auto: en pantalla
+            angosta se desplazan dentro de su franja en vez de empujar la
             temporada fuera de la barra. */}
-        <div className="flex min-w-0 items-center gap-1 overflow-x-auto">
+        <div className="flex h-full min-w-0 items-stretch gap-1 overflow-x-auto">
           {TABS.map((tab) => {
             const isActive = pathname === tab.href;
             return (
@@ -50,11 +52,12 @@ export default function Navbar({ season }: Props) {
                 href={`${tab.href}?season=${season}`}
                 // whitespace-nowrap: sin esto "En Vivo" se parte en dos líneas
                 // y desalinea toda la barra en pantallas angostas.
-                className={`whitespace-nowrap rounded px-3 py-1.5 text-sm font-medium transition-colors ${
+                className={`flex items-center whitespace-nowrap px-3 text-sm font-medium transition-colors ${
                   isActive
-                    ? "bg-header text-white"
-                    : "text-dim hover:text-white hover:bg-header"
+                    ? "text-fg shadow-[inset_0_-2px_0_rgb(var(--accent))]"
+                    : "text-dim hover:text-fg"
                 }`}
+                aria-current={isActive ? "page" : undefined}
               >
                 {tab.label}
               </Link>

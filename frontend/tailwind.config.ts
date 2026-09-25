@@ -44,6 +44,11 @@ const config: Config = {
         accent:   token("accent"),
         "accent-on": token("accent-on"),
 
+        // La franja navy de contexto y su texto.
+        ink:        token("ink"),
+        "ink-fg":   token("ink-fg"),
+        "ink-dim":  token("ink-dim"),
+
         pos:      token("pos"),
         neg:      token("neg"),
         warn:     token("warn"),

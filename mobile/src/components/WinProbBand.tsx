@@ -9,7 +9,7 @@ import {
   View,
 } from 'react-native';
 import Svg, { ClipPath, Circle, Defs, G, Line, Path, Rect } from 'react-native-svg';
-import { COLORS, TEAM_STYLES } from '../constants';
+import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 import { WinProbPoint } from '../types';
 
 interface Props {
@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
   },
   valor: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cuadro: { width: 10, height: 10, borderRadius: 2 },
-  codigo: { color: COLORS.textSupport, fontSize: 12, fontWeight: '800', letterSpacing: 0.5 },
+  codigo: { color: COLORS.textSupport, fontSize: 15, fontFamily: FONTS.display, letterSpacing: 0.5 },
   pct: {
     color: COLORS.textPrimary,
     fontSize: 14,
@@ -326,8 +326,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 8,
     color: COLORS.textSecondary,
-    fontSize: 10,
-    fontWeight: '800',
+    fontSize: 13,
+    fontFamily: FONTS.display,
     letterSpacing: 0.6,
   },
   ladoArriba: { top: 6 },

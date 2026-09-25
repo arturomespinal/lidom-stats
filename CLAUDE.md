@@ -238,7 +238,7 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 ## Frontend
 
 - `NEXT_PUBLIC_API_URL` en `frontend/.env.local` apunta al backend (default: `http://localhost:8000`)
-- Tema oscuro fijo, colores de equipos en `frontend/lib/constants.ts`
+- Tema claro con tinta navy (ver "La paleta"); colores de equipos en `frontend/lib/constants.ts`
 - Tablas sortables por clic en columna (client components), fetch en server components
 - Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
 
@@ -299,89 +299,120 @@ club — marca propia, sin archivo que pedirle al backend. `static/crests/` y el
 montaje `/static` pueden desaparecer sin tocar ningún cliente.
 
 Los colores de club viven en `TEAM_STYLES` (web `frontend/lib/constants.ts`,
-móvil `mobile/src/constants.ts`, **los mismos valores**) y llevan un piso de
-luminosidad: el azul oficial de Licey (#003DA5) y el verde de Estrellas
-(#00713B) se leen como negro sobre el fondo, así que se subieron.
+móvil `mobile/src/constants.ts`, **los mismos valores**). El azul oficial de
+Licey (#003DA5) y el verde de Estrellas (#00713B) se subieron de luminosidad
+cuando la app era oscura; con el tema claro los primarios se quedaron y cada
+club ganó una tinta (`text`) para texto sobre blanco. Ver "La paleta".
 
-## La paleta
+## La paleta: tema claro, tinta navy
 
-**El navy es la superficie; el acento sigue sin ser color.** Dos reglas que se
-escriben parecido y no son lo mismo:
+**Decidido el 25-sep-2026, después de probar el navy oscuro ese mismo día.** La
+dirección visual sale de un kit de referencia de apps deportivas (Sportify, de
+Visiata, en Figma Community): fondos claros, títulos en **Bebas Neue**, franjas
+oscuras de contexto y una **diagonal** como firma. Se tomó la dirección, no el
+kit: ni sus imágenes, ni sus escudos, ni su nombre.
 
-- **Sin ACENTO de marca.** Los seis equipos ocupan el amarillo, el rojo, el
-  verde, el azul y el magenta; un acento competiría con alguno y las filas se
-  leerían como si fueran de ese equipo. El acento es el blanco del texto, y lo
-  seleccionado se **invierte** —relleno claro, texto `--accent-on`— en vez de
-  teñirse. Un fondo tenue del acento sobre una tarjeta es invisible.
-- **Con SUPERFICIE de marca.** El fondo de toda la app es el navy de Deportiv
-  (`#06152B` página, `#0B2038` tarjeta). Un fondo no compite con el texto de
-  ningún club —ni con el azul de Licey— porque no está al mismo nivel que la
-  tinta. Con el negro neutro anterior la app era correcta y anónima: se veía
-  como cualquier app de deportes en modo oscuro. Decidido el 25-sep-2026, en
-  toda la app y no solo en las pantallas de juego — una sola identidad.
+El kit tiñe su negro con su rojo de marca (`#150000`). Aquí el negro se tiñe
+con el navy de Deportiv: la tinta es `#0B1830` y las franjas y lo seleccionado
+van en el navy de marca `#091C3A`. Misma lógica, nuestra marca.
 
-El verde de marca (`--brand`) sigue siendo **solo cascarón**: el punto del
-logotipo, el splash, el icono. Es el tono de Estrellas.
+### Sin color de acento — y por qué no el coral del kit
+
+El acento del kit es un coral, `#FF5050`. Medido contra los clubes: **ΔE 3.3
+contra Escogido** —el mismo color—, 13.1 contra Toros y 12.7 contra Gigantes.
+Con ese acento cada botón y cada pestaña activa se leerían como de Escogido, y
+un fanático del Licey abriría una app con los colores del rival. El acento es
+la tinta navy: lo seleccionado se rellena de navy con texto blanco, o se marca
+con una raya navy debajo (las pestañas).
 
 ### Contraste medido, no a ojo
 
-Todo token de texto pasa 4.5:1 sobre `--card`, que es donde vive casi todo:
+Todo token de texto pasa 4.5:1 sobre las **cuatro** superficies, incluida la
+hundida, que es la más oscura:
 
-| Token | sobre `--bg` | sobre `--card` |
-|-------|-------------|----------------|
-| `fg` | 15.9 | 14.3 |
-| `fg2` | 10.7 | 9.7 |
-| `dim` | 7.3 | 6.6 |
-| `faint` | 5.7 | 5.1 |
+| Token | `--bg` | `--card` | `--raised` | `--sunken` |
+|-------|-------:|---------:|-----------:|-----------:|
+| `fg` | 16.2 | 17.7 | 15.5 | 14.9 |
+| `fg2` | 9.0 | 9.8 | 8.6 | 8.3 |
+| `dim` | 5.6 | 6.1 | 5.3 | 5.1 |
+| `faint` | 5.1 | 5.6 | 4.9 | 4.7 |
 
-`faint` era el que fallaba: 2.9:1 en la paleta negra y 3.6:1 en el primer
-intento en navy — y es el de las micro-etiquetas de 10 px, el texto más chico.
+- **Los semánticos se oscurecieron** hasta pasar sobre el fondo: el verde de
+  "positivo" del tema oscuro daba 1.9:1 sobre blanco.
+- **"EN VIVO" va sólido**, blanco sobre rojo (5.0:1). Rojo sobre rojo al 16%
+  daba 3.95:1.
+- **La jugada de anotación va en tinta** sobre un verde tenue: verde sobre
+  verde daba 4.2:1.
+- **Los tokens de borde no son color de texto** (1.4:1).
 
-**Los tokens de borde (`--line`, `COLORS.border`) no son color de texto**:
-dan 1.4:1. Seis sitios los usaban así; la palabra "ante" del relato, el guion
-de una media entrada no jugada y el comando del estado vacío pasaron a tokens
-de texto. Los separadores puramente decorativos ("·", el "—" entre marcadores)
-se quedaron.
+### Los colores de club sobre fondo claro
+
+`TEAM_STYLES` lleva cuatro campos, iguales en las dos plataformas:
+
+| Campo | Para qué |
+|-------|----------|
+| `primary` | El color del club: relleno de la teja sólida, franja de fila, lavados de la curva |
+| `tint` | El primario al 12%, relleno de la teja perfilada |
+| `text` | La **tinta** del club: el primario oscurecido hasta 4.5:1 sobre blanco. El amarillo de Águilas da 2.0:1 tal cual |
+| `on` | El texto **encima** de la teja sólida: tinta o blanco, el que más contraste dé. Blanco sobre Águilas daría 2:1; tinta sobre Toros, 3.2:1 |
+
+Gigantes pasó de `#D6357F` a `#D2327C`: visualmente igual (ΔE < 1), pero con el
+primero el blanco encima daba 4.49:1.
 
 ### El color de club NUNCA identifica solo
 
-Validado con el script de la skill de visualización sobre el navy:
-**Gigantes↔Toros da ΔE 7.4 y Escogido↔Gigantes 10.7**, por debajo del piso de
-15 incluso con visión normal. Se probaron seis tonos para Toros y ninguno pasa:
-mover uno empuja el choque al siguiente par, porque tres clubes viven en la
-familia roja-magenta. Es estructural, y la respuesta es una regla y no un
-color: toda marca de club lleva su código escrito (`TeamBadge`), y en la franja
-de probabilidad cada equipo tiene su lado de la línea del 50%. El color
-refuerza; la posición y el texto identifican.
+Toros, Escogido y Gigantes caen los tres en la familia roja-magenta:
+**Gigantes↔Toros ΔE 7.4 y Escogido↔Gigantes 10.7**, bajo el piso de 15 incluso
+con visión normal. Se probaron seis tonos para Toros y ninguno pasa: es
+estructural. Toda marca de club lleva su código escrito, y en la franja de
+probabilidad cada equipo tiene su lado de la línea del 50%. En la tabla de
+posiciones se ve: las franjas de las filas 2 a 4 casi no se distinguen, y los
+códigos sí.
 
-### La esquina cortada es la firma, y está reservada
+### La tipografía: Bebas Neue
 
-Vive en **dos** sitios: las tejas de equipo (`TeamBadge`) y los estados de
-juego (`StatusBadge` — EN VIVO, FINAL, PREVIA). Repetida en cada tarjeta
-dejaría de significar algo.
+Títulos de página y de sección, marcadores, códigos de equipo, estados y el
+logotipo. **Tiene un solo peso (400) y solo mayúsculas**, y eso trae dos reglas:
 
-- En la web, la teja sólida y el estado llevan `clip-path` con un corte de
-  6 px **fijos** (`calc`), no un porcentaje: "FINAL (10)" mide el doble que
-  "FINAL" y con porcentaje la diagonal crecería con el texto.
-- La teja perfilada no puede llevar `clip-path` —cortaría el borde justo en la
-  diagonal— y usa el eco del móvil: la esquina inferior derecha con casi el
-  doble de radio (0.42 del lado contra 0.22).
-- React Native no tiene `clip-path`: el móvil usa ese mismo radio asimétrico
-  en todo.
+- **Web:** `.font-cond { font-synthesis: none }` en `globals.css`. Sin eso,
+  cada `font-bold` junto a `font-cond` hacía que el navegador fabricara una
+  negrita falsa engordando los trazos.
+- **Móvil: nunca `fontWeight` junto a `FONTS.display`.** En Android, pedir
+  '700' a una fuente propia de un solo peso hace que el sistema la sustituya
+  por Roboto, sin error y sin aviso.
 
-Antes había **cuatro** copias de la píldora de estado entre las dos
-plataformas, y la web usaba un rojo distinto en cada una (`text-neg` en una,
-`text-live` en otra). Ahora hay un `StatusBadge` por plataforma.
+El cuerpo sigue en Archivo (web) y la fuente del sistema (móvil): las dos
+tienen cifras tabulares, que es lo que importa en una app de estadísticas. En
+el móvil la fuente se carga con `@expo-google-fonts/bebas-neue`, y la pantalla
+de arranque se retiene hasta que está lista —si no, la primera pantalla
+aparece un instante en Roboto y luego salta—. Si la carga falla, la app
+arranca igual con la del sistema.
+
+### Las firmas del kit, en nuestros componentes
+
+- **La diagonal**: un plano gris cortado en diagonal detrás de las columnas
+  C/H/E de la tarjeta de partido. En la web es un degradado con corte duro; en
+  el móvil, un `View` con `skewX` dentro de un contenedor que recorta — sin
+  librería de degradados. Sigue a la esquina cortada de tejas y estados, que
+  se quedó.
+- **La franja navy de contexto** al pie de la tarjeta: el estadio y "Ver el
+  juego ›", 44 px de alto.
+- **Pestañas con subrayado** en lugar de píldoras, en la barra superior, en
+  el detalle de juego web y en el del móvil. Todas miden 44 px de alto.
+- **La esquina cortada**, que es anterior al kit y se quedó, reservada a las
+  tejas de equipo (`TeamBadge`) y los estados (`StatusBadge`). En la web,
+  `clip-path` con un corte de 6 px **fijos** (`calc`), no un porcentaje: "FINAL
+  (10)" mide el doble que "FINAL" y la diagonal crecería con el texto. La teja
+  perfilada no puede llevar `clip-path` —cortaría el borde— y usa el eco del
+  móvil: la esquina inferior derecha con casi el doble de radio. React Native
+  no tiene `clip-path` y usa ese radio en todo.
 
 Fuente única por plataforma. **Ningún componente escribe un hex a mano**:
 
 | Plataforma | Dónde | Cómo |
 |-----------|-------|------|
-| Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 11 32 56`), expuestas como `rgb(var(--card) / <alpha-value>)`, para que `bg-card/50` componga opacidad. Se usan por nombre: `bg-card`, `text-dim`, `border-line`. |
-| Móvil | `mobile/src/constants.ts` | `COLORS` y `ALPHA`, con los mismos valores. |
-
-Los semánticos (`pos`, `neg`, `warn`, `live`) están separados del acento a
-propósito: significan algo y sobreviven a cualquier cambio de paleta.
+| Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 255 255 255`), expuestas como `rgb(var(--card) / <alpha-value>)`. Se usan por nombre: `bg-card`, `text-dim`, `bg-ink`. |
+| Móvil | `mobile/src/constants.ts` | `COLORS`, `ALPHA` y `FONTS`, con los mismos valores. |
 
 ### Un mínimo explícito MANDA sobre el calculado
 
@@ -593,14 +624,18 @@ No borrar `index.js` pensando que sobra.
 ### La pantalla de arranque
 
 `app.json` usa el plugin `expo-splash-screen` con `assets/splash-icon.png`
-sobre `#06152B` — **el mismo navy que la primera pantalla**. Si el fondo del
-arranque y el de la app no coinciden, se ve un parpadeo en la transición. Era
-`#091C3A` (el navy de marca) hasta que el navy pasó a ser la superficie.
+sobre **`#E6E3EA`**, el mismo color que el ícono adaptativo de Android.
 
-El paquete `expo-splash-screen` tiene que estar en `package.json`
-(`npx expo install expo-splash-screen`). En Expo Go su ausencia no se nota —ahí
-la pantalla de arranque nunca aparece—, pero un build de desarrollo o de
-producción falla al resolver el plugin.
+El ícono **no es transparente**: trae su propio fondo de papel gris lila. Por
+eso el fondo del splash tiene que ser ese color y no otro. Sobre el navy que
+tuvo un día (`#06152B`), la imagen se veía como un cuadrado claro recortado en
+medio de la pantalla oscura. Con el papel, se funde, y la transición hacia la
+app clara es suave.
+
+El paquete `expo-splash-screen` tiene que estar en `package.json`. En Expo Go
+su ausencia no se nota —ahí la pantalla de arranque nunca aparece—, pero un
+build de desarrollo o de producción falla al resolver el plugin. `App.tsx` la
+retiene hasta que carga Bebas Neue.
 
 ### Pantalla en vivo
 
@@ -759,7 +794,7 @@ probabilidad, hay resultado.
 ### La franja en la web
 
 `components/game/WinProbBand.tsx`, en la cabecera del detalle de juego, entre
-el marcador y las pestañas. Es la pantalla que justifica el navy: el único dato
+el marcador y las pestañas. Es la pantalla que justifica la franja: el único dato
 que ningún otro producto de LIDOM tiene va arriba y grande.
 
 - **Una serie contra la línea del 50%.** La curva es la probabilidad del local,
@@ -818,11 +853,10 @@ mismas razones; lo que cambia es cómo se toca.
 En `GameDetailScreen` el marcador y la franja pasaron **dentro** del scroll, y
 las pestañas se quedan pegadas arriba (`stickyHeaderIndices`). Con el marcador
 fijo, la franja dejaba al relato unos 300 px en un teléfono de 844. Las
-pestañas miden ~28 pt y llevan `hitSlop` hasta los 44 de las reglas de diseño
-sin cambiar cómo se ven.
+pestañas son de subrayado y miden 44 pt de alto de verdad, sin `hitSlop`.
 
-Para instalar la dependencia: `npx expo install react-native-svg` desde
-`mobile/`. Elige la versión que corresponde al SDK (15.15.4 en el 57, según
+Para instalar las dependencias: `npx expo install react-native-svg expo-font
+@expo-google-fonts/bebas-neue` desde `mobile/`. Elige la versión que corresponde al SDK (15.15.4 en el 57, según
 `node_modules/expo/bundledNativeModules.json`).
 
 ### Trabajar la pantalla de juego sin red

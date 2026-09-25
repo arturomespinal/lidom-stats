@@ -47,14 +47,14 @@ function TeamRow({
       <TeamBadge code={team.team_code} />
       <span
         className={`flex-1 text-sm truncate ${
-          won ? "text-white font-semibold" : "text-fg2"
+          won ? "text-fg font-semibold" : "text-fg2"
         }`}
       >
         {team.team_name}
       </span>
       <span
-        className={`w-7 text-right tabular-nums font-bold ${
-          won ? "text-white" : "text-fg2"
+        className={`num w-7 text-right font-cond text-2xl leading-none ${
+          won ? "text-fg" : "text-fg2"
         }`}
       >
         {team.runs}
@@ -104,7 +104,7 @@ function LineScore({ state }: { state: LiveGameState }) {
                   {cell(runs(i))}
                 </td>
               ))}
-              <td className="text-center font-bold text-white pl-2">{t.runs}</td>
+              <td className="text-center font-bold text-fg pl-2">{t.runs}</td>
               <td className="text-center">{t.hits}</td>
               <td className="text-center">{t.errors}</td>
             </tr>
@@ -138,7 +138,7 @@ function Situation({ state }: { state: LiveGameState }) {
           <span className="text-[10px] uppercase tracking-wide text-dim w-12 shrink-0">
             Cuenta
           </span>
-          <span className="text-sm font-bold tabular-nums text-white">
+          <span className="text-sm font-bold tabular-nums text-fg">
             {state.balls}-{state.strikes}
           </span>
         </div>
@@ -148,13 +148,13 @@ function Situation({ state }: { state: LiveGameState }) {
         {state.batter && (
           <div className="truncate">
             <span className="text-dim">Al bate </span>
-            <span className="text-white font-medium">{state.batter}</span>
+            <span className="text-fg font-medium">{state.batter}</span>
           </div>
         )}
         {state.pitcher && (
           <div className="truncate">
             <span className="text-dim">Lanza </span>
-            <span className="text-white font-medium">{state.pitcher}</span>
+            <span className="text-fg font-medium">{state.pitcher}</span>
           </div>
         )}
       </div>
@@ -171,7 +171,7 @@ export default function LiveScoreboard({ state, stale, href }: Props) {
 
   return (
     <article className="bg-card border border-line rounded-lg overflow-hidden">
-      <header className="flex items-center gap-2 px-4 py-2 border-b border-line bg-bg">
+      <header className="flex items-center gap-2 px-4 py-2 border-b border-line-soft">
         <StatusPill state={state} />
         {/* inning_ordinal_es, no inning_ordinal: el crudo de la MLB viene en
             inglés y dentro de esta frase daba "Baja del 1st". */}
@@ -189,13 +189,14 @@ export default function LiveScoreboard({ state, stale, href }: Props) {
             sin señal
           </span>
         )}
-        <span className="ml-auto text-[11px] text-dim truncate max-w-[45%]">
-          {state.venue}
-        </span>
       </header>
 
-      <div className="px-4 pt-2 pb-3">
-        <div className="flex items-center gap-3 text-[10px] uppercase tracking-wide text-dim pb-1 border-b border-header">
+      {/* La diagonal del kit de referencia: un plano gris cortado en diagonal
+          detrás de las columnas C/H/E. Además de firma, separa la zona de los
+          números de la de los nombres. Es un degradado con corte duro, no una
+          imagen: escala con la tarjeta y no pesa nada. */}
+      <div className="bg-[linear-gradient(104deg,transparent_64%,rgb(var(--raised))_64%)] px-4 pt-2 pb-3">
+        <div className="flex items-center gap-3 text-[10px] uppercase tracking-wide text-dim pb-1 border-b border-line-soft">
           <span className="w-2" />
           <span className="w-8" />
           <span className="flex-1" />
@@ -222,8 +223,10 @@ export default function LiveScoreboard({ state, stale, href }: Props) {
       {state.last_play && state.status !== "preview" && (
         <div
           className={`px-4 py-2 border-t border-line text-xs ${
+            // Texto en tinta, no en verde: verde sobre verde al 12.5% daba
+            // 4.2:1. El fondo y la pelota ya dicen que fue carrera.
             state.last_play_is_scoring
-              ? "bg-pos/[.125] text-pos"
+              ? "bg-pos/[.08] text-fg"
               : "text-dim"
           }`}
         >
@@ -252,14 +255,22 @@ export default function LiveScoreboard({ state, stale, href }: Props) {
         </div>
       )}
 
-      {!!href && (
-        <Link
-          href={href}
-          className="flex items-center justify-center gap-1 border-t border-line bg-bg py-2 text-[11px] font-semibold text-dim transition-colors hover:bg-raised hover:text-fg"
-        >
-          Ver el juego <span aria-hidden>›</span>
-        </Link>
-      )}
+      {/* La franja navy de contexto, el pie de tarjeta del kit de referencia:
+          dónde se juega y, si hay detalle, la puerta a él. Mide 44 px para que
+          el pulgar la acierte. */}
+      <footer className="flex min-h-[44px] items-center gap-3 bg-ink px-4 text-[11px]">
+        <span className="min-w-0 flex-1 truncate uppercase tracking-[0.08em] text-ink-dim">
+          {state.venue ?? "Estadio por confirmar"}
+        </span>
+        {!!href && (
+          <Link
+            href={href}
+            className="shrink-0 font-cond text-[15px] tracking-[0.06em] text-ink-fg hover:underline"
+          >
+            Ver el juego <span aria-hidden>›</span>
+          </Link>
+        )}
+      </footer>
     </article>
   );
 }

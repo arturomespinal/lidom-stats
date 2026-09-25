@@ -48,12 +48,6 @@ export default function GameTabs({
             ]}
             accessibilityRole="tab"
             accessibilityState={{ selected: on }}
-            // La píldora mide ~28 pt de alto; el pulgar necesita 44. hitSlop
-            // agranda el área táctil sin cambiar lo que se ve: 8 arriba y 8
-            // abajo, justo lo que cabe en los 9 de padding de la fila. Hacia
-            // los lados, 3 — la mitad de los 6 de separación, para que dos
-            // pestañas vecinas no se pisen.
-            hitSlop={{ top: 8, bottom: 8, left: 3, right: 3 }}
           >
             <Text style={[styles.label, on && styles.labelOn]}>{t.label}</Text>
           </Pressable>
@@ -63,21 +57,33 @@ export default function GameTabs({
   );
 }
 
+/*
+ * Pestañas con SUBRAYADO, como el kit de referencia y la web, en vez de
+ * píldoras. Cada una mide 44 pt de alto: el área táctil que piden las reglas
+ * de diseño, sin necesidad de hitSlop — la píldora anterior medía 28 y lo
+ * necesitaba.
+ *
+ * La activa se marca con la raya navy Y con el texto en tinta y más peso: la
+ * raya sola, de 2 pt, es poca señal para un ojo cansado.
+ */
 const styles = StyleSheet.create({
-  scroll: { backgroundColor: COLORS.bgHeader, maxHeight: 50, flexGrow: 0 },
-  // Medidas ajustadas para que las CUATRO quepan en 390 pt sin deslizar: con
-  // 14 de padding y 7 de separación la última se salía por 9 pt.
-  content: { paddingHorizontal: 10, paddingVertical: 9, gap: 6, flexDirection: 'row' },
-  tab: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: COLORS.border,
+  scroll: {
     backgroundColor: COLORS.bgCard,
+    maxHeight: 44,
+    flexGrow: 0,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
   },
-  tabOn: { backgroundColor: COLORS.accent, borderColor: COLORS.accent },
+  content: { paddingHorizontal: 8, flexDirection: 'row' },
+  tab: {
+    height: 44,
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    borderBottomWidth: 2,
+    borderBottomColor: 'transparent',
+  },
+  tabOn: { borderBottomColor: COLORS.accent },
   tabPressed: { backgroundColor: COLORS.bgRaised },
   label: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '600' },
-  labelOn: { color: COLORS.accentOn },
+  labelOn: { color: COLORS.textPrimary, fontWeight: '700' },
 });

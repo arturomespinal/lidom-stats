@@ -1,10 +1,16 @@
 export interface TeamStyle {
-  /** Color del club. Franja de fila, borde y relleno de la marca. */
+  /** Color del club. Relleno de la teja sólida, franja de fila, lavados. */
   primary: string;
-  /** El mismo color al 14%, para el relleno de la marca perfilada. */
+  /** El mismo color al 12%, para el relleno de la teja perfilada. */
   tint: string;
-  /** Versión aclarada, para texto sobre el fondo casi negro. */
+  /**
+   * Tinta del club para TEXTO y trazos finos sobre fondo claro: el primario
+   * oscurecido hasta pasar 4.5:1 sobre blanco. El amarillo de Águilas da
+   * 2.0:1 tal cual; como texto no se leería.
+   */
   text: string;
+  /** Color del texto ENCIMA de la teja sólida: el que más contraste da. */
+  on: string;
 }
 
 /**
@@ -21,84 +27,101 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * El fondo es #06152B. El azul oficial de Licey (#003DA5) y el verde de
+ * Sobre el navy oscuro de antes, El azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
  *
  * Estos valores son los MISMOS que en frontend/lib/constants.ts. Si cambia
  * uno, cambia el otro: dos plataformas con colores distintos para el mismo
  * equipo es el tipo de fallo que nadie reporta y todo el mundo nota.
+ * ── Tema claro (25-sep-2026) ──────────────────────────────────────────────
+ * `text` es ahora la tinta de cada club para fondo CLARO (≥4.5:1 sobre
+ * blanco) y `on` el texto que va encima de la teja sólida — tinta o blanco,
+ * el que más contraste dé. Gigantes pasó de #D6357F a #D2327C: visualmente
+ * igual (ΔE < 1), pero con el primero el blanco encima daba 4.49:1.
+ *
  */
 export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.14)', text: '#F5B94B' },
-  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.14)', text: '#E0798F' },
-  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.14)', text: '#36D498' },
-  GIG: { primary: '#D6357F', tint: 'rgba(214,53,127,0.14)', text: '#E7689F' },
-  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.14)', text: '#F58080' },
-  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.14)', text: '#7FAEF6' },
+  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.12)', text: '#9D6D12', on: '#0B1830' },
+  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.12)',  text: '#C7304F', on: '#FFFFFF' },
+  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.12)', text: '#0F8659', on: '#0B1830' },
+  GIG: { primary: '#D2327C', tint: 'rgba(210,50,124,0.12)', text: '#D2327C', on: '#FFFFFF' },
+  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.12)',  text: '#D24242', on: '#0B1830' },
+  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.12)', text: '#3E75CA', on: '#0B1830' },
 };
 
 /**
- * Paleta de Deportiv — fuente única para el móvil.
+ * Paleta de Deportiv — fuente única para el móvil. Los MISMOS valores que
+ * frontend/app/globals.css; la tabla de contraste completa vive allá.
  *
- * ── El contenido no lleva color de marca ──────────────────────────────────
- * Los seis equipos ya ocupan el amarillo, el rojo, el verde, el azul y el
- * magenta. Cualquier acento competiría con alguno y haría que las filas se
- * leyeran como si pertenecieran a un equipo. El acento es el mismo blanco del
- * texto, y la jerarquía la cargan la escala, el peso y el aire.
+ * ── Tema claro, tinta navy (25-sep-2026) ──────────────────────────────────
+ * Fondos claros, títulos en Bebas Neue y franjas navy de contexto, tomados de
+ * un kit de referencia. El kit tiñe su negro con su rojo de marca; aquí se
+ * tiñe con el navy de Deportiv.
  *
- * Corolario que no se puede olvidar: el color NO distingue lo activo de lo
- * inactivo. Un elemento seleccionado se INVIERTE —relleno claro, texto oscuro
- * (accentOn)— en vez de teñirse. Si una pestaña activa vuelve a ser "accent
- * sobre card", va a desaparecer: un fondo al 12% del acento sobre la tarjeta
- * es literalmente invisible.
- *
- * ── El navy es la SUPERFICIE ──────────────────────────────────────────────
- * La regla prohíbe un ACENTO de marca, no una superficie. El navy de
- * Deportiv es el fondo de toda la app: un fondo no compite con el texto de
- * ningún club. Con el negro neutro anterior la app era correcta y anónima.
- * `brand` (el verde) sigue siendo SOLO cascarón: es el tono de Estrellas.
- *
- * ── Contraste medido ──────────────────────────────────────────────────────
- * Todo token de texto pasa 4.5:1 sobre bgCard. `textFaint` era el que
- * fallaba (2.9:1 en la paleta negra) y es el de las micro-etiquetas: el
- * texto más chico, el que más lo necesita. Tabla completa en
- * frontend/app/globals.css — los valores son los MISMOS.
+ * ── Sin color de acento ───────────────────────────────────────────────────
+ * El coral del kit (#FF5050) es el mismo color que Escogido (ΔE 3.3). El
+ * acento es la tinta navy: lo seleccionado se rellena de navy con texto
+ * blanco (accentOn).
  *
  * ── El color de club NUNCA identifica solo ────────────────────────────────
- * Toros, Escogido y Gigantes caen los tres en la familia roja-magenta
- * (Gigantes↔Toros ΔE 7.4, bajo el piso de 15 con visión normal). Es
- * estructural: toda marca de color de club va con su código de tres letras.
+ * Toros, Escogido y Gigantes no se distinguen ni con visión normal. Toda
+ * marca de club lleva su código de tres letras.
  *
  * Ningún componente escribe un hex a mano. Si un color no está aquí, o es de
  * equipo (TEAM_STYLES) o falta un token.
  */
 export const COLORS = {
-  bgPage:   '#06152B',
-  bgSunken: '#041022',   // filas hundidas (equipos fuera de la clasificación)
-  bgCard:   '#0B2038',
-  bgRaised: '#112A48',   // superficie elevada, presionada
-  bgHeader: '#0E2340',
-  border:   '#1B3A5C',
-  borderSoft: '#12294A', // separadores de fila, más tenues que el borde
+  bgPage:   '#F3F5F8',
+  bgSunken: '#E8ECF1',   // filas hundidas (fuera de la clasificación), fondo de gráfica
+  bgCard:   '#FFFFFF',
+  bgRaised: '#EDF0F4',   // presionado
+  bgHeader: '#F3F5F8',
+  border:   '#D5DCE5',
+  borderSoft: '#E7EBF0', // separadores de fila
 
-  textPrimary:   '#EAF0F8',
-  textSupport:   '#B9C8DB',  // texto de apoyo: nombres de equipo, líneas
-  textSecondary: '#8FA6C2',  // etiquetas, datos menores
-  textFaint:     '#7C94B2',  // micro-etiquetas en versalitas (5.1:1)
+  textPrimary:   '#0B1830',  // tinta: negro teñido de navy
+  textSupport:   '#36445C',
+  textSecondary: '#56637A',
+  textFaint:     '#5C697F',  // micro-etiquetas (≥4.7 sobre todas las superficies)
 
-  accent:   '#EAF0F8',   // = textPrimary. El acento sigue sin ser color.
-  accentOn: '#06152B',   // = bgPage. Texto sobre relleno claro.
+  accent:   '#091C3A',   // navy Deportiv: lo seleccionado se rellena de esto
+  accentOn: '#FFFFFF',
 
-  // Semánticos. Significan algo, así que no cambian con la paleta.
-  positive: '#3DDC97',   // bueno, ventaja, clasifica
-  negative: '#FB7185',   // malo, atraso
-  warning:  '#FFC53D',   // base ocupada, out consumido, dato viejo
-  live:     '#FF3B30',   // en vivo, ahora mismo
+  // La franja navy de contexto y su texto.
+  ink:    '#091C3A',
+  inkFg:  '#FFFFFF',
+  inkDim: '#A9B6CC',
 
-  // Marca. El verde, SOLO cascarón. El navy ya es la superficie.
+  // Semánticos, oscurecidos para fondo claro.
+  positive: '#237D56',
+  negative: '#B2505E',
+  warning:  '#8A6A21',
+  live:     '#D43128',
+
+  // Marca. El verde, SOLO cascarón.
   brand:     '#03DA58',
   brandNavy: '#091C3A',
+};
+
+/**
+ * Familias tipográficas.
+ *
+ * `display` es Bebas Neue: títulos, marcadores, códigos de equipo y estados.
+ * Tiene UN solo peso (400) y solo mayúsculas. Dos reglas que no se pueden
+ * olvidar al usarla:
+ *
+ * - **Nunca con `fontWeight`.** En Android, pedir '700' u '800' a una fuente
+ *   propia de un solo peso hace que el sistema la sustituya por la suya, sin
+ *   error y sin aviso: el texto sale en Roboto negrita.
+ * - El texto se escribe normal y la fuente lo pone en mayúsculas sola.
+ *
+ * El cuerpo sigue en la fuente del sistema: San Francisco y Roboto tienen
+ * cifras tabulares (`fontVariant: ['tabular-nums']`), que es lo que importa en
+ * una app de estadísticas.
+ */
+export const FONTS = {
+  display: 'BebasNeue_400Regular',
 };
 
 /** Transparencias derivadas, para no repetir el sufijo alfa por ahí suelto. */

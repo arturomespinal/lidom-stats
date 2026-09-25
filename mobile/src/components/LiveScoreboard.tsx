@@ -1,6 +1,6 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { ALPHA, COLORS } from '../constants';
+import { ALPHA, COLORS, FONTS } from '../constants';
 import { LiveGameState, LiveTeamLine } from '../types';
 import BaseDiamond from './BaseDiamond';
 import StatusBadge from './StatusBadge';
@@ -173,12 +173,13 @@ export default function LiveScoreboard({
           </Text>
         )}
         {stale && <Text style={styles.stale}>sin señal</Text>}
-        <Text style={styles.venue} numberOfLines={1}>
-          {state.venue}
-        </Text>
       </View>
 
       <View style={styles.teams}>
+        {/* La diagonal del kit de referencia: un plano gris inclinado detrás
+            de las columnas C/H/E. Es un View con skewX dentro de un contenedor
+            que recorta — sin librería de degradados y sin medir el ancho. */}
+        <View pointerEvents="none" style={styles.diagonal} />
         <View style={styles.colHeader}>
           <Text style={styles.colHeaderSpacer} />
           <Text style={styles.colHeaderCell}>R</Text>
@@ -251,12 +252,14 @@ export default function LiveScoreboard({
         </View>
       )}
 
-      {!!onPress && (
-        <View style={styles.more}>
-          <Text style={styles.moreText}>Ver el juego</Text>
-          <Text style={styles.moreChevron}>›</Text>
-        </View>
-      )}
+      {/* La franja navy de contexto, el pie de tarjeta del kit: dónde se
+          juega y, si la tarjeta se puede tocar, a dónde lleva. */}
+      <View style={styles.banda}>
+        <Text style={styles.bandaEstadio} numberOfLines={1}>
+          {(state.venue ?? 'Estadio por confirmar').toUpperCase()}
+        </Text>
+        {!!onPress && <Text style={styles.bandaAccion}>Ver el juego ›</Text>}
+      </View>
     </Card>
   );
 }
@@ -272,23 +275,17 @@ const styles = StyleSheet.create({
   },
   cardPressed: { backgroundColor: COLORS.bgRaised },
 
-  more: {
+  banda: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 4,
-    paddingVertical: 9,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.border,
-    backgroundColor: COLORS.bgPage,
+    gap: 12,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    backgroundColor: COLORS.ink,
   },
-  moreText: {
-    color: COLORS.textSecondary,
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 0.3,
-  },
-  moreChevron: { color: COLORS.textSecondary, fontSize: 15, lineHeight: 16 },
+  bandaEstadio: { flex: 1, color: COLORS.inkDim, fontSize: 10, letterSpacing: 0.8 },
+  // Bebas Neue, sin fontWeight (ver FONTS).
+  bandaAccion: { color: COLORS.inkFg, fontFamily: FONTS.display, fontSize: 16, letterSpacing: 0.6 },
 
   header: {
     flexDirection: 'row',
@@ -296,21 +293,22 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: COLORS.bgPage,
-    borderBottomColor: COLORS.border,
+    borderBottomColor: COLORS.borderSoft,
     borderBottomWidth: 1,
   },
   inning: { color: COLORS.textSupport, fontSize: 12 },
   stale: { color: COLORS.warning, fontSize: 10 },
-  venue: {
-    color: COLORS.textSecondary,
-    fontSize: 10,
-    marginLeft: 'auto',
-    maxWidth: '40%',
-    textAlign: 'right',
-  },
 
-  teams: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8 },
+  teams: { paddingHorizontal: 12, paddingTop: 6, paddingBottom: 8, overflow: 'hidden' },
+  diagonal: {
+    position: 'absolute',
+    top: -24,
+    bottom: -24,
+    right: -32,
+    width: '44%',
+    backgroundColor: COLORS.bgRaised,
+    transform: [{ skewX: '-14deg' }],
+  },
   colHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -331,7 +329,15 @@ const styles = StyleSheet.create({
   battingArrow: { width: 10, color: COLORS.warning, fontSize: 11 },
   teamName: { flex: 1, color: COLORS.textSupport, fontSize: 14 },
   teamNameWon: { color: COLORS.textPrimary, fontWeight: '700' },
-  runs: { width: 30, textAlign: 'right', color: COLORS.textSupport, fontSize: 16, fontWeight: '700' },
+  // El marcador en Bebas Neue, sin fontWeight (ver FONTS).
+  runs: {
+    width: 30,
+    textAlign: 'right',
+    color: COLORS.textSupport,
+    fontSize: 24,
+    fontFamily: FONTS.display,
+    fontVariant: ['tabular-nums'],
+  },
   runsWon: { color: COLORS.textPrimary },
   minor: { width: 30, textAlign: 'right', color: COLORS.textSecondary, fontSize: 12 },
 
@@ -370,7 +376,9 @@ const styles = StyleSheet.create({
 
   scoringPlay: { backgroundColor: ALPHA.positive12 },
   lastPlay: { color: COLORS.textSecondary, fontSize: 12, lineHeight: 17 },
-  scoringPlayText: { color: COLORS.positive },
+  // En tinta y no en verde: verde sobre verde al 12% no llega a 4.5:1. El
+  // fondo y la pelota ya dicen que fue carrera.
+  scoringPlayText: { color: COLORS.textPrimary },
 
   decisions: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   decision: { color: COLORS.textSupport, fontSize: 11 },

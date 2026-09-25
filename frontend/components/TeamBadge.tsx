@@ -42,6 +42,7 @@ export default function TeamBadge({
     primary: "rgb(var(--dim))",
     tint: "rgb(var(--dim) / .12)",
     text: "rgb(var(--dim))",
+    on: "rgb(var(--card))",
   };
 
   const dim =
@@ -63,7 +64,9 @@ export default function TeamBadge({
         className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.04em] ${dim}`}
         style={{
           backgroundColor: style.primary,
-          color: "rgb(var(--accent-on))",
+          // Por club y no un color fijo: sobre el amarillo de Águilas el
+          // blanco daría 2:1, y sobre el vino de Toros la tinta, 3.2:1.
+          color: style.on,
           // La esquina cortada es lo que hace que la teja se lea como una
           // marca y no como un cuadrado de color cualquiera.
           clipPath: "polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%)",

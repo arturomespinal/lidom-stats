@@ -1,16 +1,26 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
+import { BebasNeue_400Regular, useFonts } from '@expo-google-fonts/bebas-neue';
+import * as SplashScreen from 'expo-splash-screen';
 import LiveScreen from './src/screens/LiveScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
 import type { LiveStackParamList } from './src/navigation';
 import StandingsScreen from './src/screens/StandingsScreen';
 import BattingScreen from './src/screens/BattingScreen';
 import PitchingScreen from './src/screens/PitchingScreen';
-import { COLORS } from './src/constants';
+import { COLORS, FONTS } from './src/constants';
+
+// La pantalla de arranque se queda hasta que Bebas Neue esté cargada. Sin
+// esto, la primera pantalla aparece un instante con la fuente del sistema y
+// luego "salta" a la buena.
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // En algunos entornos (web, pruebas) no hay splash nativo que retener.
+});
 
 const Tab = createBottomTabNavigator();
 const LiveStack = createNativeStackNavigator<LiveStackParamList>();
@@ -56,7 +66,11 @@ function LiveTab() {
   );
 }
 
-const DarkTheme = {
+/**
+ * El tema de navegación sale de COLORS, así que sigue a la paleta sola: pasó a
+ * claro sin tocar nada más que este nombre, que decía "Dark".
+ */
+const TemaDeportiv = {
   ...DefaultTheme,
   colors: {
     ...DefaultTheme.colors,
@@ -78,16 +92,43 @@ const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> 
   Pitcheo:    { active: 'radio-button-on',inactive: 'radio-button-off' },
 };
 
-export default function App() {
+/** DEPORTIV en Bebas Neue con el punto verde: el mismo logotipo que la web. */
+function Logotipo() {
   return (
-    <NavigationContainer theme={DarkTheme}>
-      <StatusBar style="light" />
+    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+      <Text
+        style={{ fontFamily: FONTS.display, fontSize: 22, letterSpacing: 0.5, color: COLORS.textPrimary }}
+        accessibilityRole="header"
+      >
+        DEPORTIV
+      </Text>
+      <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.brand }} />
+    </View>
+  );
+}
+
+export default function App() {
+  const [fuentesListas, errorFuentes] = useFonts({ BebasNeue_400Regular });
+
+  useEffect(() => {
+    // Si la fuente falla, la app arranca igual con la del sistema: un título
+    // en Roboto es mejor que una pantalla de arranque que no se va nunca.
+    if (fuentesListas || errorFuentes) SplashScreen.hideAsync().catch(() => {});
+  }, [fuentesListas, errorFuentes]);
+
+  if (!fuentesListas && !errorFuentes) return null;
+
+  return (
+    <NavigationContainer theme={TemaDeportiv}>
+      <StatusBar style="dark" />
       <Tab.Navigator
         screenOptions={({ route }) => ({
           headerStyle: { backgroundColor: COLORS.bgCard },
           headerTintColor: COLORS.textPrimary,
           headerTitleStyle: { fontWeight: '700', fontSize: 16 },
-          headerTitle: '⚾  LIDOM Stats',
+          // Decía "⚾ LIDOM Stats": el nombre viejo, que la guía legal marca
+          // como uso de marca ajena. El producto se llama Deportiv.
+          headerTitle: () => <Logotipo />,
           tabBarStyle: {
             backgroundColor: COLORS.bgCard,
             borderTopColor: COLORS.border,

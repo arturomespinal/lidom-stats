@@ -1,6 +1,6 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { COLORS, TEAM_STYLES } from '../constants';
+import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 
 interface Props {
   code: string;
@@ -42,6 +42,7 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
     primary: COLORS.textSecondary,
     tint: `${COLORS.textSecondary}26`,
     text: COLORS.textSecondary,
+    on: COLORS.bgCard,
   };
 
   const radio = Math.round(size * 0.22);
@@ -67,8 +68,9 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
         style={[
           styles.texto,
           {
-            color: solido ? COLORS.accentOn : style.text,
-            fontSize: Math.round(size * 0.36),
+            // Por club: sobre el amarillo de Águilas el blanco daría 2:1.
+            color: solido ? style.on : style.text,
+            fontSize: Math.round(size * 0.44),
           },
         ]}
       >
@@ -84,8 +86,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
+  // Bebas Neue y SIN fontWeight: en Android un peso pedido a una fuente de un
+  // solo peso la cambia por la del sistema.
   texto: {
-    fontWeight: '800',
-    letterSpacing: 0.4,
+    fontFamily: FONTS.display,
+    letterSpacing: 0.6,
   },
 });

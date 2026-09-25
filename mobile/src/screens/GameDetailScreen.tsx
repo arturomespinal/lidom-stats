@@ -12,7 +12,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail, fetchWinProb } from '../api';
-import { COLORS } from '../constants';
+import { COLORS, FONTS } from '../constants';
 import { LiveGameDetail, WinProbResponse } from '../types';
 import type { LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
@@ -297,12 +297,13 @@ const styles = StyleSheet.create({
   sideText: { flex: 1, minWidth: 0 },
   sideTextReverse: { alignItems: 'flex-end' },
   sideName: { color: COLORS.textSecondary, fontSize: 11 },
+  // El marcador en Bebas Neue, sin fontWeight (ver FONTS).
   sideRuns: {
     color: COLORS.textSupport,
-    fontSize: 26,
-    fontWeight: '700',
+    fontSize: 36,
+    fontFamily: FONTS.display,
     fontVariant: ['tabular-nums'],
-    lineHeight: 30,
+    lineHeight: 38,
   },
   sideRunsWinning: { color: COLORS.textPrimary },
   dash: { color: COLORS.border, fontSize: 16 },

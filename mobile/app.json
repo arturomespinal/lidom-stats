@@ -4,7 +4,7 @@
     "slug": "lidom-stats",
     "version": "1.0.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "dark",
+    "userInterfaceStyle": "light",
     "icon": "./assets/icon.png",
     "ios": {
       "supportsTablet": false,
@@ -27,13 +27,14 @@
           "image": "./assets/splash-icon.png",
           "imageWidth": 180,
           "resizeMode": "contain",
-          "backgroundColor": "#06152B",
+          "backgroundColor": "#E6E3EA",
           "dark": {
             "image": "./assets/splash-icon.png",
-            "backgroundColor": "#06152B"
+            "backgroundColor": "#E6E3EA"
           }
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }

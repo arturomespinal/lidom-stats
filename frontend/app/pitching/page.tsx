@@ -26,7 +26,7 @@ export default async function PitchingPage(props: Props) {
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-5">
           <div>
-            <h1 className="text-lg font-semibold">Líderes de Pitcheo</h1>
+            <h1 className="font-cond text-[30px] leading-none tracking-[0.01em] text-fg">Líderes de Pitcheo</h1>
             <p className="text-xs text-dim mt-0.5">
               Clic en columna para ordenar · ERA/WHIP: menor es mejor
             </p>

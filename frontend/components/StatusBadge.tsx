@@ -24,8 +24,10 @@ interface Props {
  */
 const CORTE = "polygon(0 0, 100% 0, 100% 62%, calc(100% - 6px) 100%, 0 100%)";
 
+// EN VIVO va SÓLIDO: en el tema claro, rojo sobre rojo al 16% daba 3.95:1.
+// Blanco sobre el rojo, 5.0:1 — y es como lo marcan casi todas las apps.
 const ESTILO: Record<LiveStatus, string> = {
-  live: "bg-live/[.16] text-live",
+  live: "bg-live text-accent-on",
   final: "bg-raised text-dim",
   preview: "bg-fg/10 text-fg2",
   other: "bg-raised text-dim",
@@ -41,15 +43,15 @@ const TEXTO: Record<LiveStatus, string> = {
 export default function StatusBadge({ status, label }: Props) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 py-0.5 pl-2 pr-3 font-cond text-[12px] font-bold uppercase leading-4 tracking-[0.1em] ${ESTILO[status]}`}
+      className={`inline-flex items-center gap-1.5 py-0.5 pl-2 pr-3 font-cond text-[14px] uppercase leading-4 tracking-[0.08em] ${ESTILO[status]}`}
       style={{ clipPath: CORTE }}
     >
       {status === "live" && (
         // El punto que late. `motion-safe`: quien pidió menos movimiento en su
         // sistema ve el punto quieto, que dice lo mismo.
         <span className="relative flex h-1.5 w-1.5" aria-hidden="true">
-          <span className="absolute inline-flex h-full w-full rounded-full bg-live opacity-75 motion-safe:animate-ping" />
-          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-live" />
+          <span className="absolute inline-flex h-full w-full rounded-full bg-accent-on opacity-75 motion-safe:animate-ping" />
+          <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-accent-on" />
         </span>
       )}
       {label ?? TEXTO[status]}

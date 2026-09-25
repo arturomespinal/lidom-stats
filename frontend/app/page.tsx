@@ -18,7 +18,7 @@ export default async function StandingsPage(props: Props) {
       <Navbar season={season} />
       <main className="max-w-5xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-5">
-          <h1 className="text-lg font-semibold">Tabla de Posiciones</h1>
+          <h1 className="font-cond text-[30px] leading-none tracking-[0.01em] text-fg">Tabla de Posiciones</h1>
           <span className="text-xs text-dim">Temporada regular · {season}</span>
         </div>
 

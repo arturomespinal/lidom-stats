@@ -7,6 +7,7 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { BebasNeue_400Regular, useFonts } from '@expo-google-fonts/bebas-neue';
 import * as SplashScreen from 'expo-splash-screen';
+import HoyScreen from './src/screens/HoyScreen';
 import LiveScreen from './src/screens/LiveScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
 import type { LiveStackParamList, PilaParamList } from './src/navigation';
@@ -71,14 +72,15 @@ const OPCIONES_FICHA = {
  * `@react-navigation/native-stack` es JavaScript sobre `react-native-screens`,
  * que ya estaba: no añade un módulo nativo ni obliga a salir de Expo Go.
  */
-function LiveTab() {
+function HoyTab() {
   return (
     <LiveStack.Navigator screenOptions={OPCIONES_PILA}>
       <LiveStack.Screen
-        name="LiveList"
-        component={LiveScreen}
+        name="Hoy"
+        component={HoyScreen}
         options={{ headerTitle: () => <Logotipo /> }}
       />
+      <LiveStack.Screen name="LiveList" component={LiveScreen} options={{ title: 'En vivo' }} />
       <LiveStack.Screen
         name="GameDetail"
         component={GameDetailScreen}
@@ -152,7 +154,7 @@ const TemaDeportiv = {
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> = {
-  'En Vivo':  { active: 'flash',          inactive: 'flash-outline' },
+  Hoy:        { active: 'today',          inactive: 'today-outline' },
   Posiciones: { active: 'podium',         inactive: 'podium-outline' },
   Bateo:      { active: 'baseball',       inactive: 'baseball-outline' },
   Pitcheo:    { active: 'radio-button-on',inactive: 'radio-button-off' },
@@ -190,7 +192,7 @@ export default function App() {
       <StatusBar style="dark" />
       <Tab.Navigator
         screenOptions={({ route }) => ({
-          // La cabecera la pone cada pila (ver LiveTab). El logotipo va en la
+          // La cabecera la pone cada pila (ver HoyTab). El logotipo va en la
           // raíz de cada una: antes decía "⚾ LIDOM Stats", el nombre viejo,
           // que la guía legal marca como uso de marca ajena.
           headerShown: false,
@@ -213,7 +215,7 @@ export default function App() {
           },
         })}
       >
-        <Tab.Screen name="En Vivo"    component={LiveTab} />
+        <Tab.Screen name="Hoy"        component={HoyTab} />
         <Tab.Screen name="Posiciones" component={PosicionesTab} />
         <Tab.Screen name="Bateo"      component={BateoTab} />
         <Tab.Screen name="Pitcheo"    component={PitcheoTab} />

@@ -1,5 +1,6 @@
 import {
   BattingRow,
+  Jornada,
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
@@ -118,6 +119,16 @@ export async function fetchWinProb(
   gamePk: number
 ): Promise<WinProbResponse | null> {
   return apiFetch<WinProbResponse>(`/live/games/${gamePk}/winprob`);
+}
+
+/* ── La jornada ──────────────────────────────────────────────────────────── */
+
+/**
+ * La jornada de una fecha (YYYY-MM-DD) o, sin fecha, la de hoy en RD. Fuera de
+ * temporada el servidor devuelve la última jornada con `is_requested: false`.
+ */
+export async function fetchDay(fecha?: string): Promise<Jornada | null> {
+  return apiFetch<Jornada>(fecha ? `/day?date=${encodeURIComponent(fecha)}` : "/day");
 }
 
 /* ── Fichas ──────────────────────────────────────────────────────────────── */

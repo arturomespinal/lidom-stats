@@ -1,6 +1,7 @@
 import { API_BASE, DEFAULT_SEASON } from './config';
 import {
   BattingRow,
+  Jornada,
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
@@ -122,3 +123,11 @@ export async function searchPlayers(
 
 // crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son
 // propias y se dibujan en TeamBadge — no hay archivo que pedirle al backend.
+
+/**
+ * La jornada de una fecha (YYYY-MM-DD) o, sin fecha, la de hoy en RD. Fuera de
+ * temporada el servidor devuelve la última jornada con `is_requested: false`.
+ */
+export async function fetchDay(date?: string, signal?: AbortSignal): Promise<Jornada | null> {
+  return get<Jornada>(date ? `/day?date=${date}` : '/day', signal);
+}

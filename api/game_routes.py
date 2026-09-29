@@ -16,6 +16,8 @@ Convenciones heredadas de main.py:
 
 from __future__ import annotations
 
+from datetime import date
+
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
@@ -45,7 +47,21 @@ from src.contexto import (
     puesto_en_la_liga,
     titular_puesto,
 )
+from src.jornada import (
+    armar_juego,
+    destacado,
+    etiqueta_estado,
+    etiqueta_fecha,
+    figuras,
+    franja_de_fechas,
+    frase_figura,
+    ganador,
+    hoy_rd,
+    resolver_fecha,
+    titular_destacado,
+)
 from src.lateralidad import anotar_lateralidad
+from src.live.store import store as live_store, titular_recorrido
 from src.models.database import get_engine
 from src.qualification import qualifying_ip, qualifying_pa
 
@@ -967,3 +983,241 @@ def head_to_head(
 
 
 __all__ = ["router"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# La jornada: la portada "Hoy"
+# ─────────────────────────────────────────────────────────────────────────────
+
+# Estados de `games` que cuentan como "hubo (o habrá) juego ese día". Un día
+# con todo pospuesto no es una jornada que mostrar.
+_ESTADOS_CON_JUEGO = ("final", "scheduled", "live")
+
+_SQL_BATEO_DIA = """
+    SELECT b.*, p.full_name, g.game_id,
+           CASE WHEN b.team_code = g.home_team_code THEN g.away_team_code
+                ELSE g.home_team_code END AS opponent
+      FROM batting_lines b
+      JOIN games g   ON g.game_id = b.game_id
+      JOIN players p ON p.player_id = b.player_id
+     WHERE g.game_date = :d AND g.status = 'final'
+"""
+
+_SQL_PITCHEO_DIA = """
+    SELECT l.*, p.full_name, g.game_id,
+           CASE WHEN l.team_code = g.home_team_code THEN g.away_team_code
+                ELSE g.home_team_code END AS opponent
+      FROM pitching_lines l
+      JOIN games g   ON g.game_id = l.game_id
+      JOIN players p ON p.player_id = l.player_id
+     WHERE g.game_date = :d AND g.status = 'final'
+"""
+
+
+def _nombres_de_equipos() -> dict[str, dict]:
+    filas = query_db("SELECT team_code, full_name, short_name FROM teams")
+    nombres = {f["team_code"]: f for f in filas}
+    # El catálogo canónico manda sobre la tabla para los nombres cortos.
+    for code, info in LIDOM_TEAMS_BY_CODE.items():
+        nombres.setdefault(code, {}).update(
+            {k: info[k] for k in ("full_name", "short_name") if k in info}
+        )
+    return nombres
+
+
+def _juegos_del_dia(d: str, nombres: dict[str, dict]) -> list[dict]:
+    filas = query_db(
+        "SELECT * FROM games WHERE game_date = :d ORDER BY game_datetime_utc, game_id",
+        {"d": d},
+    )
+    return [armar_juego(f, nombres) for f in filas]
+
+
+def _superponer_en_vivo(juegos: list[dict], dia: str) -> None:
+    """
+    La base es la verdad histórica, pero durante la jornada se queda atrás:
+    un juego en curso figura como `scheduled` hasta que termina y se ingesta.
+    La caché en vivo manda sobre el estado y el marcador mientras tenga el
+    juego. Además marca qué juegos tienen detalle (relato, boxscore) para
+    abrir.
+    """
+    for j in juegos:
+        entry = live_store.get(j["game_pk"]) if j["game_pk"] else None
+        if entry is None:
+            entry = live_store.by_game_id(j["game_id"])
+        j["has_detail"] = bool(entry and (entry.raw is not None or entry.detail is not None))
+        st = entry.state if entry else None
+        if st is None or (st.game_date and st.game_date != dia):
+            continue
+        j["game_pk"] = st.game_pk
+        if st.status == "live":
+            j["status"] = "live"
+        elif st.status == "final" and j["status"] != "final":
+            j["status"] = "final"
+            j["innings"] = st.inning
+        if j["status"] in ("live", "final"):
+            j["away"]["runs"] = st.away.runs
+            j["home"]["runs"] = st.home.runs
+        if j["status"] == "live":
+            j["inning"] = st.inning
+            j["is_top_inning"] = st.is_top_inning
+            j["inning_ordinal"] = st.inning_ordinal_es
+            j["outs"] = st.outs
+
+
+def _decisiones(dia: str) -> dict[str, dict]:
+    """Ganador, perdedor y salvado de cada juego terminado del día."""
+    filas = query_db(
+        """
+        SELECT l.game_id, l.decision, l.player_id, p.full_name
+          FROM pitching_lines l
+          JOIN games g   ON g.game_id = l.game_id
+          JOIN players p ON p.player_id = l.player_id
+         WHERE g.game_date = :d AND l.decision IN ('W', 'L', 'SV')
+        """,
+        {"d": dia},
+    )
+    clave = {"W": "win", "L": "loss", "SV": "save"}
+    salida: dict[str, dict] = {}
+    for f in filas:
+        salida.setdefault(f["game_id"], {})[clave[f["decision"]]] = {
+            "player_id": f["player_id"],
+            "full_name": f["full_name"],
+        }
+    return salida
+
+
+@router.get("/day", tags=["Jornada"])
+def get_day(
+    date_: str | None = Query(
+        None, alias="date",
+        description="YYYY-MM-DD. Por defecto, hoy en República Dominicana.",
+    ),
+):
+    """
+    La jornada de una fecha: los juegos, el destacado con su titular, las
+    figuras y lo que viene. Es la portada "Hoy" de la web y del móvil.
+
+    Si la fecha pedida no tuvo juegos —fuera de temporada, un día libre— se
+    sirve la última jornada anterior, y `is_requested` viene en `false` para
+    que el cliente no la presente como "hoy".
+    """
+    hoy = hoy_rd()
+    if date_:
+        try:
+            pedida = date.fromisoformat(date_)
+        except ValueError:
+            raise HTTPException(400, f"Fecha inválida: '{date_}'. Formato: YYYY-MM-DD")
+    else:
+        pedida = hoy
+
+    conteo_filas = query_db(
+        f"""
+        SELECT game_date, COUNT(*) AS n FROM games
+         WHERE status IN {_ESTADOS_CON_JUEGO}
+         GROUP BY game_date
+        """
+    )
+    conteo = {date.fromisoformat(str(f["game_date"])[:10]): f["n"] for f in conteo_filas}
+    # Un juego que la caché ya sigue cuenta aunque la base todavía no lo tenga.
+    for st in live_store.states():
+        if st.game_date:
+            d = date.fromisoformat(st.game_date[:10])
+            conteo.setdefault(d, 0)
+    dia = resolver_fecha(pedida, conteo)
+    if dia is None:
+        raise HTTPException(404, "No hay juegos en la base")
+
+    nombres = _nombres_de_equipos()
+    juegos = _juegos_del_dia(dia.isoformat(), nombres)
+    _superponer_en_vivo(juegos, dia.isoformat())
+    decisiones = _decisiones(dia.isoformat())
+    for j in juegos:
+        j["status_label"] = etiqueta_estado(j)
+        j["winner"] = ganador(j)
+        # Las decisiones solo existen cuando el juego terminó: con la caché
+        # diciendo que va por la 5ta, un "G Esmil Rogers" sería adelantarse.
+        j["decisions"] = decisiones.get(j["game_id"]) if j["status"] == "final" else None
+
+    bateo = query_db(_SQL_BATEO_DIA, {"d": dia.isoformat()})
+    pitcheo = query_db(_SQL_PITCHEO_DIA, {"d": dia.isoformat()})
+
+    # El destacado y su frase.
+    elegido = destacado(juegos)
+    featured = None
+    if elegido:
+        track = live_store.win_prob_track(elegido["game_pk"]) if elegido["game_pk"] else []
+        recorrido = (
+            titular_recorrido(track, elegido["home"]["code"], elegido["away"]["code"])
+            if track and elegido["status"] == "final" else None
+        )
+        del_juego = [x for x in bateo if x["game_id"] == elegido["game_id"]]
+        del_juego_p = [x for x in pitcheo if x["game_id"] == elegido["game_id"]]
+        tops = figuras(del_juego, del_juego_p, n=1)
+        # La figura del juego es la mejor de las dos: el Game Score y los
+        # puntos de bateo no están en la misma escala, así que se compara
+        # contra lo que sería una noche buena de cada uno (60 y 8).
+        figura = max(
+            tops,
+            key=lambda f: f["score"] / (60 if f["kind"] == "pitching" else 8),
+            default=None,
+        )
+        frase = (
+            frase_figura(
+                figura,
+                {x["player_id"]: x for x in del_juego},
+                {x["player_id"]: x for x in del_juego_p},
+            )
+            if figura else None
+        )
+        entry = live_store.get(elegido["game_pk"]) if elegido["game_pk"] else None
+        featured = {
+            "game_id": elegido["game_id"],
+            "headline": titular_destacado(elegido, recorrido, frase),
+            # La misma forma que /live/games/{pk}/winprob, para que los
+            # clientes reusen su franja tal cual.
+            "win_prob": {
+                "home_team": elegido["home"]["code"],
+                "away_team": elegido["away"]["code"],
+                "current": entry.state.win_prob_home if entry and entry.state else None,
+                "headline": recorrido,
+                "points": track,
+                "points_count": len(track),
+            } if len(track) >= 2 else None,
+        }
+
+    # Lo que viene: la siguiente fecha con juegos después de esta.
+    siguientes = sorted(d for d in conteo if d > dia)
+    siguiente = None
+    if siguientes:
+        prox = siguientes[0]
+        juegos_prox = _juegos_del_dia(prox.isoformat(), nombres)
+        _superponer_en_vivo(juegos_prox, prox.isoformat())
+        for j in juegos_prox:
+            j["status_label"] = etiqueta_estado(j)
+            j["winner"] = ganador(j)
+        siguiente = {
+            "date": prox.isoformat(),
+            "label": etiqueta_fecha(prox),
+            "days_ahead": (prox - dia).days,
+            "games": juegos_prox,
+        }
+
+    hay_vivo = any(j["status"] == "live" for j in juegos)
+    return {
+        "requested_date": pedida.isoformat(),
+        "date": dia.isoformat(),
+        "label": etiqueta_fecha(dia),
+        "is_requested": dia == pedida,
+        "is_today": dia == hoy,
+        "season_id": juegos[0]["season_id"] if juegos else None,
+        "strip": franja_de_fechas(dia, conteo),
+        "games": juegos,
+        "featured": featured,
+        "figures": figuras(bateo, pitcheo, n=2),
+        "next": siguiente,
+        "any_live": hay_vivo,
+        # Con juegos en curso, el cliente vuelve a pedir la jornada a este
+        # ritmo: el de la caché en vivo, no más rápido.
+        "poll_seconds": 15 if hay_vivo else None,
+    }

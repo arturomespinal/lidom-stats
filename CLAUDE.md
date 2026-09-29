@@ -116,9 +116,10 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
         ┌──────────────┴───────────────┐
         ▼                              ▼
    frontend/ (Next.js 16)         mobile/ (Expo)
-   /          → posiciones
-   /batting   → líderes de bateo
-   /pitching  → líderes de pitcheo
+   /            → Hoy (la jornada)
+   /posiciones  → tabla de posiciones
+   /batting     → líderes de bateo
+   /pitching    → líderes de pitcheo
 ```
 
 **Estado actual:** el esquema de juego cubre **14 temporadas, de la 2012-13 a la
@@ -157,10 +158,11 @@ la 2015-16. No cambiar esa clave.
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
+| `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 248 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 280 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -199,6 +201,7 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
 | `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
 | `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
+| `GET /day?date=` | La jornada: juegos, destacado con titular, figuras y la próxima fecha. Portada Hoy |
 
 `season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
 
@@ -686,7 +689,7 @@ Tocar una tarjeta abre `screens/GameDetailScreen.tsx` con cuatro pestañas:
 `PlayByPlay`, `InningGrid`, `BoxScore` y `Lineups`, todas sobre
 `/live/games/{pk}/detail`.
 
-La pestaña "En Vivo" es una **pila** (`@react-navigation/native-stack`), no una
+La primera pestaña (hoy "Hoy", antes "En Vivo") es una **pila** (`@react-navigation/native-stack`), no una
 pantalla suelta: así hay gesto de volver y botón de atrás. Es JavaScript sobre
 `react-native-screens`, que ya estaba, así que **no añade un módulo nativo
 nuevo** ni obliga a salir de Expo Go. Los tipos de ruta viven en
@@ -1027,7 +1030,7 @@ sobre los mismos endpoints que la web.
 **Cada pestaña es una pila.** Las cinco declaran las rutas `Equipo` y `Jugador`
 (`FichasParamList` en `src/navigation.ts`), así que se puede ir de posiciones a
 equipo a jugador a su equipo de 2016 sin salir de la pestaña, y el gesto de
-volver deshace ese camino. Las cuatro que no son En Vivo se fabrican con
+volver deshace ese camino. Las cuatro que no son la primera se fabrican con
 `crearPila()` en `App.tsx`: cuatro copias de la misma pila acabarían distintas.
 `useFichas()` navega a una ficha desde cualquier pantalla.
 
@@ -1128,6 +1131,54 @@ los mismos nombres: `Heroe`, `Monograma`, `Seccion`, `PuestoLiga`,
 - **Bebas no trae el glifo "º"**: el ordinal va en Archivo al lado del número.
 - La temporada de la ficha de equipo en la web va en pestañas pegadas bajo la
   barra (`TemporadaTabs`), que son enlaces: la temporada sigue en la URL.
+
+## La portada Hoy (29-sep-2026)
+
+`GET /day?date=YYYY-MM-DD` — sin fecha, hoy en República Dominicana. Es la
+primera pestaña del móvil (`screens/HoyScreen.tsx`, que reemplazó a "En Vivo"
+como raíz) y la página `/` de la web. La tabla de posiciones pasó a
+`/posiciones`. Las funciones puras viven en `src/jornada.py`; la ruta hace el
+SQL y cruza con la caché en vivo.
+
+Qué devuelve: la fecha resuelta, una franja de siete días con cuántos juegos
+tuvo cada uno, los juegos (estado, marcador, hora local, estadio, ganador,
+decisiones), el destacado con su titular y, si la caché lo siguió, su franja
+de probabilidad; las figuras y la próxima fecha con juegos.
+
+Reglas que no conviene deshacer:
+
+- **Fuera de temporada se sirve la última jornada**, con `is_requested:
+  false`. Los clientes lo dicen ("No hay juegos hoy. Esta fue la última
+  jornada…") en vez de llamarla "Hoy". Una portada vacía nueve meses al año
+  no sirve; una que miente, menos.
+- **El destacado lo elige el marcador, no los datos que tengamos.** En vivo, el
+  más apretado. Terminados: entradas extra, después menor diferencia, después
+  más carreras. Elegir "el que tiene franja" destacaría siempre el mismo tipo
+  de juego por una razón técnica.
+- **El titular, por orden**: el recorrido de la probabilidad si existe
+  (`titular_recorrido`), las entradas extra ("Licey lo resolvió en la entrada
+  10."), y si no, la figura del juego ("Jonrón y 4 impulsadas de Aderlin
+  Rodríguez."). Se compone de conteos, nunca de la línea abreviada.
+- **Figuras con fórmulas conocidas**: Game Score de Bill James para el
+  pitcheo, con mínimo de 3 entradas (un relevista de un out perfecto no es la
+  figura); bases totales + impulsadas + anotadas + boletos + robos para el
+  bateo, con al menos un hit. Hay jornadas sin figura de pitcheo — el 16 de
+  octubre de 2025 ningún lanzador pasó de 2.2 — y está bien.
+- **La hora se pinta en la de RD (UTC−4 fijo)**, y la fecha del juego es
+  `game_date`, la oficial: un juego de las 8 de la noche es 00:00 UTC del día
+  siguiente. `zoneinfo` no hace falta y en Windows pediría `tzdata`.
+- **La caché en vivo manda sobre la base** mientras tenga el juego: un juego
+  en curso figura `scheduled` en `games` hasta que termina y se ingesta. Y las
+  decisiones (G/P/SV) solo se muestran con el juego terminado.
+- **Un juego se abre solo si la caché tiene su detalle** (`has_detail`). Un
+  juego viejo no tiene relato; una tarjeta que parece tocable y no hace nada
+  es peor que una que no lo parece. Falta un boxscore histórico desde
+  `/games/{game_id}` para abrir cualquier juego.
+- **Con juegos en curso llega `poll_seconds` (15)** y los clientes vuelven a
+  pedir la jornada: el móvil con `setTimeout` mientras tiene el foco, la web
+  con `router.refresh()` mientras la pestaña se ve (`components/hoy/Refresco.tsx`).
+- La fecha vive en la URL de la web (`/?fecha=`). Un día sin juegos en la
+  franja no es enlace: el servidor lo resolvería a otra fecha.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

@@ -5,9 +5,11 @@ import { usePathname } from "next/navigation";
 
 import PlayerSearch from "@/components/PlayerSearch";
 
+// "Hoy" es la portada, como la primera pestaña del móvil. Los marcadores en
+// vivo (/live) se abren desde ahí cuando hay juegos en curso.
 const TABS = [
-  { label: "En Vivo", href: "/live" },
-  { label: "Posiciones", href: "/" },
+  { label: "Hoy", href: "/" },
+  { label: "Posiciones", href: "/posiciones" },
   { label: "Bateo", href: "/batting" },
   { label: "Pitcheo", href: "/pitching" },
 ];

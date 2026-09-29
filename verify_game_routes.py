@@ -594,6 +594,102 @@ check("cifras de la cabecera: la última temporada, equipos sumados",
       (lt["season_id"], lt["team_code"], lt["hr"], lt["rbi"], round(lt["ops"], 3)),
       ("2025-26", "ESC", 6, 26, 0.873))
 
+print("\n━━━ la jornada: portada Hoy ━━━")
+import glob as _glob
+from src.jornada import (
+    destacado as _destacado, game_score, hora_local, linea_bateo, linea_pitcheo,
+    resolver_fecha, titular_destacado,
+)
+from src.live.gumbo import parse_live_feed
+from src.live.store import store as _store
+from datetime import date as _date
+
+d = call("/day?date=2025-10-15")
+check("la fecha pedida, con juegos", (d["date"], d["label"], d["is_requested"]), ("2025-10-15", "Mié 15 oct", True))
+check("tres juegos, por hora y en orden de game_id",
+      [g["game_id"] for g in d["games"]],
+      ["2025-10-15-ESC-LIC-1", "2025-10-15-GIG-AGU-1", "2025-10-15-TOR-EST-1"])
+por_id = {g["game_id"]: g for g in d["games"]}
+check("la hora en la de RD, no en UTC", por_id["2025-10-15-TOR-EST-1"]["time_local"], "7:30 p. m.")
+check("entradas extra en la etiqueta", por_id["2025-10-15-ESC-LIC-1"]["status_label"], "FINAL (10)")
+check("el ganador sale del marcador", por_id["2025-10-15-TOR-EST-1"]["winner"], "EST")
+check("decisiones del juego inaugural",
+      {k: v["full_name"] for k, v in por_id["2025-10-15-TOR-EST-1"]["decisions"].items()},
+      {"win": "Esmil Rogers", "loss": "Matt Dermody"})
+check("destacado: el de entradas extra antes que el de una carrera",
+      d["featured"]["game_id"], "2025-10-15-ESC-LIC-1")
+check("titular de entradas extra", d["featured"]["headline"], "Licey lo resolvió en la entrada 10.")
+check("sin recorrido en la caché, sin franja", d["featured"]["win_prob"], None)
+check("la franja: siete días con la jornada en el centro",
+      [(x["date"][5:], x["games"]) for x in d["strip"]],
+      [("10-12", 0), ("10-13", 0), ("10-14", 0), ("10-15", 3), ("10-16", 1), ("10-17", 2), ("10-18", 2)])
+f0 = d["figures"][0]
+check("figura de bateo: Rodolfo Castro", (f0["full_name"], f0["line"]), ("Rodolfo Castro", "2-3 · HR · 5 CI"))
+check("figuras intercaladas bateo/pitcheo", [f["kind"] for f in d["figures"]],
+      ["batting", "pitching", "batting", "pitching"])
+check("Esmil Rogers: la decisión va primero",
+      d["figures"][3]["line"], "G · 5.0 IP · 6 K · 2 CL")
+check("lo que viene: el día siguiente", (d["next"]["label"], d["next"]["days_ahead"], len(d["next"]["games"])),
+      ("Jue 16 oct", 1, 1))
+check("sin juegos en curso no se sondea", (d["any_live"], d["poll_seconds"]), (False, None))
+
+d2 = call("/day?date=2025-10-16")
+check("un bullpen de principio a fin: nadie llega a 3 entradas, ninguna figura de pitcheo",
+      [f["kind"] for f in d2["figures"]], ["batting", "batting"])
+check("sin extras, el titular es la figura del juego", d2["featured"]["headline"],
+      "Jonrón y 4 impulsadas de Aderlin Rodríguez.")
+
+fuera = call("/day?date=2026-09-29")
+check("fuera de temporada: la última jornada, marcada como no pedida",
+      (fuera["date"], fuera["is_requested"], fuera["next"]), ("2025-12-23", False, None))
+antes = call("/day?date=2012-01-01")
+check("antes de la primera jornada: la primera", (antes["date"], antes["is_requested"]), ("2012-10-14", False))
+call("/day?date=15-10-2025", expect=400)
+
+check("resolver_fecha sin juegos → None", resolver_fecha(_date(2025, 1, 1), []), None)
+check("hora_local: 00:00 UTC son las 8 de la noche del día anterior",
+      hora_local("2025-10-16 00:00:00.000000"), "8:00 p. m.")
+check("Game Score de una blanqueada completa de 9 K y 3 H",
+      game_score({"outs_recorded": 27, "strikeouts": 9, "hits_allowed": 3, "earned_runs": 0,
+                  "runs_allowed": 0, "walks_allowed": 1}), 50 + 27 + 10 + 9 - 6 - 1)
+check("linea_bateo con dos dobles", linea_bateo({"hits": 3, "at_bats": 4, "doubles": 2, "triples": 0,
+      "home_runs": 0, "rbi": 0, "runs": 1, "walks": 0, "stolen_bases": 0}), "3-4 · 2 2B")
+check("linea_pitcheo: un salvado", linea_pitcheo({"decision": "SV", "outs_recorded": 3,
+      "strikeouts": 2, "earned_runs": 0}), "SV · 1.0 IP · 2 K · 0 CL")
+_j = lambda st, a, h, inn=9, top=None, i=None: {"status": st, "away": {"runs": a, "code": "A"},
+      "home": {"runs": h, "code": "H"}, "innings": inn, "inning": i, "start_utc": ""}
+check("en vivo manda el más apretado, aunque haya terminados con extras",
+      _destacado([_j("final", 3, 4, 12), _j("live", 5, 1, i=7), _j("live", 2, 2, i=3)])["away"]["runs"], 2)
+check("el recorrido manda sobre las extras en el titular",
+      titular_destacado({"status": "final", "innings": 10, "home": {"code": "LIC", "runs": 4, "short_name": "Licey"},
+                         "away": {"code": "ESC", "runs": 3, "short_name": "Escogido"}},
+                        "Licey nunca estuvo por debajo del 40%.", None),
+      "Licey nunca estuvo por debajo del 40%.")
+
+# Con la caché en vivo: el juego inaugural a medias, sembrado desde fixtures/
+# por el mismo camino que el poller. Sin capturas se salta — no son parte del
+# repositorio (ver CLAUDE.md).
+capturas = sorted(_glob.glob("fixtures/826343_2*.json"))
+if capturas:
+    _store.clear()
+    for ruta in capturas[:5]:
+        with open(ruta, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        est = parse_live_feed(doc)
+        _store.update(est.game_pk, doc, est)
+    v = call("/day?date=2025-10-15")
+    tor = {g["game_id"]: g for g in v["games"]}["2025-10-15-TOR-EST-1"]
+    check("la caché manda: el juego inaugural está EN VIVO", tor["status"], "live")
+    check("en vivo, el destacado es el juego en curso", v["featured"]["game_id"], "2025-10-15-TOR-EST-1")
+    check("…con su franja de probabilidad", v["featured"]["win_prob"] is not None, True)
+    check("…y la portada pide sondear", (v["any_live"], v["poll_seconds"]), (True, 15))
+    check("el juego en curso tiene detalle que abrir", tor["has_detail"], True)
+    check("en curso no hay ganador ni decisiones todavía", (tor["winner"], tor["decisions"]), (None, None))
+    check("la etiqueta dice la entrada", tor["status_label"].split(" del ")[0] in ("Alta", "Baja"), True)
+    _store.clear()
+else:
+    print("  (sin fixtures/: se saltan las comprobaciones con la caché en vivo)")
+
 print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:

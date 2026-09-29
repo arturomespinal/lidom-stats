@@ -32,7 +32,9 @@ export type FichasParamList = {
 };
 
 export type LiveStackParamList = FichasParamList & {
-  /** Listado de juegos del día. */
+  /** La portada: la jornada del día (GET /day). Raíz de la primera pestaña. */
+  Hoy: undefined;
+  /** Los marcadores en vivo, con diamante y cuenta. Se abre desde Hoy. */
   LiveList: undefined;
   /**
    * Detalle de un juego.

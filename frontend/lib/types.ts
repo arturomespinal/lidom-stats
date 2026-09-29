@@ -591,3 +591,95 @@ export interface TeamStanding {
   /** "1ro · 5 juegos de ventaja", compuesto en el servidor. */
   label: string;
 }
+
+/* ── La jornada: la portada "Hoy" (GET /day) ──────────────────────────────
+   El servidor elige el destacado, escribe su titular y calcula las figuras
+   (src/jornada.py). El cliente dibuja. */
+
+export type EstadoJornada = "scheduled" | "live" | "final" | "postponed" | "cancelled";
+
+export interface LadoJornada {
+  code: string;
+  name: string;
+  short_name: string;
+  /** null si el juego no ha empezado: 0-0 a las 5 de la tarde sería mentira. */
+  runs: number | null;
+}
+
+export interface PitcherDecision {
+  player_id: string;
+  full_name: string;
+}
+
+export interface JuegoJornada {
+  game_id: string;
+  season_id: string | null;
+  /** El gamePk de la MLB: la llave del detalle en vivo. */
+  game_pk: number | null;
+  status: EstadoJornada;
+  /** "FINAL", "FINAL (10)", "7:30 p. m.", "Baja del 5to", "POSPUESTO". */
+  status_label: string;
+  start_utc: string | null;
+  /** La hora en República Dominicana: "7:30 p. m.". */
+  time_local: string | null;
+  venue: string | null;
+  innings: number | null;
+  away: LadoJornada;
+  home: LadoJornada;
+  winner: string | null;
+  decisions?: { win?: PitcherDecision; loss?: PitcherDecision; save?: PitcherDecision } | null;
+  /** La caché en vivo tiene relato y boxscore para abrir. */
+  has_detail?: boolean;
+  inning?: number | null;
+  is_top_inning?: boolean | null;
+  outs?: number;
+}
+
+export interface FiguraJornada {
+  kind: "batting" | "pitching";
+  player_id: string;
+  full_name: string;
+  team_code: string;
+  opponent: string;
+  game_id: string;
+  /** "2-3 · HR · 5 CI" o "G · 5.0 IP · 6 K · 2 CL". */
+  line: string;
+  score: number;
+}
+
+export interface DiaFranja {
+  date: string;
+  /** "Jue 16 oct". */
+  label: string;
+  games: number;
+}
+
+export interface Jornada {
+  requested_date: string;
+  date: string;
+  label: string;
+  /** false = la fecha pedida no tuvo juegos y esta es la última anterior. */
+  is_requested: boolean;
+  is_today: boolean;
+  season_id: string | null;
+  strip: DiaFranja[];
+  games: JuegoJornada[];
+  featured: {
+    game_id: string;
+    headline: string | null;
+    /** La misma forma que /live/games/{pk}/winprob; null si no se siguió en vivo. */
+    win_prob: {
+      home_team: string;
+      away_team: string;
+      current: number | null;
+      headline: string | null;
+      points: WinProbPoint[];
+      points_count: number;
+    } | null;
+  } | null;
+  figures: FiguraJornada[];
+  next: { date: string; label: string; days_ahead: number; games: JuegoJornada[] } | null;
+  any_live: boolean;
+  /** Con juegos en curso, cada cuánto volver a pedir la jornada. */
+  poll_seconds: number | null;
+}

@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { setStatusBarStyle } from 'expo-status-bar';
 
 import { fetchTeamProfile } from '../api';
 import { DEFAULT_SEASON } from '../config';
@@ -11,31 +13,16 @@ import type { TeamLeader, TeamProfile, TeamRosterBatter, TeamRosterPitcher } fro
 import { EsqueletoFicha } from '../components/Esqueleto';
 import Pestanas from '../components/Pestanas';
 import Seccion from '../components/Seccion';
-import TeamBadge from '../components/TeamBadge';
+import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
+import UltimosDiez from '../components/UltimosDiez';
+import CarreraBanderin from '../components/CarreraBanderin';
+import BarrasDiferencial from '../components/BarrasDiferencial';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Equipo'>;
 type Plantilla = 'bateadores' | 'lanzadores';
 
 /** Filas de plantilla antes de "Ver los 30". */
 const VISIBLES = 12;
-
-/** Un número grande con su etiqueta, para la cabecera. */
-function Cifra({ valor, etiqueta, color }: { valor: string; etiqueta: string; color?: string }) {
-  return (
-    <View style={styles.cifra} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
-      <Text
-        style={[styles.cifraValor, color ? { color } : null]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-      >
-        {valor}
-      </Text>
-      <Text style={styles.etiqueta} numberOfLines={1}>
-        {etiqueta}
-      </Text>
-    </View>
-  );
-}
 
 /**
  * Tarjeta de un destacado. La tarjeta ENTERA es el área táctil (96 pt de
@@ -161,6 +148,14 @@ export default function TeamScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
+  // Cabecera navy: barra de estado clara mientras esta pantalla tiene el foco.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, []),
+  );
+
   useLayoutEffect(() => {
     navigation.setOptions({ title: equipo?.short_name ?? TEAM_SHORT_NAMES[code] ?? code });
   }, [navigation, equipo, code]);
@@ -190,7 +185,6 @@ export default function TeamScreen({ route, navigation }: Props) {
   // catorce PCT—.
   const totalG = equipo.history.reduce((a, f) => a + f.wins, 0);
   const totalP = equipo.history.reduce((a, f) => a + f.losses, 0);
-  const pctHistorico = totalG + totalP > 0 ? totalG / (totalG + totalP) : null;
   // La temporada ELEGIDA, no la más reciente: la cabecera tiene que hablar
   // del mismo año que los destacados y la plantilla que hay debajo.
   const actual = equipo.history.find(f => f.season_id === equipo.season_id);
@@ -218,47 +212,46 @@ export default function TeamScreen({ route, navigation }: Props) {
       contentContainerStyle={{ paddingBottom: 32 }}
       stickyHeaderIndices={[1]}
     >
-      {/* 0 ── Cabecera ── */}
-      <View style={styles.cabecera}>
-        {color && <View style={[styles.franjaClub, { backgroundColor: color }]} />}
-        <View style={styles.identidad}>
-          <TeamBadge code={code} size={48} variant="solid" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.nombre} accessibilityRole="header" numberOfLines={2}>
-              {equipo.team_name}
+      {/* 0 ── Cabecera: navy con el plano del club y su código gigante ── */}
+      <Heroe color={color ?? COLORS.textSecondary} marca={code}>
+        <View style={styles.nombreCaja}>
+          <Text style={styles.micro} numberOfLines={1}>
+            {[equipo.city, equipo.founded_year && `desde ${equipo.founded_year}`].filter(Boolean).join(' · ')}
+          </Text>
+          <Text
+            style={styles.nombre}
+            accessibilityRole="header"
+            numberOfLines={2}
+            adjustsFontSizeToFit
+            minimumFontScale={0.7}
+          >
+            {equipo.team_name}
+          </Text>
+        </View>
+        {actual && (
+          <View style={styles.record}>
+            <Text style={styles.recordValor} accessibilityLabel={`${actual.wins} ganados, ${actual.losses} perdidos`}>
+              {actual.wins}-{actual.losses}
             </Text>
-            <Text style={styles.sub} numberOfLines={1}>
-              {[equipo.city, equipo.founded_year && `fundado en ${equipo.founded_year}`]
-                .filter(Boolean)
-                .join(' · ')}
-            </Text>
+            {equipo.standing && (
+              <View style={styles.recordLado}>
+                <View style={styles.chip}>
+                  <Text style={styles.chipTexto}>
+                    {equipo.standing.label.split(' · ')[0]} · {equipo.season_id}
+                  </Text>
+                </View>
+                <Text style={styles.meta}>{equipo.standing.label.split(' · ')[1]}</Text>
+              </View>
+            )}
           </View>
-        </View>
-
-        <View style={styles.cifras}>
-          <Cifra valor={`${totalG}-${totalP}`} etiqueta={`${equipo.seasons_count} temp.`} />
-          {pctHistorico != null && (
-            <Cifra valor={pct3(pctHistorico)} etiqueta="PCT hist." />
-          )}
-          {actual && (
-            <>
-              <Cifra valor={`${actual.wins}-${actual.losses}`} etiqueta={actual.season_id} />
-              {/* El signo va escrito: el color solo no se lee en deuteranopia. */}
-              <Cifra
-                valor={conSigno(actual.run_diff)}
-                etiqueta="Diferencial"
-                color={
-                  actual.run_diff > 0
-                    ? COLORS.positive
-                    : actual.run_diff < 0
-                      ? COLORS.negative
-                      : undefined
-                }
-              />
-            </>
-          )}
-        </View>
-      </View>
+        )}
+        <FilaCifras>
+          {actual && <CifraHeroe valor={pct3(actual.win_pct)} etiqueta="PCT" />}
+          {/* El signo va escrito: sobre el navy no hay verde ni rojo que valga. */}
+          {actual && <CifraHeroe valor={conSigno(actual.run_diff)} etiqueta="Diferencial" />}
+          <CifraHeroe valor={`${totalG}-${totalP}`} etiqueta={`${equipo.seasons_count} temporadas`} />
+        </FilaCifras>
+      </Heroe>
 
       {/* 1 ── Selector de temporada, pegado arriba ── */}
       <Pestanas
@@ -269,6 +262,29 @@ export default function TeamScreen({ route, navigation }: Props) {
 
       {/* 2 ── Lo que depende de la temporada ── */}
       <View style={recargando && styles.atenuado}>
+        {equipo.last10.length > 0 && (
+          <>
+            <Seccion
+              titulo={`Últimos ${equipo.last10.length}`}
+              nota={`${equipo.last10.filter(j => j.result === 'G').length}-${equipo.last10.filter(j => j.result === 'P').length}`}
+              sub="El más reciente, a la derecha."
+            />
+            <UltimosDiez juegos={equipo.last10} />
+          </>
+        )}
+
+        {equipo.race.length > 0 && (
+          <>
+            <Seccion
+              titulo="La carrera"
+              nota={equipo.season_id}
+              titular={equipo.race_headline}
+              sub="Juegos sobre .500, partido a partido. Por encima de la línea, más ganados que perdidos."
+            />
+            <CarreraBanderin carrera={equipo.race} equipo={code} />
+          </>
+        )}
+
         {destacados.length > 0 && (
           <>
             <Seccion titulo="Destacados" nota={equipo.season_id} />
@@ -347,8 +363,15 @@ export default function TeamScreen({ route, navigation }: Props) {
         </View>
       </View>
 
-      {/* 3 ── Temporada a temporada ── */}
-      <Seccion titulo="Temporada a temporada" nota="Solo temporada regular" />
+      {/* 3 ── Temporada a temporada: el diferencial en barras y la tabla ── */}
+      <Seccion
+        titulo={`${equipo.seasons_count} temporadas`}
+        nota="Solo temporada regular"
+        titular={equipo.history_headline}
+        sub="Diferencial de carreras: anotadas menos permitidas."
+      />
+      <BarrasDiferencial historial={equipo.history} elegida={equipo.season_id} />
+      <View style={{ height: 16 }} />
       <View style={styles.lista}>
         <View style={[styles.filaHist, styles.cabHist]}>
           <Text style={[styles.cab, styles.colTemp]}>Temp.</Text>
@@ -423,35 +446,44 @@ export default function TeamScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
 
-  cabecera: {
-    backgroundColor: COLORS.bgCard,
-    padding: 16,
-    paddingLeft: 20,
+  // La columna de texto no pasa del 52% del ancho: el resto es del plano del
+  // club, y letra blanca sobre el amarillo de Águilas no se lee (Heroe.tsx).
+  nombreCaja: { width: '52%', gap: 6 },
+  micro: {
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.inkDim,
   },
-  franjaClub: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
-  identidad: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   nombre: {
     fontFamily: FONTS.display,
-    fontSize: 28,
-    lineHeight: 30,
-    letterSpacing: 0.3,
-    color: COLORS.textPrimary,
+    fontSize: 52,
+    lineHeight: 48,
+    paddingTop: 4,
+    color: COLORS.inkFg,
   },
-  sub: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
-  cifras: {
-    flexDirection: 'row',
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: COLORS.borderSoft,
-  },
-  cifra: { flex: 1, paddingRight: 8 },
-  cifraValor: {
+  meta: { fontSize: 13, color: COLORS.inkDim },
+  record: { flexDirection: 'row', alignItems: 'flex-end', gap: 16 },
+  recordValor: {
     fontFamily: FONTS.display,
-    fontSize: 22,
-    color: COLORS.textPrimary,
+    fontSize: 84,
+    lineHeight: 76,
+    color: COLORS.inkFg,
     fontVariant: ['tabular-nums'],
   },
+  recordLado: { gap: 6, paddingBottom: 6, flexShrink: 1 },
+  // Chip blanco con la esquina cortada: es un estado (el puesto), y la
+  // esquina cortada está reservada a tejas y estados.
+  chip: {
+    alignSelf: 'flex-start',
+    paddingHorizontal: 10,
+    paddingVertical: 2,
+    backgroundColor: COLORS.inkFg,
+    borderRadius: 3,
+    borderBottomRightRadius: 9,
+  },
+  chipTexto: { fontFamily: FONTS.display, fontSize: 16, color: COLORS.ink },
+
   etiqueta: {
     fontSize: 11,
     color: COLORS.textFaint,

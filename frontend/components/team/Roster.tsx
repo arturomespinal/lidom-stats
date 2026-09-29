@@ -27,9 +27,9 @@ function num(v: number | null | undefined, dec = 0): string {
 export function Batters({ data }: { data: TeamRosterBatter[] }) {
   return (
     <section>
-      <h2 className="mb-2 font-cond text-lg font-bold tracking-[0.02em] text-fg">
+      <h3 className="mb-2 font-cond text-xl leading-none tracking-[0.02em] text-fg">
         Bateadores
-      </h2>
+      </h3>
       <div className="overflow-x-auto rounded-xl border border-line bg-card">
         <table className="w-full min-w-[620px] text-sm">
           <thead>
@@ -83,9 +83,9 @@ export function Batters({ data }: { data: TeamRosterBatter[] }) {
 export function Pitchers({ data }: { data: TeamRosterPitcher[] }) {
   return (
     <section>
-      <h2 className="mb-2 font-cond text-lg font-bold tracking-[0.02em] text-fg">
+      <h3 className="mb-2 font-cond text-xl leading-none tracking-[0.02em] text-fg">
         Lanzadores
-      </h2>
+      </h3>
       <div className="overflow-x-auto rounded-xl border border-line bg-card">
         <table className="w-full min-w-[620px] text-sm">
           <thead>

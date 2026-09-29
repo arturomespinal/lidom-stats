@@ -519,6 +519,81 @@ else:
     check("un id sin ficha no queda cacheado como 'sin ficha'",
           _sin["player_id"] in _cache_fichas, False)
 
+print("\n━━━ ficha de jugador: contra la liga ━━━")
+from src.contexto import _puesto, titular_carrera
+from src.banderin import titular_banderin
+nv = call("/players/yamaico-navarro-1987-10-31")
+ctx = nv["context"]
+rk = ctx["ranking"]
+check("Navarro se compara como bateador", ctx["role"], "batting")
+check("  en su última temporada calificada", rk["season_id"], "2025-26")
+# El listón es el de las tablas de líderes de TODA la liga, no el de su equipo.
+lb = call("/leaderboards/batting?season=2025&sort_by=ops")
+check("  con el mismo mínimo que las tablas de líderes", rk["minimum"], lb["min_pa"])
+check("  entre 16 calificados", rk["pool"], 16)
+pos = {i["stat"]: i["rank"] for i in rk["items"]}
+check("  3º en OPS, 2º en slugging y en poder aislado", (pos["ops"], pos["slg"], pos["iso"]), (3, 2, 2))
+check("  el orden es fijo: OPS primero, ponches al final",
+      (rk["items"][0]["stat"], rk["items"][-1]["stat"]), ("ops", "so_pct"))
+check("  en ponches, menos es mejor", rk["items"][-1]["higher_is_better"], False)
+check("  el OPS recompuesto es el de su fila", round(rk["items"][0]["value"], 3), nv["batting"][0]["ops"])
+check("  titular con la edad de ESA temporada", rk["headline"], "Tercer mejor OPS de la liga, a los 38.")
+check("empates compartidos: .9 .8 .8 .7 → el .8 es 2º y el .7 es 4º",
+      (_puesto(.8, [.9, .8, .8, .7], True), _puesto(.7, [.9, .8, .8, .7], True)), (2, 4))
+
+tv = call("/players/jorge-tavarez-1995-08-04")["context"]
+check("un abridor se compara como lanzador, en femenino",
+      (tv["role"], tv["ranking"]["headline"]), ("pitching", "Segunda mejor efectividad de la liga."))
+vd = call("/players/jordany-valdespin-1987-12-23")["context"]["ranking"]
+check("si la temporada no es la actual, el titular la nombra",
+      vd["headline"], "Segundo mejor OPS de la liga en 2019-20.")
+ob = call("/players/wirfin-obispo-1984-09-26")["context"]
+check("un relevista sin temporada calificada no tiene puesto", ob["ranking"], None)
+
+cv = ctx["curve"]
+check("la curva: una temporada por punto", len(cv["points"]), 11)
+check("  2016-17 (27 AP) es muestra chica",
+      next(p["small_sample"] for p in cv["points"] if p["season_id"] == "2016-17"), True)
+check("  la liga en las 14 temporadas", len(cv["league"]), 14)
+check("  OPS de la liga 2025-26", cv["league"][-1]["value"], 0.696)
+# 2020-21 fue la temporada de la pandemia: sus 99 AP sí calificaron, con .926.
+check("  titular", cv["headline"], "Su mejor temporada calificada desde 2020-21.")
+Q = lambda s, v: {"season_id": s, "value": v, "qualified": True}
+check("titular_carrera: la última es la mejor → de su carrera",
+      titular_carrera([Q("a", .8), Q("b", .9)], "batting"), "La mejor temporada calificada de su carrera.")
+check("titular_carrera: la supera justo la anterior → sin titular",
+      titular_carrera([Q("a", .8), Q("b", .9), Q("c", .85)], "batting"), None)
+check("titular_carrera: una sola calificada → sin titular",
+      titular_carrera([Q("a", .8)], "batting"), None)
+
+print("\n━━━ ficha de equipo: la temporada juego a juego ━━━")
+ag = call("/teams/AGU?season=2025")
+serie = {c["team_code"]: c["series"] for c in ag["race"]}
+check("la carrera trae a los seis", sorted(serie), sorted(["AGU", "TOR", "EST", "GIG", "ESC", "LIC"]))
+h0 = ag["history"][0]
+check("  el último punto de Águilas es G−P de la temporada", serie["AGU"][-1], h0["wins"] - h0["losses"])
+check("  un punto por juego, más el cero inicial", len(serie["AGU"]), h0["wins"] + h0["losses"] + 1)
+check("  titular (se mide el ritmo, no los juegos sobre .500)",
+      ag["race_headline"], "Llegaron a 21-4 y cerraron 11-13.")
+check("últimos 10, del más viejo al más nuevo", "".join(x["result"] for x in ag["last10"]), "PPGGPPPGGP")
+check("titular del historial", ag["history_headline"], "9 de 14 con más carreras anotadas que permitidas.")
+gi = call("/teams/GIG?season=2025")
+check("la remontada de Gigantes", gi["race_headline"], "Estuvieron 17-25 y cerraron 7-1.")
+check("titular_banderin: menos de 10 juegos → nada", titular_banderin([0, 1, 2, 3]), None)
+check("el puesto de la cabecera", ag["standing"]["label"], "1ro · 5 juegos de ventaja")
+# El puesto sale de la serie de la carrera, no de /standings: tienen que coincidir.
+tabla = call("/standings?season=2025")["data"]
+for i, fila in enumerate(tabla):
+    pe = call(f"/teams/{fila['team_id']}?season=2025")["standing"]
+    gb = fila["games_back"]
+    esperado = "5 juegos de ventaja" if gb in ("-", "0", "0.0") else f"a {float(gb):g} del primero"
+    check(f"  {fila['team_id']}: {i + 1}º y {esperado}",
+          (pe["position"], pe["label"].split(" · ")[1]), (i + 1, esperado))
+lt = ctx["latest"]
+check("cifras de la cabecera: la última temporada, equipos sumados",
+      (lt["season_id"], lt["team_code"], lt["hr"], lt["rbi"], round(lt["ops"], 3)),
+      ("2025-26", "ESC", 6, 26, 0.873))
+
 print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:

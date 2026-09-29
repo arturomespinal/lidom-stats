@@ -156,9 +156,11 @@ la 2015-16. No cambiar esa clave.
 | `src/qualification.py` | Mínimos de calificación (PA/IP), compartidos por las dos capas |
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
+| `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
+| `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 210 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 248 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -191,11 +193,11 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /games` | Listado con filtros: `team`, `opponent`, `stage`, `status`, `date_from`, `date_to`, `order`, paginado con `limit`/`offset` |
 | `GET /games/{game_id}` | Boxscore completo: las dos alineaciones con líneas de bateo y pitcheo |
 | `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
-| `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera |
+| `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera + `context` (contra la liga y curva) |
 | `GET /players/{player_id}/gamelog` | Juego por juego — lo que las tablas planas no pueden dar |
 | `GET /leaderboards/batting` | Líderes con calificación por PA |
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
-| `GET /teams/{code}` | Ficha del equipo: historial por temporada, destacados y plantilla |
+| `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
 | `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
 
 `season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
@@ -1040,8 +1042,9 @@ lejano del pulgar en un teléfono grande.
 
 Lo que cambia respecto a la web:
 
-- **Jugador:** la carrera va ARRIBA, en una franja navy (la firma del kit), y
-  no al pie de la tabla: en un teléfono eso la dejaba a dos pantallas. La
+- **Jugador:** la carrera entera va en una franja navy (la firma del kit)
+  justo antes de la tabla, y no al pie: en un teléfono eso la dejaba a dos
+  pantallas. Arriba manda la cabecera héroe con la última temporada. La
   tabla de temporadas tiene la columna de temporada **fija** y las cifras se
   desplazan —React Native no tiene `sticky` horizontal: son dos columnas con
   filas de la misma altura fija—. Tocar la celda fija abre el equipo **en esa
@@ -1057,6 +1060,74 @@ Lo que cambia respecto a la web:
   usa por debajo. Una sola implementación, una sola altura (44 pt).
 - Escala de las fichas: 28 / 22 / 14 / 11. Sin Bebas en las tablas: sus cifras
   no son tabulares y en una columna alineada a la derecha no cuadran.
+
+## El rediseño de las fichas (29-sep-2026)
+
+Las fichas de jugador y de equipo se rehicieron en las dos plataformas a partir
+de tres maquetas del canvas de diseño (Hoy, Jugador, Equipo). El dato nuevo lo
+calcula el **servidor**; los clientes solo dibujan.
+
+### Lo que añade la API
+
+`GET /players/{player_id}` trae `context` (o `null` si no tiene filas en su
+papel principal):
+
+| Campo | Qué es |
+|-------|--------|
+| `role` | `batting` o `pitching`, el mismo criterio que `es_lanzador()` |
+| `latest` | Su última temporada con los equipos **sumados**: las cifras grandes de la cabecera |
+| `ranking` | Su puesto entre los calificados de su última temporada calificada, por categoría, con `headline` |
+| `curve` | OPS (o EFE) temporada a temporada, el promedio de la liga y un `headline` |
+
+`GET /teams/{code}` añade `race` (juegos sobre .500 de los seis, partido a
+partido), `race_headline`, `standing` ("1ro · 5 juegos de ventaja"), `last10`
+(del más viejo al más nuevo) y `history_headline`.
+
+Reglas que no conviene deshacer:
+
+- **Puestos con empates compartidos** (1, 2, 2, 4), comparados a la precisión
+  con que se pintan: dos OPS de .873 empatan aunque difieran en la cuarta cifra.
+- **Las tasas se recomponen de conteos sumados**, también para el cambiado a
+  mitad de temporada y para el promedio de la liga. Nunca se promedian.
+- **El listón de la liga usa los juegos del equipo que más jugó**
+  (`season_games_played`), no un fijo: en 2025-26 son 155 AP y 16 calificados.
+- **Las sumas de la liga se cachean** con clave (juegos finales, última fecha):
+  la ficha bajó de 550 ms a 26 ms, y la clave cambia sola al ingestar.
+- **El titular de la carrera es de ritmo**, no de mínimo: "Llegaron a 21-4 y
+  cerraron 11-13". Medir la caída en juegos sobre .500 daba `None` para
+  Águilas, que solo perdió dos de colchón pero jugó .458 desde el pico.
+- Un titular de una temporada vieja lleva el año ("… en 2019-20").
+
+### Cómo se dibuja
+
+Web en `frontend/components/ficha/`, móvil en `mobile/src/components/`, con
+los mismos nombres: `Heroe`, `Monograma`, `Seccion`, `PuestoLiga`,
+`CurvaCarrera`, `CarreraBanderin`, `UltimosDiez`, `BarrasDiferencial`,
+`Trayectoria`.
+
+- **La cabecera héroe ocupa el lugar de la foto**: franja navy a sangre con un
+  plano del color del club en diagonal. **Toda letra va sobre el navy, nunca
+  sobre el plano** — blanco sobre el amarillo de Águilas da 2:1. En el
+  teléfono el plano mide 176 px y la columna de texto no pasa del 52%; en la
+  web, desde `sm`, el plano ocupa todo el alto y el texto el 58%. El nombre se
+  achica para caber (`adjustsFontSizeToFit` en el móvil, `NombreHeroe` en la
+  web): partir "RODRÍGUEZ" a media palabra es peor.
+- **El monograma** (iniciales en teja navy con la esquina cortada) va sobre el
+  plano. Nada de fotos ni escudos: ver la guía legal.
+- **Una sola serie con color en cada gráfica.** El jugador o el equipo en
+  tinta; la liga y los otros cinco en gris `#8A96A9` (3.0:1, el mínimo para
+  una marca). Seis colores de club serían tres rojos indistinguibles.
+- **Marcas de eje redondas** con `marcasRedondas()` (.600 / .800 / 1.000;
+  −5 / .500 / +5), en `formato.ts` de las dos plataformas.
+- **Puesto, no percentil.** Con 16 calificados "81" esconde que fue 3º. El
+  podio (1º-3º) va en teja navy; el resto, escrito en gris.
+- En la web, cada gráfica tiene puntero, flechas del teclado y una tabla en
+  "Ver datos": el puntero mejora, nunca es la única puerta al dato. Las
+  gráficas miden su contenedor (`useAncho`) en vez de escalar un `viewBox`,
+  para que las letras no bajen a 7 px en un teléfono.
+- **Bebas no trae el glifo "º"**: el ordinal va en Archivo al lado del número.
+- La temporada de la ficha de equipo en la web va en pestañas pegadas bajo la
+  barra (`TemporadaTabs`), que son enlaces: la temporada sigue en la URL.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

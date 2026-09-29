@@ -401,6 +401,8 @@ export interface PlayerProfile {
   career_pitching: CareerPitching | null;
   teams: CareerTeam[];
   is_pitcher: boolean;
+  /** null si no tiene filas en su papel principal. */
+  context: PlayerContext | null;
 }
 
 export interface PlayerSearchHit {
@@ -500,4 +502,90 @@ export interface TeamProfile {
   leaders: TeamLeaders;
   batters: TeamRosterBatter[];
   pitchers: TeamRosterPitcher[];
+  /** Los seis equipos, juego a juego: la carrera por el banderín. */
+  race: RaceSeries[];
+  race_headline: string | null;
+  standing: TeamStanding | null;
+  /** Del más viejo al más nuevo. */
+  last10: LastGame[];
+  history_headline: string | null;
+}
+
+/* ── Contexto de las fichas (rediseño 29-sep) ─────────────────────────────
+   El servidor calcula los puestos, la curva y las frases (src/contexto.py y
+   src/banderin.py). El cliente dibuja: no decide quién es tercero ni escribe
+   un titular. */
+
+export type FormatoValor = 'rate3' | 'pct1' | 'dec2' | 'int' | 'ip';
+
+export interface RankingItem {
+  stat: string;
+  label: string;
+  value: number;
+  /** Cómo pintar `value`: .873, 12.9%, 1.49, 6, 36.1. */
+  format: FormatoValor;
+  higher_is_better: boolean;
+  /** Puesto con empates compartidos: 1, 2, 2, 4. */
+  rank: number;
+}
+
+export interface PlayerRanking {
+  season_id: string;
+  /** Cuántos calificados hay: "3º de 16". */
+  pool: number;
+  /** AP para bateo, entradas para pitcheo. */
+  minimum: number;
+  items: RankingItem[];
+  headline: string | null;
+}
+
+export interface CurvePoint {
+  season_id: string;
+  value: number;
+  /** AP u outs de esa temporada, equipos sumados. */
+  volume: number;
+  /** Se pinta hueco: 27 AP no son evidencia de nada. */
+  small_sample: boolean;
+  qualified: boolean;
+}
+
+export interface PlayerCurve {
+  /** 'ops' para bateadores, 'era' para lanzadores. */
+  stat: string;
+  points: CurvePoint[];
+  league: { season_id: string; value: number }[];
+  headline: string | null;
+}
+
+export interface PlayerContext {
+  role: 'batting' | 'pitching';
+  /** La última temporada, equipos sumados: las cifras grandes de la cabecera. */
+  latest: Record<string, number | string | string[] | null> & {
+    season_id: string;
+    team_code: string;
+  };
+  ranking: PlayerRanking | null;
+  curve: PlayerCurve;
+}
+
+export interface RaceSeries {
+  team_code: string;
+  /** Juegos sobre .500 tras cada juego; empieza en 0. */
+  series: number[];
+}
+
+export interface LastGame {
+  result: 'G' | 'P';
+  opponent: string;
+  runs_for: number;
+  runs_against: number;
+  home: boolean;
+  date: string;
+}
+
+export interface TeamStanding {
+  position: number;
+  teams: number;
+  /** "1ro · 5 juegos de ventaja", compuesto en el servidor. */
+  label: string;
 }

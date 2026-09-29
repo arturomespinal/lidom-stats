@@ -42,6 +42,18 @@ const OPCIONES_PILA = {
 };
 
 /**
+ * Las fichas abren con la cabecera navy (components/Heroe.tsx), así que la
+ * barra de navegación se pinta del mismo navy y sin título: la flecha blanca
+ * queda sobre la franja y el nombre grande de la ficha hace de título. El
+ * `title` se sigue poniendo —lo usa el lector de pantalla—; solo no se dibuja.
+ */
+const OPCIONES_FICHA = {
+  headerStyle: { backgroundColor: COLORS.ink },
+  headerTintColor: COLORS.inkFg,
+  headerTitle: () => null,
+};
+
+/**
  * Cada pestaña es una PILA, no una pantalla suelta.
  *
  * Antes solo "En Vivo" lo era; ahora las cinco, porque las fichas de equipo y
@@ -79,12 +91,12 @@ function LiveTab() {
       <LiveStack.Screen
         name="Equipo"
         component={TeamScreen}
-        options={({ route }) => ({ title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+        options={({ route }) => ({ ...OPCIONES_FICHA, title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
       />
       <LiveStack.Screen
         name="Jugador"
         component={PlayerScreen}
-        options={({ route }) => ({ title: route.params.nombre ?? 'Jugador' })}
+        options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
       />
     </LiveStack.Navigator>
   );
@@ -103,12 +115,12 @@ function crearPila(Raiz: React.ComponentType) {
         <Pila.Screen
           name="Equipo"
           component={TeamScreen}
-          options={({ route }) => ({ title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+          options={({ route }) => ({ ...OPCIONES_FICHA, title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
         />
         <Pila.Screen
           name="Jugador"
           component={PlayerScreen}
-          options={({ route }) => ({ title: route.params.nombre ?? 'Jugador' })}
+          options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
         />
       </Pila.Navigator>
     );

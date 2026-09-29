@@ -1,6 +1,5 @@
 import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
-import { DEFAULT_SEASON } from "@/lib/constants";
 import { entradas } from "@/lib/formato";
 import {
   CareerBatting,
@@ -83,7 +82,7 @@ interface Props<T> {
 function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
   return (
     <section>
-      <h2 className="mb-2 font-cond text-lg font-bold tracking-[0.02em] text-fg">
+      <h2 className="mb-3 font-cond text-2xl leading-none tracking-[0.02em] text-fg">
         {titulo}
       </h2>
 
@@ -115,12 +114,14 @@ function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
                 key={`${f.season_id}-${f.team_code}-${i}`}
                 className="border-b border-line-soft last:border-0 hover:bg-raised"
               >
-                <td className="num sticky left-0 z-10 bg-card px-3 py-2 text-left text-fg2">
+                <td className="num sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-2 text-left text-fg2">
                   {f.season_id}
                 </td>
                 <td className="px-2 py-2">
                   <Link
-                    href={`/teams/${f.team_code}?season=${DEFAULT_SEASON}`}
+                    // El equipo EN ESA temporada, como en el móvil: desde la
+                    // fila de 2016-17 uno quiere ver aquel roster, no el de hoy.
+                    href={`/teams/${f.team_code}?season=${f.season_id}`}
                     className="inline-block"
                   >
                     <TeamBadge code={f.team_code} size="sm" />

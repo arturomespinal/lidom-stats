@@ -1,6 +1,8 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
+import { setStatusBarStyle } from 'expo-status-bar';
 
 import { fetchPlayerProfile } from '../api';
 import { COLORS, FONTS, TEAM_SHORT_NAMES, TEAM_STYLES } from '../constants';
@@ -17,7 +19,11 @@ import { EsqueletoFicha } from '../components/Esqueleto';
 import Pestanas from '../components/Pestanas';
 import Seccion from '../components/Seccion';
 import TablaTemporadas, { Col } from '../components/TablaTemporadas';
-import TeamBadge from '../components/TeamBadge';
+import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
+import Monograma from '../components/Monograma';
+import PuestoLiga from '../components/PuestoLiga';
+import CurvaCarrera from '../components/CurvaCarrera';
+import Trayectoria from '../components/Trayectoria';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Jugador'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -60,18 +66,6 @@ const COLS_PITCHEO: Col<FilaPitcheo>[] = [
   { k: 'EFE', t: 'Efectividad', val: f => num(f.era, 2), fuerte: true },
   { k: 'WHIP', t: 'Embasados por entrada', val: f => num(f.whip, 2), fuerte: true },
 ];
-
-/** Etiqueta chica arriba, valor abajo. */
-function Dato({ etiqueta, valor }: { etiqueta: string; valor: string }) {
-  return (
-    <View style={styles.dato}>
-      <Text style={styles.etiqueta}>{etiqueta}</Text>
-      <Text style={styles.datoValor} numberOfLines={1}>
-        {valor}
-      </Text>
-    </View>
-  );
-}
 
 /** Una cifra de la franja navy de carrera. */
 function Cifra({ valor, etiqueta }: { valor: string; etiqueta: string }) {
@@ -164,6 +158,15 @@ export default function PlayerScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
+  // La cabecera es navy: la barra de estado va en claro mientras esta
+  // pantalla tiene el foco, y vuelve a oscura al salir.
+  useFocusEffect(
+    useCallback(() => {
+      setStatusBarStyle('light');
+      return () => setStatusBarStyle('dark');
+    }, []),
+  );
+
   // El título pasa del nombre que traía el enlace al oficial de la ficha. Es
   // útil cuando la cabecera de la tarjeta ya se fue por arriba al desplazar.
   useLayoutEffect(() => {
@@ -212,73 +215,142 @@ export default function PlayerScreen({ route, navigation }: Props) {
   const abrirEquipo = (code: string, season?: string) =>
     navigation.push('Equipo', { code, season });
 
+  const ctx = perfil.context;
+  /** Un número de la última temporada, o null si no viene. */
+  const n = (k: string): number | null => {
+    const v = ctx?.latest[k];
+    return typeof v === 'number' ? v : null;
+  };
+  // El equipo de más volumen en cada temporada: pinta las épocas de la curva.
+  const equipoPorTemporada: Record<string, string> = {};
+  if (ctx) {
+    const filas =
+      ctx.role === 'batting'
+        ? perfil.batting.map(f => ({ s: f.season_id, t: f.team_code, v: f.pa }))
+        : perfil.pitching.map(f => ({ s: f.season_id, t: f.team_code, v: f.outs }));
+    const mejor: Record<string, number> = {};
+    for (const { s: temporada, t: code, v } of filas) {
+      if (!(temporada in mejor) || v > mejor[temporada]) {
+        mejor[temporada] = v;
+        equipoPorTemporada[temporada] = code;
+      }
+    }
+  }
+
   return (
     <ScrollView style={styles.pagina} contentContainerStyle={{ paddingBottom: 32 }}>
-      {/* ── Quién es ── */}
-      <View style={styles.cabecera}>
-        {color && <View style={[styles.franjaClub, { backgroundColor: color }]} />}
+      {/* ── Quién es ── La cabecera navy con el plano del club: ocupa el
+          lugar de la foto. El monograma va sobre el plano; el texto, sobre
+          el navy, siempre (ver Heroe.tsx). */}
+      <Heroe color={color ?? COLORS.textSecondary}>
         <View style={styles.identidad}>
-          {equipo && <TeamBadge code={equipo} size={48} variant="solid" />}
-          <View style={{ flex: 1 }}>
-            <Text style={styles.nombre} accessibilityRole="header" numberOfLines={2}>
+          <View style={styles.nombreCaja}>
+            <Text style={styles.micro} numberOfLines={1}>
+              {[equipo ? TEAM_SHORT_NAMES[equipo] ?? equipo : 'Sin equipo registrado', ctx?.latest.season_id]
+                .filter(Boolean)
+                .join(' · ')}
+            </Text>
+            <Text
+              style={styles.nombre}
+              accessibilityRole="header"
+              numberOfLines={3}
+              adjustsFontSizeToFit
+              minimumFontScale={0.7}
+            >
               {bio.full_name}
             </Text>
-            <Text style={styles.sub} numberOfLines={1}>
+            {/* La lateralidad llega traducida (bats_label): el cliente nunca
+                traduce 'S', ver src/lateralidad.py. */}
+            <Text style={styles.meta}>
               {[
-                equipo ? TEAM_SHORT_NAMES[equipo] ?? equipo : 'Sin equipo registrado',
-                bio.nationality,
+                bio.age != null ? `${bio.age} años` : null,
+                bio.bats_label ? `batea ${bio.bats_label.toLowerCase()}` : null,
+                bio.throws_label ? `lanza ${bio.throws_label.toLowerCase()}` : null,
               ]
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
+            {(!!fisico || !!bio.birth_date || !!bio.nationality) && (
+              <Text style={styles.meta}>
+                {[bio.birth_date ? fechaEs(bio.birth_date) : null, bio.nationality, fisico || null]
+                  .filter(Boolean)
+                  .join(' · ')}
+              </Text>
+            )}
           </View>
+          <Monograma nombre={bio.full_name} />
         </View>
+        {ctx && (
+          <FilaCifras titulo={`Temporada ${ctx.latest.season_id}`}>
+            {ctx.role === 'batting' ? (
+              <>
+                <CifraHeroe valor={pct3(n('ops'))} etiqueta="OPS" />
+                <CifraHeroe valor={num(n('hr'))} etiqueta="HR" />
+                <CifraHeroe valor={num(n('rbi'))} etiqueta="CI" />
+                <CifraHeroe valor={pct3(n('avg'))} etiqueta="AVG" />
+              </>
+            ) : (
+              <>
+                <CifraHeroe valor={num(n('era'), 2)} etiqueta="EFE" />
+                <CifraHeroe valor={`${num(n('wins'))}-${num(n('losses'))}`} etiqueta="G-P" />
+                <CifraHeroe valor={num(n('so'))} etiqueta="K" />
+                <CifraHeroe valor={entradas(n('innings_pitched'))} etiqueta="IP" />
+              </>
+            )}
+          </FilaCifras>
+        )}
+      </Heroe>
 
-        {/* Solo lo que existe: una fila de guiones no informa de nada. La
-            lateralidad llega traducida (bats_label) — el cliente nunca
-            traduce 'S', ver src/lateralidad.py. */}
-        <View style={styles.datos}>
-          {bio.age != null && <Dato etiqueta="Edad" valor={`${bio.age} años`} />}
-          {bio.bats_label && <Dato etiqueta="Batea" valor={bio.bats_label} />}
-          {bio.throws_label && <Dato etiqueta="Lanza" valor={bio.throws_label} />}
-          {!!fisico && <Dato etiqueta="Físico" valor={fisico} />}
-          {bio.birth_date && <Dato etiqueta="Nacimiento" valor={fechaEs(bio.birth_date)} />}
-        </View>
-      </View>
+      {/* ── Contra la liga ── El puesto entre los calificados de su última
+          temporada calificada. Los puestos y la frase los pone el servidor. */}
+      {ctx?.ranking && (
+        <>
+          <Seccion
+            titulo="Contra la liga"
+            nota={ctx.ranking.season_id}
+            titular={ctx.ranking.headline}
+            sub={
+              `Puesto entre los ${ctx.ranking.pool} calificados ` +
+              (ctx.role === 'batting'
+                ? `(${ctx.ranking.minimum}+ AP). En ponches, 1º es quien menos se poncha.`
+                : `(${entradas(ctx.ranking.minimum)}+ IP). En efectividad, WHIP y boletos, 1º es el más bajo.`)
+            }
+          />
+          <PuestoLiga ranking={ctx.ranking} />
+        </>
+      )}
 
-      {/* ── Qué tan bueno es ── */}
-      {activo && <FranjaCarrera rol={activo} perfil={perfil} />}
+      {/* ── La carrera en una curva ── */}
+      {ctx && ctx.curve.points.length > 1 && (
+        <>
+          <Seccion
+            titulo={`${ctx.curve.points.length} temporadas`}
+            nota={ctx.curve.stat === 'era' ? 'EFE' : 'OPS'}
+            titular={ctx.curve.headline}
+            sub={
+              ctx.role === 'batting'
+                ? 'Punto hueco: menos de 50 AP. Calificada: la que habría entrado en la tabla de líderes.'
+                : 'Más arriba, mejor. Punto hueco: menos de 10 entradas.'
+            }
+          />
+          <CurvaCarrera curva={ctx.curve} equipoPorTemporada={equipoPorTemporada} />
+        </>
+      )}
 
-      {/* ── Dónde jugó ── Carrusel: con cuatro o cinco equipos no cabe en una
-          fila, y partirlo en dos renglones empuja la tabla hacia abajo. */}
+      {/* ── Dónde jugó ── Una barra partida por equipo, del largo de sus
+          temporadas en cada uno. */}
       {perfil.teams.length > 0 && (
         <>
           <Seccion
             titulo="Trayectoria"
             nota={`${perfil.teams.length} ${perfil.teams.length === 1 ? 'equipo' : 'equipos'}`}
           />
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.carrusel}
-          >
-            {perfil.teams.map(t => (
-              <Pressable
-                key={t.team_code}
-                onPress={() => abrirEquipo(t.team_code)}
-                style={({ pressed }) => [styles.chip, pressed && styles.presionado]}
-                accessibilityRole="button"
-                accessibilityLabel={`${t.team_code}, ${t.seasons} temporadas. Abrir equipo`}
-              >
-                <TeamBadge code={t.team_code} size={24} />
-                <Text style={styles.chipTexto}>
-                  {rangoTemporadas(t.first_season, t.last_season)}
-                </Text>
-              </Pressable>
-            ))}
-          </ScrollView>
+          <Trayectoria equipos={perfil.teams} onEquipo={code => abrirEquipo(code)} />
         </>
       )}
+
+      {/* ── Qué tan bueno ha sido ── La carrera entera, en la franja navy. */}
+      {activo && <FranjaCarrera rol={activo} perfil={perfil} />}
 
       {/* ── El año a año ── Pestañas solo si hay dos roles que mostrar. */}
       {bateo && pitcheo ? (
@@ -336,34 +408,24 @@ export default function PlayerScreen({ route, navigation }: Props) {
 const styles = StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
 
-  cabecera: {
-    backgroundColor: COLORS.bgCard,
-    padding: 16,
-    paddingLeft: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.border,
+  identidad: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
+  // La columna de texto no pasa del 52% del ancho: el resto es del plano del
+  // club, y letra blanca sobre el amarillo de Águilas no se lee (Heroe.tsx).
+  nombreCaja: { width: '52%', gap: 6 },
+  micro: {
+    fontSize: 11,
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.inkDim,
   },
-  // El color del club entra por el borde: identifica sin competir con el
-  // texto, que es lo que pasaría si tiñera la tarjeta entera.
-  franjaClub: { position: 'absolute', left: 0, top: 0, bottom: 0, width: 4 },
-  identidad: { flexDirection: 'row', alignItems: 'center', gap: 16 },
   nombre: {
     fontFamily: FONTS.display,
-    fontSize: 28,
-    lineHeight: 30,
-    letterSpacing: 0.3,
-    color: COLORS.textPrimary,
+    fontSize: 52,
+    lineHeight: 48,
+    paddingTop: 4,
+    color: COLORS.inkFg,
   },
-  sub: { fontSize: 14, color: COLORS.textSecondary, marginTop: 4 },
-  datos: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 16, rowGap: 16 },
-  dato: { width: '33.33%', paddingRight: 8 },
-  etiqueta: {
-    fontSize: 11,
-    color: COLORS.textFaint,
-    textTransform: 'uppercase',
-    letterSpacing: 0.6,
-  },
-  datoValor: { fontSize: 14, color: COLORS.textPrimary, marginTop: 4 },
+  meta: { fontSize: 13, lineHeight: 18, color: COLORS.inkDim },
 
   // La franja navy. Esquinas redondeadas parejas: la esquina cortada está
   // reservada a tejas y estados, y aquí no significaría nada.

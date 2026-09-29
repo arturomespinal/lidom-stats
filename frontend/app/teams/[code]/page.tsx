@@ -2,12 +2,17 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import Navbar from "@/components/Navbar";
-import TeamBadge from "@/components/TeamBadge";
+import TeamHeader from "@/components/team/TeamHeader";
+import TemporadaTabs from "@/components/team/TemporadaTabs";
+import Seccion from "@/components/ficha/Seccion";
+import UltimosDiez from "@/components/ficha/UltimosDiez";
+import CarreraBanderin from "@/components/ficha/CarreraBanderin";
+import BarrasDiferencial from "@/components/ficha/BarrasDiferencial";
 import TeamHistory from "@/components/team/TeamHistory";
 import Leaders from "@/components/team/Leaders";
 import { Batters, Pitchers } from "@/components/team/Roster";
 import { fetchTeamProfile } from "@/lib/api";
-import { DEFAULT_SEASON, TEAM_STYLES } from "@/lib/constants";
+import { DEFAULT_SEASON } from "@/lib/constants";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -17,28 +22,6 @@ interface Props {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { code } = await props.params;
   return { title: `${code.toUpperCase()} · Deportiv` };
-}
-
-/** Un número grande con su etiqueta debajo, para la cabecera. */
-function Cifra({
-  valor,
-  etiqueta,
-  tono,
-}: {
-  valor: string;
-  etiqueta: string;
-  tono?: string;
-}) {
-  return (
-    <div>
-      <div className={`num font-cond text-2xl font-bold ${tono ?? "text-fg"}`}>
-        {valor}
-      </div>
-      <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-faint">
-        {etiqueta}
-      </div>
-    </div>
-  );
 }
 
 export default async function TeamPage(props: Props) {
@@ -52,79 +35,43 @@ export default async function TeamPage(props: Props) {
   const equipo = await fetchTeamProfile(codigo, season);
   if (!equipo) notFound();
 
-  const color = TEAM_STYLES[codigo]?.primary;
-
-  // El total histórico se compone de lo que ya vino: pedirle al servidor otra
-  // agregación para sumar catorce filas que el cliente tiene delante sería un
-  // viaje de más. Las TASAS son otra cosa —esas nunca se promedian aquí— pero
-  // G y P son conteos y se suman sin peligro.
-  const totalG = equipo.history.reduce((a, f) => a + f.wins, 0);
-  const totalP = equipo.history.reduce((a, f) => a + f.losses, 0);
-  const pctHistorico = totalG + totalP > 0 ? totalG / (totalG + totalP) : null;
-  const ultima = equipo.history[0];
+  const ganados = equipo.last10.filter((j) => j.result === "G").length;
 
   return (
     <>
       <Navbar season={season} />
-      <main className="mx-auto max-w-5xl space-y-6 px-4 py-8">
-        <header className="relative overflow-hidden rounded-xl border border-line bg-card">
-          {color && (
-            <span
-              className="absolute inset-y-0 left-0 w-1"
-              style={{ backgroundColor: color }}
-              aria-hidden="true"
+      <TeamHeader equipo={equipo} />
+      <TemporadaTabs
+        code={codigo}
+        temporadas={equipo.history.map((f) => f.season_id)}
+        activa={equipo.season_id}
+      />
+      <main className="mx-auto max-w-5xl space-y-10 px-4 pb-10 pt-6">
+        {/* Lo que depende de la temporada: la racha, la carrera por el
+            banderín, los destacados y la plantilla. Las frases las compone
+            el servidor (src/banderin.py). */}
+        {equipo.last10.length > 0 && (
+          <section className="max-w-xl">
+            <Seccion
+              titulo={`Últimos ${equipo.last10.length}`}
+              nota={`${ganados}-${equipo.last10.length - ganados}`}
+              sub="El más reciente, a la derecha."
             />
-          )}
-          <div className="p-5 pl-6">
-            <div className="flex items-start gap-4">
-              <TeamBadge code={codigo} size="md" variant="solid" />
-              <div>
-                <h1 className="font-cond text-3xl font-bold leading-none tracking-[0.01em] text-fg">
-                  {equipo.team_name.toUpperCase()}
-                </h1>
-                <p className="mt-1.5 text-xs text-dim">
-                  {[equipo.city, equipo.founded_year && `fundado en ${equipo.founded_year}`]
-                    .filter(Boolean)
-                    .join(" · ")}
-                </p>
-              </div>
-            </div>
+            <UltimosDiez juegos={equipo.last10} />
+          </section>
+        )}
 
-            <div className="mt-5 flex flex-wrap gap-x-10 gap-y-4 border-t border-line-soft pt-4">
-              <Cifra
-                valor={`${totalG}-${totalP}`}
-                etiqueta={`${equipo.seasons_count} temporadas`}
-              />
-              {pctHistorico != null && (
-                <Cifra
-                  valor={pctHistorico.toFixed(3).slice(1)}
-                  etiqueta="PCT histórico"
-                />
-              )}
-              {ultima && (
-                <>
-                  <Cifra
-                    valor={`${ultima.wins}-${ultima.losses}`}
-                    etiqueta={ultima.season_id}
-                  />
-                  <Cifra
-                    valor={
-                      ultima.run_diff > 0 ? `+${ultima.run_diff}` : String(ultima.run_diff)
-                    }
-                    etiqueta="Diferencial"
-                    tono={
-                      ultima.run_diff > 0
-                        ? "text-pos"
-                        : ultima.run_diff < 0
-                          ? "text-neg"
-                          : "text-fg2"
-                    }
-                  />
-                </>
-              )}
-            </div>
-          </div>
-        </header>
+        {equipo.race.length > 0 && (
+          <section>
+            <Seccion
+              titulo="La carrera"
+              nota={equipo.season_id}
+              titular={equipo.race_headline}
+              sub="Juegos sobre .500, partido a partido. Por encima de la línea, más ganados que perdidos."
+            />
+            <CarreraBanderin carrera={equipo.race} equipo={codigo} />
+          </section>
+        )}
 
         <Leaders
           leaders={equipo.leaders}
@@ -133,12 +80,8 @@ export default async function TeamPage(props: Props) {
           seasonId={equipo.season_id}
         />
 
-        <TeamHistory history={equipo.history} teamCode={codigo} />
-
-        <div>
-          <p className="mb-3 text-xs text-dim">
-            Plantilla de {equipo.season_id} · ordenada por uso
-          </p>
+        <section>
+          <Seccion titulo="Plantilla" nota={`${equipo.season_id} · ordenada por uso`} />
           <div className="space-y-6">
             {equipo.batters.length > 0 && <Batters data={equipo.batters} />}
             {equipo.pitchers.length > 0 && <Pitchers data={equipo.pitchers} />}
@@ -148,7 +91,20 @@ export default async function TeamPage(props: Props) {
               </p>
             )}
           </div>
-        </div>
+        </section>
+
+        {/* Temporada a temporada: el diferencial en barras y la tabla. */}
+        <section>
+          <Seccion
+            titulo={`${equipo.seasons_count} temporadas`}
+            nota="Solo temporada regular"
+            titular={equipo.history_headline}
+          />
+          <div className="space-y-4">
+            <BarrasDiferencial historial={equipo.history} elegida={equipo.season_id} equipo={codigo} />
+            <TeamHistory history={equipo.history} teamCode={codigo} elegida={equipo.season_id} />
+          </div>
+        </section>
       </main>
     </>
   );

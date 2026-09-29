@@ -26,7 +26,25 @@ from src.carrera import (
     equipos_de_la_carrera,
     es_lanzador,
 )
+from src.banderin import (
+    carrera_por_el_banderin,
+    posicion_en_la_tabla,
+    titular_banderin,
+    titular_historial,
+    ultimos_diez,
+)
 from src.constants import LIDOM_TEAMS, LIDOM_TEAMS_BY_CODE
+from src.contexto import (
+    CATEGORIAS_BATEO,
+    CATEGORIAS_PITCHEO,
+    agregar_bateo,
+    agregar_pitcheo,
+    curva_de_carrera,
+    edad_en_temporada,
+    liga_por_temporada,
+    puesto_en_la_liga,
+    titular_puesto,
+)
 from src.lateralidad import anotar_lateralidad
 from src.models.database import get_engine
 from src.qualification import qualifying_ip, qualifying_pa
@@ -348,6 +366,7 @@ def get_player_profile(player_id: str):
     bio = anotar_lateralidad(players[0])
     bio["age"] = edad(bio.get("birth_date"))
 
+    lanzador = es_lanzador(batting, pitching)
     return {
         # Con `bats_label` y `throws_label` ya compuestos: ver src/lateralidad.py.
         "player": bio,
@@ -356,8 +375,113 @@ def get_player_profile(player_id: str):
         "career_batting": carrera_bateo(batting),
         "career_pitching": carrera_pitcheo(pitching),
         "teams": equipos_de_la_carrera(batting, pitching),
-        "is_pitcher": es_lanzador(batting, pitching),
+        "is_pitcher": lanzador,
+        "context": contexto_del_jugador(
+            player_id, bio, batting, pitching, "pitching" if lanzador else "batting"
+        ),
     }
+
+
+def _minimos_por_temporada() -> dict[str, int]:
+    """Juegos del calendario más largo de cada temporada: la base de los mínimos."""
+    return {
+        r["season_id"]: r["g"] or 0
+        for r in query_db(
+            "SELECT season_id, MAX(games_played) AS g FROM v_standings GROUP BY season_id"
+        )
+    }
+
+
+_SUMAS_BATEO = """
+    SELECT season_id, SUM(pa) AS pa, SUM(ab) AS ab, SUM(h) AS h,
+           SUM(doubles) AS doubles, SUM(triples) AS triples, SUM(hr) AS hr,
+           SUM(bb) AS bb, SUM(hbp) AS hbp, SUM(sf) AS sf
+    FROM v_batting_season GROUP BY season_id
+"""
+_SUMAS_PITCHEO = "SELECT season_id, SUM(er) AS er, SUM(outs) AS outs FROM v_pitching_season GROUP BY season_id"
+
+
+# El promedio de la liga por temporada cuesta ~200 ms (suma las vistas
+# enteras) y solo cambia cuando entra un juego nuevo. Se guarda con una clave
+# que cuesta 1 ms: cuántos juegos finales hay y el último día. Cuando el poller
+# ingesta un juego terminado la clave cambia y la próxima ficha lo recalcula.
+_cache_liga: dict = {"clave": None, "valor": None}
+
+
+def _liga_por_temporada() -> list[dict]:
+    fila = query_db("SELECT COUNT(*) AS n, MAX(game_date) AS d FROM games WHERE status = 'final'")[0]
+    clave = (fila["n"], fila["d"])
+    if _cache_liga["clave"] != clave:
+        _cache_liga["valor"] = liga_por_temporada(query_db(_SUMAS_BATEO), query_db(_SUMAS_PITCHEO))
+        _cache_liga["clave"] = clave
+    return _cache_liga["valor"]
+
+
+def contexto_del_jugador(
+    player_id: str, bio: dict, batting: list[dict], pitching: list[dict], rol: str
+) -> dict | None:
+    """
+    El jugador contra la liga, para su papel principal: el puesto entre los
+    calificados de su última temporada calificada, y la curva de su carrera
+    contra el promedio de la liga. Ver src/contexto.py.
+
+    La calificación es la de las tablas de líderes de TODA la liga
+    (`season_games_played`), no la del equipo del jugador: aquí se le compara
+    con la liga entera.
+    """
+    filas = batting if rol == "batting" else pitching
+    if not filas:
+        return None
+    juegos = _minimos_por_temporada()
+    if rol == "batting":
+        propias = agregar_bateo({**f, "player_id": player_id} for f in batting)
+        minimo = lambda s: qualifying_pa(juegos.get(s, 0))
+        volumen, categorias, agregar, vista = "pa", CATEGORIAS_BATEO, agregar_bateo, "v_batting_season"
+    else:
+        propias = agregar_pitcheo({**f, "player_id": player_id} for f in pitching)
+        # En OUTS, no en entradas redondeadas: ver destacados_del_equipo().
+        minimo = lambda s: qualifying_ip(juegos.get(s, 0)) * 3
+        volumen, categorias, agregar, vista = "outs", CATEGORIAS_PITCHEO, agregar_pitcheo, "v_pitching_season"
+
+    temporadas = list(propias.values())
+
+    # El puesto: la temporada calificada más reciente.
+    ranking = None
+    calificadas = sorted(
+        (t for t in temporadas if t[volumen] >= minimo(t["season_id"]) > 0),
+        key=lambda t: t["season_id"],
+    )
+    if calificadas:
+        yo = calificadas[-1]
+        s = yo["season_id"]
+        liga = agregar(query_db(f"SELECT * FROM {vista} WHERE season_id = :s", {"s": s}))
+        pool = [t for t in liga.values() if t[volumen] >= minimo(s)]
+        items = puesto_en_la_liga(yo, pool, categorias)
+        ranking = {
+            "season_id": s,
+            "pool": len(pool),
+            "minimum": minimo(s) if rol == "batting" else qualifying_ip(juegos.get(s, 0)),
+            "items": items,
+            "headline": titular_puesto(
+                items, rol, edad_en_temporada(bio.get("birth_date"), s),
+                temporada=None if s == max(juegos) else s,
+            ),
+        }
+
+    # La última temporada, equipos sumados: las cifras grandes de la cabecera.
+    # El equipo que se nombra es el de más volumen esa temporada.
+    reciente = max(temporadas, key=lambda t: t["season_id"])
+    filas_reciente = [f for f in filas if f["season_id"] == reciente["season_id"]]
+    principal = max(filas_reciente, key=lambda f: f.get(volumen) or 0)
+    latest = {k: v for k, v in reciente.items() if k != "player_id"}
+    latest["team_code"] = principal["team_code"]
+    latest["teams"] = sorted({f["team_code"] for f in filas_reciente})
+
+    curva = curva_de_carrera(temporadas, rol, minimo)
+    liga = _liga_por_temporada()
+    campo = curva["stat"]
+    curva["league"] = [{"season_id": f["season_id"], "value": f[campo]} for f in liga if f[campo] is not None]
+    return {"role": rol, "latest": latest, "ranking": ranking, "curve": curva}
 
 
 @router.get("/players/{player_id}/gamelog", tags=["Jugadores"])
@@ -717,6 +841,20 @@ def team_profile(
     juegos_equipo = team_games_played(season_id, team)
     destacados = destacados_del_equipo(plantilla, cuerpo, juegos_equipo)
 
+    # La temporada juego a juego: la carrera de los seis y los últimos diez.
+    juegos_temporada = query_db(
+        """
+        SELECT game_date, home_team_code, away_team_code, home_score, away_score
+        FROM games
+        WHERE season_id = :s AND status = 'final' AND stage = 'regular'
+        ORDER BY game_datetime_utc, game_id
+        """,
+        {"s": season_id},
+    )
+    carrera = carrera_por_el_banderin(juegos_temporada)
+    serie_propia = next(c["series"] for c in carrera if c["team_code"] == team)
+    posicion = posicion_en_la_tabla(carrera, team)
+
     info = LIDOM_TEAMS_BY_CODE.get(team, {})
     return {
         "team_code": team,
@@ -733,6 +871,11 @@ def team_profile(
         "leaders": destacados,
         "batters": plantilla[:roster_limit],
         "pitchers": cuerpo[:roster_limit],
+        "race": carrera,
+        "race_headline": titular_banderin(serie_propia),
+        "standing": posicion,
+        "last10": ultimos_diez(juegos_temporada, team),
+        "history_headline": titular_historial(historial),
     }
 
 

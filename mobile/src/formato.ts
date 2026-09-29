@@ -68,3 +68,54 @@ export function valorDestacado(stat: string, v: number): string {
   if (['era', 'whip'].includes(stat)) return v.toFixed(2);
   return String(v);
 }
+
+/** Un valor de "contra la liga" según el formato que manda el servidor. */
+export function valorPuesto(v: number, formato: string): string {
+  switch (formato) {
+    case 'rate3':
+      return pct3(v);
+    case 'pct1':
+      return `${(v * 100).toFixed(1)}%`;
+    case 'dec2':
+      return v.toFixed(2);
+    case 'ip':
+      return entradas(v);
+    default:
+      return String(Math.round(v));
+  }
+}
+
+const SUFIJOS = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv']);
+
+/**
+ * "Yamaico Navarro" → "YN"; "Mel Rojas Jr." → "MR". El monograma que ocupa el
+ * lugar de la foto: primera letra del nombre y del último apellido.
+ */
+export function iniciales(nombre: string): string {
+  const partes = nombre.split(/\s+/).filter(p => p && !SUFIJOS.has(p.toLowerCase()));
+  if (partes.length === 0) return '?';
+  const a = partes[0][0];
+  const b = partes.length > 1 ? partes[partes.length - 1][0] : '';
+  return (a + b).toUpperCase();
+}
+
+/**
+ * Marcas de eje en números redondos: .600 / .800 / 1.000, no .571 / .762.
+ * El paso sale de 1, 2, 2.5 y 5 por potencias de 10; se toma el más chico que
+ * deja como mucho `max` marcas dentro del rango.
+ */
+export function marcasRedondas(lo: number, hi: number, max = 4): number[] {
+  const rango = hi - lo;
+  if (!(rango > 0)) return [lo];
+  const base = Math.pow(10, Math.floor(Math.log10(rango)) - 1);
+  for (const k of [1, 2, 2.5, 5, 10, 20, 25, 50, 100]) {
+    const paso = k * base;
+    const marcas: number[] = [];
+    for (let v = Math.ceil(lo / paso) * paso; v <= hi + 1e-9; v += paso) {
+      // toFixed(10) limpia el ruido del punto flotante: 0.6000000000000001.
+      marcas.push(Number((Math.round(v / paso) * paso).toFixed(10)));
+    }
+    if (marcas.length <= max) return marcas;
+  }
+  return [lo, hi];
+}

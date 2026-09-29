@@ -1,5 +1,7 @@
 import Link from "next/link";
+import Seccion from "@/components/ficha/Seccion";
 import { TeamLeader, TeamLeaders } from "@/lib/types";
+import { entradas } from "@/lib/formato";
 
 /**
  * Los líderes del equipo, en dos filas de tarjetitas.
@@ -41,7 +43,7 @@ function Tarjeta({ l }: { l: TeamLeader }) {
         {/* El asterisco marca lo que lleva mínimo; el pie lo explica. */}
         {l.qualified && <span className="text-dim"> *</span>}
       </span>
-      <span className="num mt-1.5 font-cond text-2xl font-bold leading-none text-fg">
+      <span className="num mt-2 font-cond text-[34px] leading-none text-fg">
         {valor(l.stat, l.value)}
       </span>
       <span className="mt-1.5 truncate text-xs text-fg2 group-hover:text-fg">
@@ -70,9 +72,7 @@ export default function Leaders({
 
   return (
     <section>
-      <h2 className="mb-2 font-cond text-lg font-bold tracking-[0.02em] text-fg">
-        Destacados de {seasonId}
-      </h2>
+      <Seccion titulo="Destacados" nota={seasonId} />
 
       <div className="space-y-2">
         {/* Rejilla de 2 columnas en teléfono y 5 en escritorio. Con
@@ -100,7 +100,7 @@ export default function Leaders({
       {hayTasa && (
         <p className="mt-2 text-[11px] text-faint">
           * Con mínimo de calificación: {minPa} apariciones al plato para el
-          bateo, {minIp} entradas para el pitcheo. Las acumuladas no llevan
+          bateo, {entradas(minIp)} entradas para el pitcheo. Las acumuladas no llevan
           mínimo.
         </p>
       )}

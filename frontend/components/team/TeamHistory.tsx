@@ -1,9 +1,12 @@
+import Link from "next/link";
 import { TeamSeasonRow } from "@/lib/types";
 import { TEAM_STYLES } from "@/lib/constants";
 
 interface Props {
   history: TeamSeasonRow[];
   teamCode: string;
+  /** La temporada que muestra la ficha: su fila va marcada y las demás la abren. */
+  elegida: string;
 }
 
 /** ±N con el signo SIEMPRE visible. El signo es el dato, no el color. */
@@ -25,7 +28,7 @@ function conSigno(n: number): string {
  * escrito y la barra tiene una línea de cero visible: quien no distinga los
  * tonos lee igual el dato, y quien sí los distinga lo lee más rápido.
  */
-export default function TeamHistory({ history, teamCode }: Props) {
+export default function TeamHistory({ history, teamCode, elegida }: Props) {
   const color = TEAM_STYLES[teamCode]?.primary ?? "rgb(var(--fg2))";
 
   // La barra se escala contra el mejor porcentaje del propio equipo y no
@@ -34,11 +37,7 @@ export default function TeamHistory({ history, teamCode }: Props) {
   const maxPct = Math.max(...history.map((f) => f.win_pct ?? 0), 0.001);
 
   return (
-    <section>
-      <h2 className="mb-2 font-cond text-lg font-bold tracking-[0.02em] text-fg">
-        Temporada a temporada
-      </h2>
-
+    <div>
       <div className="overflow-hidden rounded-xl border border-line bg-card">
         <table className="w-full text-sm">
           <thead>
@@ -82,12 +81,22 @@ export default function TeamHistory({ history, teamCode }: Props) {
           <tbody>
             {history.map((f) => {
               const pct = f.win_pct ?? 0;
+              const es = f.season_id === elegida;
               return (
                 <tr
                   key={f.season_id}
-                  className="border-b border-line-soft last:border-0 hover:bg-raised"
+                  aria-current={es ? "true" : undefined}
+                  className={`border-b border-line-soft last:border-0 ${es ? "bg-raised" : "hover:bg-raised"}`}
                 >
-                  <td className="num px-3 py-2 text-fg">{f.season_id}</td>
+                  <td className={`num px-3 py-2 text-fg ${es ? "shadow-[inset_3px_0_0_rgb(var(--ink))]" : ""}`}>
+                    {es ? (
+                      <b>{f.season_id}</b>
+                    ) : (
+                      <Link href={`/teams/${teamCode}?season=${f.season_id}`} className="underline-offset-2 hover:underline">
+                        {f.season_id}
+                      </Link>
+                    )}
+                  </td>
                   <td className="num px-2 py-2 text-right font-medium text-fg">
                     {f.wins}
                   </td>
@@ -134,6 +143,6 @@ export default function TeamHistory({ history, teamCode }: Props) {
         Solo temporada regular. Las barras se escalan contra la mejor campaña
         del propio equipo, no contra 1.000.
       </p>
-    </section>
+    </div>
   );
 }

@@ -1,6 +1,7 @@
 import {
   BattingRow,
   Jornada,
+  JuegoHistorico,
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
@@ -129,6 +130,11 @@ export async function fetchWinProb(
  */
 export async function fetchDay(fecha?: string): Promise<Jornada | null> {
   return apiFetch<Jornada>(fecha ? `/day?date=${encodeURIComponent(fecha)}` : "/day");
+}
+
+/** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */
+export async function fetchGame(gameId: string): Promise<JuegoHistorico | null> {
+  return apiFetch<JuegoHistorico>(`/games/${encodeURIComponent(gameId)}/detail`);
 }
 
 /* ── Fichas ──────────────────────────────────────────────────────────────── */

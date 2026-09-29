@@ -594,7 +594,8 @@ export interface TeamStanding {
    El servidor elige el destacado, escribe su titular y calcula las figuras
    (src/jornada.py). El cliente dibuja. */
 
-export type EstadoJornada = 'scheduled' | 'live' | 'final' | 'postponed' | 'cancelled';
+/** `no_result`: una fecha pasada que la base nunca cerró (forfeit, pospuesto sin reposición). */
+export type EstadoJornada = 'scheduled' | 'live' | 'final' | 'postponed' | 'cancelled' | 'no_result';
 
 export interface LadoJornada {
   code: string;
@@ -680,4 +681,30 @@ export interface Jornada {
   any_live: boolean;
   /** Con juegos en curso, cada cuánto volver a pedir la jornada. */
   poll_seconds: number | null;
+}
+
+/**
+ * Un equipo en el boxscore de un juego TERMINADO, armado desde la base
+ * (GET /games/{id}/detail). Misma forma que `TeamDetail` salvo que la base no
+ * guarda los errores ni los corredores dejados del equipo: vienen en null y
+ * el boxscore los omite en vez de pintar un cero falso. Ver src/boxscore.py.
+ */
+export type TeamBox = Omit<TeamDetail, 'errors' | 'left_on_base'> & {
+  errors: number | null;
+  left_on_base: number | null;
+};
+
+/** GET /games/{game_id}/detail: la página de un juego terminado. */
+export interface JuegoHistorico {
+  game: JuegoJornada;
+  date: string;
+  /** 'Mié 15 oct'. */
+  label: string;
+  headline: string | null;
+  win_prob: NonNullable<Jornada['featured']>['win_prob'];
+  figures: FiguraJornada[];
+  /** false = el juego existe en el calendario pero no tiene boxscore (forfeit, pospuesto). */
+  boxscore_available: boolean;
+  home: TeamBox;
+  away: TeamBox;
 }

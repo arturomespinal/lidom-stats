@@ -47,6 +47,7 @@ from src.contexto import (
     puesto_en_la_liga,
     titular_puesto,
 )
+from src.boxscore import equipo_detalle
 from src.jornada import (
     armar_juego,
     destacado,
@@ -994,23 +995,23 @@ __all__ = ["router"]
 _ESTADOS_CON_JUEGO = ("final", "scheduled", "live")
 
 _SQL_BATEO_DIA = """
-    SELECT b.*, p.full_name, g.game_id,
+    SELECT b.*, p.full_name, p.mlb_id, g.game_id,
            CASE WHEN b.team_code = g.home_team_code THEN g.away_team_code
                 ELSE g.home_team_code END AS opponent
       FROM batting_lines b
       JOIN games g   ON g.game_id = b.game_id
       JOIN players p ON p.player_id = b.player_id
-     WHERE g.game_date = :d AND g.status = 'final'
+     WHERE {filtro} AND g.status = 'final'
 """
 
 _SQL_PITCHEO_DIA = """
-    SELECT l.*, p.full_name, g.game_id,
+    SELECT l.*, p.full_name, p.mlb_id, g.game_id,
            CASE WHEN l.team_code = g.home_team_code THEN g.away_team_code
                 ELSE g.home_team_code END AS opponent
       FROM pitching_lines l
       JOIN games g   ON g.game_id = l.game_id
       JOIN players p ON p.player_id = l.player_id
-     WHERE g.game_date = :d AND g.status = 'final'
+     WHERE {filtro} AND g.status = 'final'
 """
 
 
@@ -1087,6 +1088,52 @@ def _decisiones(dia: str) -> dict[str, dict]:
     return salida
 
 
+def _titular_y_franja(juego: dict, bateo: list[dict], pitcheo: list[dict]) -> tuple:
+    """
+    El titular de un juego y su franja de probabilidad, si la caché lo siguió.
+    Lo usan la portada (para el destacado) y la página de un juego: la misma
+    frase en los dos sitios.
+
+    `bateo` y `pitcheo` pueden traer líneas de otros juegos; se filtran aquí.
+    """
+    track = live_store.win_prob_track(juego["game_pk"]) if juego["game_pk"] else []
+    recorrido = (
+        titular_recorrido(track, juego["home"]["code"], juego["away"]["code"])
+        if track and juego["status"] == "final" else None
+    )
+    del_juego = [x for x in bateo if x["game_id"] == juego["game_id"]]
+    del_juego_p = [x for x in pitcheo if x["game_id"] == juego["game_id"]]
+    tops = figuras(del_juego, del_juego_p, n=1)
+    # La figura del juego es la mejor de las dos: el Game Score y los puntos
+    # de bateo no están en la misma escala, así que se compara contra lo que
+    # sería una noche buena de cada uno (60 y 8).
+    figura = max(
+        tops,
+        key=lambda f: f["score"] / (60 if f["kind"] == "pitching" else 8),
+        default=None,
+    )
+    frase = (
+        frase_figura(
+            figura,
+            {x["player_id"]: x for x in del_juego},
+            {x["player_id"]: x for x in del_juego_p},
+        )
+        if figura else None
+    )
+    entry = live_store.get(juego["game_pk"]) if juego["game_pk"] else None
+    win_prob = {
+        "home_team": juego["home"]["code"],
+        "away_team": juego["away"]["code"],
+        "current": entry.state.win_prob_home if entry and entry.state else None,
+        "headline": recorrido,
+        "points": track,
+        "points_count": len(track),
+    } if len(track) >= 2 else None
+    # La misma forma que /live/games/{pk}/winprob, para que los clientes
+    # reusen su franja tal cual.
+    return titular_destacado(juego, recorrido, frase), win_prob
+
+
 @router.get("/day", tags=["Jornada"])
 def get_day(
     date_: str | None = Query(
@@ -1139,52 +1186,16 @@ def get_day(
         # diciendo que va por la 5ta, un "G Esmil Rogers" sería adelantarse.
         j["decisions"] = decisiones.get(j["game_id"]) if j["status"] == "final" else None
 
-    bateo = query_db(_SQL_BATEO_DIA, {"d": dia.isoformat()})
-    pitcheo = query_db(_SQL_PITCHEO_DIA, {"d": dia.isoformat()})
+    filtro = "g.game_date = :d"
+    bateo = query_db(_SQL_BATEO_DIA.format(filtro=filtro), {"d": dia.isoformat()})
+    pitcheo = query_db(_SQL_PITCHEO_DIA.format(filtro=filtro), {"d": dia.isoformat()})
 
     # El destacado y su frase.
     elegido = destacado(juegos)
     featured = None
     if elegido:
-        track = live_store.win_prob_track(elegido["game_pk"]) if elegido["game_pk"] else []
-        recorrido = (
-            titular_recorrido(track, elegido["home"]["code"], elegido["away"]["code"])
-            if track and elegido["status"] == "final" else None
-        )
-        del_juego = [x for x in bateo if x["game_id"] == elegido["game_id"]]
-        del_juego_p = [x for x in pitcheo if x["game_id"] == elegido["game_id"]]
-        tops = figuras(del_juego, del_juego_p, n=1)
-        # La figura del juego es la mejor de las dos: el Game Score y los
-        # puntos de bateo no están en la misma escala, así que se compara
-        # contra lo que sería una noche buena de cada uno (60 y 8).
-        figura = max(
-            tops,
-            key=lambda f: f["score"] / (60 if f["kind"] == "pitching" else 8),
-            default=None,
-        )
-        frase = (
-            frase_figura(
-                figura,
-                {x["player_id"]: x for x in del_juego},
-                {x["player_id"]: x for x in del_juego_p},
-            )
-            if figura else None
-        )
-        entry = live_store.get(elegido["game_pk"]) if elegido["game_pk"] else None
-        featured = {
-            "game_id": elegido["game_id"],
-            "headline": titular_destacado(elegido, recorrido, frase),
-            # La misma forma que /live/games/{pk}/winprob, para que los
-            # clientes reusen su franja tal cual.
-            "win_prob": {
-                "home_team": elegido["home"]["code"],
-                "away_team": elegido["away"]["code"],
-                "current": entry.state.win_prob_home if entry and entry.state else None,
-                "headline": recorrido,
-                "points": track,
-                "points_count": len(track),
-            } if len(track) >= 2 else None,
-        }
+        headline, win_prob = _titular_y_franja(elegido, bateo, pitcheo)
+        featured = {"game_id": elegido["game_id"], "headline": headline, "win_prob": win_prob}
 
     # Lo que viene: la siguiente fecha con juegos después de esta.
     siguientes = sorted(d for d in conteo if d > dia)
@@ -1220,4 +1231,50 @@ def get_day(
         # Con juegos en curso, el cliente vuelve a pedir la jornada a este
         # ritmo: el de la caché en vivo, no más rápido.
         "poll_seconds": 15 if hay_vivo else None,
+    }
+
+
+@router.get("/games/{game_id}/detail", tags=["Juegos"])
+def get_game_detail(game_id: str):
+    """
+    La página de un juego terminado: cabecera, titular, figuras y boxscore.
+
+    El boxscore viene con la MISMA forma que el detalle en vivo
+    (`TeamDetail`), para que los clientes reusen su componente. Lo que la
+    base no guarda —errores, línea por entradas, relato— no viaja: ver
+    src/boxscore.py. Si la caché en vivo tiene el juego, `has_detail` lo dice
+    y el cliente puede ir al detalle completo.
+    """
+    filas = query_db("SELECT * FROM games WHERE game_id = :g", {"g": game_id})
+    if not filas:
+        raise HTTPException(404, f"Juego '{game_id}' no encontrado")
+    nombres = _nombres_de_equipos()
+    juego = armar_juego(filas[0], nombres)
+    dia = str(filas[0]["game_date"])[:10]
+    _superponer_en_vivo([juego], dia)
+    juego["status_label"] = etiqueta_estado(juego)
+    juego["winner"] = ganador(juego)
+    juego["decisions"] = (
+        _decisiones(dia).get(game_id) if juego["status"] == "final" else None
+    )
+
+    filtro = "g.game_id = :g"
+    bateo = query_db(_SQL_BATEO_DIA.format(filtro=filtro), {"g": game_id})
+    pitcheo = query_db(_SQL_PITCHEO_DIA.format(filtro=filtro), {"g": game_id})
+    headline, win_prob = _titular_y_franja(juego, bateo, pitcheo)
+
+    return {
+        "game": juego,
+        "date": dia,
+        "label": etiqueta_fecha(date.fromisoformat(dia)),
+        "headline": headline,
+        "win_prob": win_prob,
+        "figures": figuras(bateo, pitcheo, n=2),
+        "boxscore_available": bool(bateo or pitcheo),
+        "away": equipo_detalle(
+            juego["away"]["code"], juego["away"]["name"], juego["away"]["runs"], bateo, pitcheo
+        ),
+        "home": equipo_detalle(
+            juego["home"]["code"], juego["home"]["name"], juego["home"]["runs"], bateo, pitcheo
+        ),
     }

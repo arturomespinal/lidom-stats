@@ -1,6 +1,6 @@
 import TeamBadge from "@/components/TeamBadge";
 import NombreJugador from "@/components/game/NombreJugador";
-import { BatterLine, PitcherLine, TeamDetail } from "@/lib/types";
+import { BatterLine, PitcherLine, TeamBox } from "@/lib/types";
 
 /**
  * Boxscore: los números de HOY, no el acumulado de temporada.
@@ -72,14 +72,14 @@ function PitcherRow({ p }: { p: PitcherLine }) {
   );
 }
 
-function TeamBlock({ team }: { team: TeamDetail }) {
+function TeamBlock({ team }: { team: TeamBox }) {
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2.5 bg-bg px-4 py-2.5">
         <TeamBadge code={team.team_code ?? "—"} />
         <h3 className="flex-1 truncate text-sm font-bold">{team.team_name}</h3>
         <span className="shrink-0 text-xs tabular-nums text-dim">
-          {team.runs} C · {team.hits} H · {team.errors} E
+          {team.runs} C · {team.hits} H{team.errors != null ? ` · ${team.errors} E` : ""}
         </span>
       </header>
 
@@ -127,8 +127,8 @@ export default function BoxScore({
   home,
   away,
 }: {
-  home: TeamDetail;
-  away: TeamDetail;
+  home: TeamBox;
+  away: TeamBox;
 }) {
   if (away.batters.length === 0 && home.batters.length === 0) {
     return (

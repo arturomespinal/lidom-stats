@@ -152,17 +152,23 @@ export function TarjetaDestacado({
   destacado,
   onAbrir,
   onJugador,
+  etiqueta = 'Juego destacado',
+  accion = 'Ver el juego ›',
 }: {
   juego: JuegoJornada;
-  destacado: NonNullable<Jornada['featured']>;
+  destacado: Pick<NonNullable<Jornada['featured']>, 'headline' | 'win_prob'>;
   onAbrir?: () => void;
   onJugador: (p: PitcherDecision) => void;
+  /** Lo que dice arriba a la izquierda. En la página del juego, la fecha. */
+  etiqueta?: string;
+  /** El texto de la franja navy: "Ver el juego ›" o "Relato y línea ›". */
+  accion?: string;
 }) {
   const wp = destacado.win_prob;
   return (
     <View style={styles.tarjeta}>
       <View style={styles.cabeza}>
-        <Text style={styles.micro}>Juego destacado</Text>
+        <Text style={styles.micro}>{etiqueta}</Text>
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </View>
       <View style={styles.cuerpo}>
@@ -186,19 +192,27 @@ export function TarjetaDestacado({
       )}
       {!!destacado.headline && <Text style={styles.titular}>{destacado.headline}</Text>}
       {!!juego.decisions && <Decisiones d={juego.decisions} onJugador={onJugador} />}
-      <Banda venue={juego.venue} onAbrir={onAbrir} />
+      <Banda venue={juego.venue} onAbrir={onAbrir} accion={accion} />
     </View>
   );
 }
 
 /** La franja navy de contexto, el pie de tarjeta del kit. */
-function Banda({ venue, onAbrir }: { venue: string | null; onAbrir?: () => void }) {
+function Banda({
+  venue,
+  onAbrir,
+  accion = 'Ver el juego ›',
+}: {
+  venue: string | null;
+  onAbrir?: () => void;
+  accion?: string;
+}) {
   const contenido = (
     <>
       <Text style={styles.bandaEstadio} numberOfLines={1}>
         {(venue ?? 'Estadio por confirmar').toUpperCase()}
       </Text>
-      {!!onAbrir && <Text style={styles.bandaAccion}>Ver el juego ›</Text>}
+      {!!onAbrir && <Text style={styles.bandaAccion}>{accion}</Text>}
     </>
   );
   if (!onAbrir) return <View style={styles.banda}>{contenido}</View>;
@@ -207,7 +221,7 @@ function Banda({ venue, onAbrir }: { venue: string | null; onAbrir?: () => void 
       onPress={onAbrir}
       style={({ pressed }) => [styles.banda, pressed && { opacity: 0.85 }]}
       accessibilityRole="button"
-      accessibilityLabel="Ver el juego"
+      accessibilityLabel={accion.replace(' ›', '')}
     >
       {contenido}
     </Pressable>
@@ -217,9 +231,9 @@ function Banda({ venue, onAbrir }: { venue: string | null; onAbrir?: () => void 
 // ── Un resultado ───────────────────────────────────────────────────────────
 
 /**
- * Una tarjeta chica por juego. Se abre solo si la caché en vivo tiene su
- * detalle: un juego viejo no tiene relato que mostrar, y una tarjeta que
- * parece tocable y no hace nada es peor que una que no lo parece.
+ * Una tarjeta chica por juego. Se abre si hay algo que abrir: el detalle en
+ * vivo, o el boxscore de la base si ya terminó. Un juego que no ha empezado
+ * no parece tocable, porque no lo es.
  */
 export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?: () => void }) {
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;

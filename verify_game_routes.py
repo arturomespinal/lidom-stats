@@ -666,6 +666,32 @@ check("el recorrido manda sobre las extras en el titular",
                         "Licey nunca estuvo por debajo del 40%.", None),
       "Licey nunca estuvo por debajo del 40%.")
 
+print("\n━━━ un juego terminado desde la base ━━━")
+_store.clear()  # sin caché en vivo: el titular sale solo de la base
+gd = call("/games/2025-10-15-TOR-EST-1/detail")
+check("cabecera del juego", (gd["label"], gd["game"]["status_label"], gd["game"]["winner"]),
+      ("Mié 15 oct", "FINAL", "EST"))
+check("titular: la figura del juego", gd["headline"], "Jonrón y 5 impulsadas de Rodolfo Castro.")
+check("los errores no se inventan", (gd["home"]["errors"], gd["away"]["errors"]), (None, None))
+check("…ni el LOB del equipo", gd["home"]["left_on_base"], None)
+check("la carreras del boxscore son las del juego", (gd["away"]["runs"], gd["home"]["runs"]), (3, 7))
+est = gd["home"]
+check("orden al bate: los titulares van en 100, 200…",
+      [b["batting_order"] for b in est["batters"] if b["is_starter"]], [100, 200, 300, 400, 500, 600, 700, 800, 900])
+check("un sustituto va debajo del titular al que relevó",
+      [b["name"] for b in est["batters"][2:5]], ["Josh Lester", "Yefri Pérez", "Rainer Nunez"])
+check("las entradas, en notación de béisbol y con la decisión",
+      [(p["name"], p["innings_pitched"], p["note"]) for p in est["pitchers"][:2]],
+      [("Esmil Rogers", "5.0", "(G)"), ("Diego Castillo", "1.0", None)])
+check("cada fila lleva a su ficha", all(b["profile_id"] for b in est["batters"] + est["pitchers"]), True)
+check("la suma de los lanzadores cuadra con las carreras del rival",
+      sum(p["runs"] for p in gd["away"]["pitchers"]), gd["home"]["runs"])
+vacio = call("/games/2016-11-22-GIG-LIC-1/detail")
+check("un juego sin boxscore (el forfeit) lo dice", vacio["boxscore_available"], False)
+check("…y no se pinta como programado para las 7:15 de 2016",
+      (vacio["game"]["status"], vacio["game"]["status_label"]), ("no_result", "SIN RESULTADO"))
+call("/games/no-existe/detail", expect=404)
+
 # Con la caché en vivo: el juego inaugural a medias, sembrado desde fixtures/
 # por el mismo camino que el poller. Sin capturas se salta — no son parte del
 # repositorio (ver CLAUDE.md).
@@ -686,6 +712,26 @@ if capturas:
     check("el juego en curso tiene detalle que abrir", tor["has_detail"], True)
     check("en curso no hay ganador ni decisiones todavía", (tor["winner"], tor["decisions"]), (None, None))
     check("la etiqueta dice la entrada", tor["status_label"].split(" del ")[0] in ("Alta", "Baja"), True)
+    _store.clear()
+    # Las dos capas se validan entre sí: el boxscore de la base contra el del
+    # feed en vivo, del mismo juego ya terminado.
+    for ruta in capturas:
+        with open(ruta, encoding="utf-8") as fh:
+            doc = json.load(fh)
+        est = parse_live_feed(doc)
+        _store.update(est.game_pk, doc, est)
+    _store.drop(826343)
+    vivo = c.get("/live/games/826343/detail?plays=0").json()["data"]
+    base = call("/games/2025-10-15-TOR-EST-1/detail")
+    for lado in ("away", "home"):
+        check(f"hits del {lado}: base = feed en vivo", base[lado]["hits"], vivo[lado]["hits"])
+        check(f"líneas de bateo del {lado}: mismos jugadores y hits",
+              sorted((b["profile_id"], b["hits"]) for b in base[lado]["batters"]),
+              sorted((b["profile_id"], b["hits"]) for b in vivo[lado]["batters"] if b["profile_id"]))
+        check(f"entradas de los lanzadores del {lado}",
+              [p["innings_pitched"] for p in base[lado]["pitchers"]],
+              [p["innings_pitched"] for p in vivo[lado]["pitchers"]])
+    check("con la caché, la página del juego sabe que hay detalle en vivo", base["game"]["has_detail"], True)
     _store.clear()
 else:
     print("  (sin fixtures/: se saltan las comprobaciones con la caché en vivo)")

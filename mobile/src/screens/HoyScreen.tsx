@@ -88,10 +88,15 @@ export default function HoyScreen({ navigation }: Props) {
     scroll.current?.scrollTo({ y: 0, animated: true });
   };
 
-  const abrirJuego = (j: JuegoJornada) =>
-    j.has_detail && j.game_pk
-      ? () => navigation.push('GameDetail', { gamePk: j.game_pk!, awayCode: j.away.code, homeCode: j.home.code })
-      : undefined;
+  // Con detalle en vivo (relato, línea por entradas), ese; si no, el juego
+  // armado desde la base. Un juego que no ha terminado y no se sigue en vivo
+  // no tiene nada que abrir todavía.
+  const abrirJuego = (j: JuegoJornada) => {
+    const codigos = { awayCode: j.away.code, homeCode: j.home.code };
+    if (j.has_detail && j.game_pk) return () => navigation.push('GameDetail', { gamePk: j.game_pk!, ...codigos });
+    if (j.status === 'final') return () => navigation.push('Juego', { gameId: j.game_id, ...codigos });
+    return undefined;
+  };
   const abrirJugador = (playerId: string, nombre: string) =>
     navigation.push('Jugador', { playerId, nombre });
 

@@ -27,9 +27,15 @@ function estadoBadge(st: EstadoJornada): LiveStatus {
   return "other";
 }
 
-/** A dónde lleva un juego: su detalle, solo si la caché en vivo lo tiene. */
+/**
+ * A dónde lleva un juego: al detalle en vivo si la caché lo tiene (relato,
+ * línea por entradas); si ya terminó, a su página armada desde la base. Un
+ * juego que no ha empezado no lleva a ningún lado todavía.
+ */
 export function enlaceJuego(j: JuegoJornada): string | null {
-  return j.has_detail && j.game_pk ? `/live/${j.game_pk}` : null;
+  if (j.has_detail && j.game_pk) return `/live/${j.game_pk}`;
+  if (j.status === "final") return `/juegos/${j.game_id}`;
+  return null;
 }
 
 // ── La franja de fechas ─────────────────────────────────────────────────────
@@ -139,7 +145,15 @@ function Decisiones({ d }: { d: NonNullable<JuegoJornada["decisions"]> }) {
 }
 
 /** La franja navy de contexto, el pie de tarjeta del kit. */
-function Banda({ venue, href }: { venue: string | null; href: string | null }) {
+function Banda({
+  venue,
+  href,
+  accion = "Ver el juego ›",
+}: {
+  venue: string | null;
+  href: string | null;
+  accion?: string;
+}) {
   return (
     <div className="flex min-h-11 items-center gap-3 bg-ink px-4">
       <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.08em] text-ink-dim">
@@ -147,7 +161,7 @@ function Banda({ venue, href }: { venue: string | null; href: string | null }) {
       </span>
       {href && (
         <Link href={href} className="font-cond text-base tracking-[0.04em] text-ink-fg hover:underline">
-          Ver el juego ›
+          {accion}
         </Link>
       )}
     </div>
@@ -159,16 +173,24 @@ function Banda({ venue, href }: { venue: string | null; href: string | null }) {
 export function TarjetaDestacado({
   juego,
   destacado,
+  etiqueta = "Juego destacado",
+  href,
+  accion,
 }: {
   juego: JuegoJornada;
-  destacado: NonNullable<Jornada["featured"]>;
+  destacado: Pick<NonNullable<Jornada["featured"]>, "headline" | "win_prob">;
+  /** Lo que dice arriba a la izquierda. En la página del juego, la fecha. */
+  etiqueta?: string;
+  /** A dónde lleva la franja navy. Por defecto, `enlaceJuego`. */
+  href?: string | null;
+  accion?: string;
 }) {
   const wp = destacado.win_prob;
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;
   return (
     <article className="overflow-hidden rounded-xl border border-line bg-card">
       <div className="flex items-center justify-between gap-2 px-4 pt-3">
-        <span className="text-[11px] uppercase tracking-[0.08em] text-dim">Juego destacado</span>
+        <span className="text-[11px] uppercase tracking-[0.08em] text-dim">{etiqueta}</span>
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </div>
       <div className="px-4 pb-1 pt-2">
@@ -194,7 +216,7 @@ export function TarjetaDestacado({
         <p className="px-4 pt-3 text-[15px] font-bold leading-snug text-fg">{destacado.headline}</p>
       )}
       <div className="pt-2">{juego.decisions && <Decisiones d={juego.decisions} />}</div>
-      <Banda venue={juego.venue} href={enlaceJuego(juego)} />
+      <Banda venue={juego.venue} href={href === undefined ? enlaceJuego(juego) : href} accion={accion} />
     </article>
   );
 }
@@ -202,8 +224,8 @@ export function TarjetaDestacado({
 // ── Un resultado ───────────────────────────────────────────────────────────
 
 /**
- * Una tarjeta chica por juego. "Ver el juego" solo si la caché en vivo tiene
- * su detalle: un juego viejo no tiene relato que mostrar.
+ * Una tarjeta chica por juego. "Ver el juego" si hay algo que abrir: el
+ * detalle en vivo o, si ya terminó, su página con el boxscore.
  */
 export function TarjetaJuego({ juego }: { juego: JuegoJornada }) {
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;

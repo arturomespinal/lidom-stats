@@ -44,6 +44,11 @@ export type LiveStackParamList = FichasParamList & {
    * pantalla abre con el encabezado vacío y parpadea.
    */
   GameDetail: { gamePk: number; awayCode: string; homeCode: string };
+  /**
+   * Un juego terminado armado desde la base (GET /games/{id}/detail): para
+   * los que el motor en vivo no siguió, que son casi todos los de la historia.
+   */
+  Juego: { gameId: string; awayCode: string; homeCode: string };
 };
 
 /**

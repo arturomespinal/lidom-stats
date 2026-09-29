@@ -2,6 +2,7 @@ import { API_BASE, DEFAULT_SEASON } from './config';
 import {
   BattingRow,
   Jornada,
+  JuegoHistorico,
   LiveDetailResponse,
   LiveGameState,
   PitchingRow,
@@ -130,4 +131,9 @@ export async function searchPlayers(
  */
 export async function fetchDay(date?: string, signal?: AbortSignal): Promise<Jornada | null> {
   return get<Jornada>(date ? `/day?date=${date}` : '/day', signal);
+}
+
+/** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */
+export async function fetchGame(gameId: string): Promise<JuegoHistorico | null> {
+  return get<JuegoHistorico>(`/games/${encodeURIComponent(gameId)}/detail`);
 }

@@ -158,11 +158,12 @@ la 2015-16. No cambiar esa clave.
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
+| `src/boxscore.py` | El boxscore de un juego terminado desde la base, con la forma del detalle en vivo |
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 280 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 299 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -194,6 +195,7 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 |----------|--------|
 | `GET /games` | Listado con filtros: `team`, `opponent`, `stage`, `status`, `date_from`, `date_to`, `order`, paginado con `limit`/`offset` |
 | `GET /games/{game_id}` | Boxscore completo: las dos alineaciones con líneas de bateo y pitcheo |
+| `GET /games/{game_id}/detail` | La página de un juego terminado: cabecera, titular, figuras y boxscore con la forma del detalle en vivo |
 | `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
 | `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera + `context` (contra la liga y curva) |
 | `GET /players/{player_id}/gamelog` | Juego por juego — lo que las tablas planas no pueden dar |
@@ -1172,13 +1174,37 @@ Reglas que no conviene deshacer:
   decisiones (G/P/SV) solo se muestran con el juego terminado.
 - **Un juego se abre solo si la caché tiene su detalle** (`has_detail`). Un
   juego viejo no tiene relato; una tarjeta que parece tocable y no hace nada
-  es peor que una que no lo parece. Falta un boxscore histórico desde
-  `/games/{game_id}` para abrir cualquier juego.
+  es peor que una que no lo parece. Un juego terminado sin detalle en vivo
+  abre su página armada desde la base (ver "Un juego terminado").
 - **Con juegos en curso llega `poll_seconds` (15)** y los clientes vuelven a
   pedir la jornada: el móvil con `setTimeout` mientras tiene el foco, la web
   con `router.refresh()` mientras la pestaña se ve (`components/hoy/Refresco.tsx`).
 - La fecha vive en la URL de la web (`/?fecha=`). Un día sin juegos en la
   franja no es enlace: el servidor lo resolvería a otra fecha.
+
+## Un juego terminado, desde la base
+
+`GET /games/{game_id}/detail` — web en `app/juegos/[gameId]`, móvil en
+`screens/JuegoScreen.tsx` (ruta `Juego` de la pila de Hoy). Es la puerta a los
+~2.000 juegos que el motor en vivo no siguió: la portada abre el detalle en
+vivo si la caché lo tiene y, si no, esta página.
+
+- **El boxscore viaja con la forma del detalle en vivo** (`TeamDetail`),
+  armado en `src/boxscore.py`, para que los dos clientes reusen su
+  componente `BoxScore`. Dos formas para lo mismo acabarían pintando distinto
+  la misma línea.
+- **Lo que la base no guarda no se inventa.** Errores y corredores dejados del
+  equipo van en `null` (el LOB del equipo no es la suma de los individuales)
+  y el boxscore omite la "E". Sin línea por entradas ni relato. El tipo es
+  `TeamBox` en los clientes: `TeamDetail` con esos dos campos anulables.
+- **La suite cruza las dos capas**: el boxscore de la base contra el del feed
+  en vivo del juego inaugural — mismos jugadores, mismos hits, mismas
+  entradas por lanzador.
+- **Un juego `scheduled` de una fecha pasada pasa a `no_result`** ("SIN
+  RESULTADO"): el forfeit de 2016 se pintaba "7:15 p. m.", como si fuera a
+  jugarse. `armar_juego` compara contra hoy en RD.
+- La decisión va como nota junto al lanzador — (G), (P), (SV) — igual que en
+  el detalle en vivo.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

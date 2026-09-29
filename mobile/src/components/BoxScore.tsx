@@ -1,7 +1,7 @@
 import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
-import { BatterLine, PitcherLine, TeamDetail } from '../types';
+import { BatterLine, PitcherLine, TeamBox } from '../types';
 import TeamBadge from './TeamBadge';
 import { useFichas } from '../navigation';
 
@@ -43,7 +43,7 @@ function Fila({
   );
 }
 
-function TeamHeader({ team }: { team: TeamDetail }) {
+function TeamHeader({ team }: { team: TeamBox }) {
   return (
     <View style={styles.teamHeader}>
       <TeamBadge code={team.team_code ?? '—'} size={28} />
@@ -51,7 +51,7 @@ function TeamHeader({ team }: { team: TeamDetail }) {
         {team.team_name ?? '—'}
       </Text>
       <Text style={styles.teamLine}>
-        {team.runs} C · {team.hits} H · {team.errors} E
+        {team.runs} C · {team.hits} H{team.errors != null ? ` · ${team.errors} E` : ''}
       </Text>
     </View>
   );
@@ -103,7 +103,7 @@ function PitcherRow({ p }: { p: PitcherLine }) {
   );
 }
 
-function TeamBlock({ team }: { team: TeamDetail }) {
+function TeamBlock({ team }: { team: TeamBox }) {
   return (
     <View style={styles.block}>
       <TeamHeader team={team} />
@@ -140,8 +140,8 @@ export default function BoxScore({
   home,
   away,
 }: {
-  home: TeamDetail;
-  away: TeamDetail;
+  home: TeamBox;
+  away: TeamBox;
 }) {
   if (away.batters.length === 0 && home.batters.length === 0) {
     return (

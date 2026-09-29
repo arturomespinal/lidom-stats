@@ -10,6 +10,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import HoyScreen from './src/screens/HoyScreen';
 import LiveScreen from './src/screens/LiveScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
+import JuegoScreen from './src/screens/JuegoScreen';
 import type { LiveStackParamList, PilaParamList } from './src/navigation';
 import StandingsScreen from './src/screens/StandingsScreen';
 import BattingScreen from './src/screens/BattingScreen';
@@ -89,6 +90,11 @@ function HoyTab() {
           // del primer fetch y la cabecera no parpadea.
           title: `${route.params.awayCode} vs ${route.params.homeCode}`,
         })}
+      />
+      <LiveStack.Screen
+        name="Juego"
+        component={JuegoScreen}
+        options={({ route }) => ({ title: `${route.params.awayCode} vs ${route.params.homeCode}` })}
       />
       <LiveStack.Screen
         name="Equipo"

@@ -127,6 +127,8 @@ def etiqueta_estado(juego: dict) -> str:
         return "POSPUESTO"
     if st == "cancelled":
         return "CANCELADO"
+    if st == "no_result":
+        return "SIN RESULTADO"
     return juego.get("time_local") or "Por definir"
 
 
@@ -327,8 +329,15 @@ def titular_destacado(
     return figura
 
 
-def armar_juego(fila: dict, nombres: dict[str, dict]) -> dict[str, Any]:
-    """Una fila de `games` en la forma que sirve la jornada."""
+def armar_juego(fila: dict, nombres: dict[str, dict], hoy: Optional[date] = None) -> dict[str, Any]:
+    """
+    Una fila de `games` en la forma que sirve la jornada.
+
+    Un juego `scheduled` de una fecha ya pasada no está programado: es uno que
+    la base nunca cerró — el forfeit de 2016, un pospuesto sin reposición —.
+    Pintarlo con su hora ("7:15 p. m." en 2016) invita a esperarlo. Pasa a
+    `no_result` ("SIN RESULTADO").
+    """
     def lado(code: str, runs: Any) -> dict:
         info = nombres.get(code, {})
         return {
@@ -350,6 +359,9 @@ def armar_juego(fila: dict, nombres: dict[str, dict]) -> dict[str, Any]:
         "away": lado(fila["away_team_code"], fila.get("away_score")),
         "home": lado(fila["home_team_code"], fila.get("home_score")),
     }
+    dia = str(fila.get("game_date") or "")[:10]
+    if juego["status"] == "scheduled" and dia and dia < (hoy or hoy_rd()).isoformat():
+        juego["status"] = "no_result"
     # Un juego que no ha empezado no tiene marcador, aunque la fila traiga
     # ceros de la siembra: 0-0 a las 5 de la tarde sería mentira.
     if juego["status"] not in ("final", "live"):

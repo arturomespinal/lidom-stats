@@ -251,10 +251,11 @@ class MLBAPIClient:
 
     def get_schedule(
         self,
-        season: str,
+        season: Optional[str],
         league_id: int = LIDOM_LEAGUE_ID,
         sport_id: int = LIDOM_SPORT_ID,
         game_type: Optional[str] = None,
+        game_pk: Optional[int] = None,
     ) -> dict:
         """
         Lista de juegos de una temporada.
@@ -264,12 +265,17 @@ class MLBAPIClient:
 
         Devolvemos dict raw para inspección. El modelo Pydantic Schedule
         lo agregamos cuando consumamos este endpoint en el ingestor.
+
+        Con `game_pk` devuelve solo ese juego, con la misma forma: es lo que
+        usa la ingesta de un juego recién terminado (`ingest_game`), que así
+        no baja el calendario entero de la temporada cada vez.
         """
         params = {
             "leagueId": league_id,
             "sportId": sport_id,
             "season": season,
             "gameType": game_type,
+            "gamePk": game_pk,
         }
         return self._get("/schedule", params=params)
 

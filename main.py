@@ -17,6 +17,8 @@ Modos:
   ingest-games [temporada] [...]  /schedule + /boxscore → esquema de juego
       --smoke                     Solo 3 juegos, para validar el parser
       --refresh                   Re-procesa juegos ya ingestados
+  ingest-game <gamePk>            Un solo juego: su calendario y su boxscore
+                                  (lo mismo que hace el motor en vivo al final)
 
 La temporada va en el formato crudo de la MLB API y se nombra por el año en
 que EMPIEZA la campaña: "2025" es la 2025-26. Por defecto, "2025".
@@ -64,6 +66,17 @@ def main():
             max_games=3 if "--smoke" in flags else None,
         )
         logger.success(f"✅ Ingesta de boxscores completa: {summary}")
+
+    # ── Un solo juego → esquema de juego ─────────────────────────────────────
+    elif mode == "ingest-game":
+        from src.pipeline.boxscore_ingestor import BoxscoreIngestor
+        if len(sys.argv) < 3 or not sys.argv[2].isdigit():
+            print("Uso: python main.py ingest-game <gamePk>   (ej.: 826343)", file=sys.stderr)
+            sys.exit(2)
+        summary = BoxscoreIngestor().ingest_game(int(sys.argv[2]))
+        if not summary["ingested"]:
+            logger.warning(f"El juego no se ingestó: {summary}")
+            sys.exit(1)
 
     else:
         logger.error(f"Modo desconocido: {mode!r}")

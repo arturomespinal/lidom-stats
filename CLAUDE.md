@@ -40,6 +40,7 @@ python main.py ingest 2025
 python main.py ingest-games 2025
 python main.py ingest-games 2025 --smoke      # solo 3 juegos, para validar el parser
 python main.py ingest-games 2025 --refresh    # re-procesa juegos ya ingestados
+python main.py ingest-game 826343             # un solo juego (lo que hace el motor en vivo al final)
 
 # Levantar la API
 uvicorn api.main:app --reload          # http://localhost:8000
@@ -166,7 +167,7 @@ la 2015-16. No cambiar esa clave.
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
-| `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
+| `verify_boxscore_ingestor.py` | 50 comprobaciones del ingestor contra un boxscore sintético, incluida la ingesta de un solo juego |
 | `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
@@ -510,6 +511,37 @@ Medido sobre doce sondeos reales: **7,9 MB por feed completo contra 0,75 MB por 
 Cuando un parche no se puede aplicar —respuesta con forma inesperada, marca demasiado vieja, operación inválida— el poller baja el feed completo. Es más caro, pero nunca deja el estado corrupto.
 
 `src/live/store.py` es la caché: deliberadamente en memoria y **no** en SQLite. La base es la verdad histórica y se escribe una vez por juego; esto cambia cada diez segundos y no debe sobrevivir a un reinicio. Si el proceso cae, el poller reconstruye todo en un sondeo. Guarda el GUMBO crudo (porque los parches se aplican sobre él) y el estado reducido; al terminar un juego suelta el crudo, que es un megabyte sin uso.
+
+### Al terminar un juego: se ingesta ESE juego (30-sep-2026)
+
+`on_final` (en `api/live_routes.py`, `_ingest_finished_game`) llama a
+`BoxscoreIngestor.ingest_game(game_pk)`: el juego en `/schedule?gamePk=`, su
+boxscore y `/people` solo si hay jugadores nuevos. Dos o tres peticiones, y se
+escribe solo ese juego. Antes corría `ingest(season)` entero: el calendario de
+la temporada (~150 juegos) reescrito en `games` en cada final, seis veces por
+jornada — y como `ingest()` pide por defecto solo temporada regular, **un juego
+del round robin o de la final que terminaba no se ingestaba nunca**.
+
+- `ingest_game` respeta las reglas de la ingesta por temporada: la colisión de
+  `game_id` (una entrada no final no pisa un juego ya final, regla 7), los
+  `innings_played` de los outs reales (regla 8) y el `merge` idempotente.
+- **No reescribe la temporada**: `_upsert_season` tomaría las fechas de este
+  único juego como inicio y fin. `_ensure_season` la crea si falta y corre la
+  fecha final si el juego es posterior.
+- La temporada sale del estado en vivo y, si no viene, del calendario del
+  propio juego (`/schedule` trae `season` en cada juego).
+- **Después pone al día las tablas planas** (`MLBIngestor.ingest`, tres
+  peticiones) si el juego entró. Sin eso, en plena temporada Posiciones,
+  Bateo y Pitcheo seguirían con los números del día en que alguien corrió
+  `python main.py ingest` a mano, y la temporada nueva no aparecería en el
+  selector. Un fallo ahí no deshace el juego, y ningún fallo sale del hilo
+  del poller.
+- A mano: `python main.py ingest-game <gamePk>`. Sale con código 1 si el juego
+  no se ingestó (no existe, no es de LIDOM o no ha terminado).
+- `verify_boxscore_ingestor.py` lo prueba con el cliente simulado (un juego del
+  round robin que la ingesta por temporada no ve, la colisión, idempotencia,
+  la temporada intacta) y `verify_live_poller.py` el cableado de `on_final` con
+  ingestores dobles.
 
 ### Endpoints en vivo
 
@@ -1463,11 +1495,10 @@ conteos internos.
 
 ## Próximos pasos
 
-1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
-2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-3. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
-4. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
-5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
+2. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
+3. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
+4. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal
 

@@ -73,18 +73,36 @@ def _ingest_finished_game(game_pk: int, state) -> None:
     Al terminar un juego, su boxscore ya es definitivo: se ingesta a la base
     canónica y deja de ser estado volátil.
 
+    Solo ESE juego (`ingest_game`): antes se corría la ingesta de la temporada
+    entera, que además pedía solo temporada regular y dejaba sin ingestar los
+    juegos del round robin y la final. La temporada va del estado en vivo si
+    la trae; si no, la saca el propio calendario del juego.
+
     El import va aquí dentro y no arriba porque el ingestor abre la base, y no
     queremos esa dependencia solo por importar las rutas.
     """
     try:
         from src.pipeline.boxscore_ingestor import BoxscoreIngestor
-        season = state.season or ""
-        if not season:
-            return
-        summary = BoxscoreIngestor().ingest(season=season, max_games=None)
+        summary = BoxscoreIngestor().ingest_game(game_pk, season=state.season or None)
         logger.info(f"  boxscore de {game_pk} ingestado tras el final: {summary}")
     except Exception as exc:
         logger.error(f"  no pude ingestar el boxscore de {game_pk}: {exc}")
+        return
+
+    # Las tablas planas (Posiciones, Bateo, Pitcheo) no se llenan solas: sin
+    # esto, en plena temporada seguirían con los números del día en que alguien
+    # corrió `python main.py ingest` a mano. Son tres peticiones (/standings y
+    # los dos /stats) por juego terminado. Un fallo aquí no deshace lo de
+    # arriba: el juego ya quedó en la base.
+    temporada = summary.get("season") or state.season
+    if not summary.get("ingested") or not temporada:
+        return
+    try:
+        from src.pipeline.mlb_ingestor import MLBIngestor
+        planas = MLBIngestor().ingest(season=temporada)
+        logger.info(f"  tablas planas de {temporada} al día tras {game_pk}: {planas}")
+    except Exception as exc:
+        logger.error(f"  no pude refrescar las tablas planas tras {game_pk}: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────

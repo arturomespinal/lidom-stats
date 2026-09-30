@@ -69,6 +69,14 @@ BOX = {
         "away": side([batter(101, 100, "SS", 5, 3, t=1, rbi=2)],  # mismo jugador, otro equipo
                      [pitcher(213, 30, 2, 4, 1, 9, gs=1, w=1)]),
     }},
+    # Juego del round robin (gameType "P"): solo se pide suelto, por gamePk.
+    # AGU(667) 3 - LIC(672) 1, el 28 de diciembre.
+    826348: {"teams": {
+        "home": side([batter(103, 100, "C", 4, 2, rbi=2)],
+                     [pitcher(203, 27, 1, 5, 1, 8, gs=1, w=1)]),
+        "away": side([batter(101, 100, "SS", 4, 1)],
+                     [pitcher(213, 24, 3, 6, 2, 5, gs=1, l=1)]),
+    }},
     826347: {"teams": {
         "home": side([batter(112, 100, "LF", 4, 2, rbi=3)],
                      [pitcher(212, 27, 2, 5, 2, 8, gs=1, w=1)]),
@@ -92,15 +100,16 @@ PEOPLE = {
 }
 
 
-class FakeClient:
-    calls = {"schedule": 0, "boxscore": 0, "people": 0}
+# Juegos que /schedule devuelve pidiéndolos por gamePk, además de los de la
+# temporada. El del round robin NO está en el calendario de la temporada
+# regular: la ingesta por temporada no lo ve, la de un juego sí.
+SUELTOS = {
+    826348: game(826348, "2025-12-28", 672, 667, 1, 3, gtype="P"),
+}
 
-    def __enter__(self): return self
-    def __exit__(self, *a): return False
 
-    def get_schedule(self, season, game_type=None):
-        FakeClient.calls["schedule"] += 1
-        return {"dates": [
+def calendario():
+    return {"dates": [
             {"date": "2025-10-15", "games": [game(826343, "2025-10-15", 668, 669, 3, 5)]},
             {"date": "2025-10-16", "games": [
                 game(826344, "2025-10-16", 672, 667, 4, 2),
@@ -113,6 +122,24 @@ class FakeClient:
                 game(826346, "2025-10-17", 668, 670, None, None, state="D"),
             ]},
         ]}
+
+
+class FakeClient:
+    calls = {"schedule": 0, "schedule_pk": 0, "boxscore": 0, "people": 0}
+
+    def __enter__(self): return self
+    def __exit__(self, *a): return False
+
+    def get_schedule(self, season, game_type=None, game_pk=None):
+        if game_pk is None:
+            FakeClient.calls["schedule"] += 1
+            return calendario()
+        # /schedule?gamePk=X: solo ese juego, con la misma forma. La MLB API
+        # lo devuelve con su "season"; el sintético también.
+        FakeClient.calls["schedule_pk"] += 1
+        todos = [g for d in calendario()["dates"] for g in d["games"]] + list(SUELTOS.values())
+        uno = [dict(g, season="2025") for g in todos if g["gamePk"] == game_pk]
+        return {"dates": [{"games": uno}]} if uno else {"dates": []}
 
     def get_boxscore(self, game_pk):
         FakeClient.calls["boxscore"] += 1
@@ -219,6 +246,47 @@ check("AVG de Munguía (3/5)", r["avg"], 0.6)
 check("SLG de Munguía (2 sencillos + 1 triple)", r["slg"], 1.0)
 check("regla 3: batting_lines no guarda AVG",
       "avg" in [d[1] for d in q("pragma table_info(batting_lines)")], False)
+
+print("\n━━━ UN SOLO JUEGO (ingest_game, lo que dispara el motor en vivo) ━━━")
+antes = dict(FakeClient.calls)
+lineas_antes = n("batting_lines"), n("pitching_lines")
+otros_antes = [tuple(r) for r in q("select game_id, status, home_score, away_score, innings_played from games order by game_id")]
+
+u = bi.BoxscoreIngestor(DB).ingest_game(826348)
+check("ingest_game: se ingestó", u["ingested"], True)
+check("ingest_game: el game_id del juego", u["game_id"], "2025-12-28-LIC-AGU-1")
+check("ingest_game: pidió el calendario de UN juego, no el de la temporada",
+      (FakeClient.calls["schedule"] - antes["schedule"], FakeClient.calls["schedule_pk"] - antes["schedule_pk"]), (0, 1))
+check("ingest_game: un solo boxscore", FakeClient.calls["boxscore"] - antes["boxscore"], 1)
+check("ingest_game: /people no se pide (jugadores ya conocidos)", FakeClient.calls["people"] - antes["people"], 0)
+g = q("select * from games where game_id='2025-12-28-LIC-AGU-1'")[0]
+check("ingest_game: juego del round robin (la ingesta por temporada lo dejaba fuera)", g["stage"], "round_robin")
+check("ingest_game: final con su marcador", (g["status"], g["away_score"], g["home_score"]), ("final", 1, 3))
+check("ingest_game: sus líneas (2 de bateo, 2 de pitcheo)",
+      (n("batting_lines") - lineas_antes[0], n("pitching_lines") - lineas_antes[1]), (2, 2))
+check("ingest_game: los otros juegos quedan intactos",
+      [tuple(r) for r in q("select game_id, status, home_score, away_score, innings_played from games where game_id != '2025-12-28-LIC-AGU-1' order by game_id")],
+      otros_antes)
+r = q("select * from seasons")[0]
+check("ingest_game: no reescribe el inicio de la temporada", r["start_date"], "2025-10-15")
+check("ingest_game: corre el fin de la temporada a este juego", r["end_date"], "2025-12-28")
+
+u2 = bi.BoxscoreIngestor(DB).ingest_game(826348)
+check("ingest_game dos veces: mismas filas (idempotente)",
+      (n("games"), n("batting_lines"), n("pitching_lines")), (4, lineas_antes[0] + 2, lineas_antes[1] + 2))
+
+# La colisión (regla 7) también rige aquí: la entrada pospuesta del juego que
+# sí se jugó no puede pisarlo aunque se la pida por su gamePk.
+u3 = bi.BoxscoreIngestor(DB).ingest_game(826346)
+dup = q("select * from games where game_id='2025-10-17-TOR-GIG-1'")[0]
+check("ingest_game de la entrada pospuesta: no se ingesta", u3["ingested"], False)
+check("ingest_game de la entrada pospuesta: el juego sigue final con su marcador",
+      (dup["status"], dup["away_score"], dup["home_score"]), ("final", 2, 6))
+
+u4 = bi.BoxscoreIngestor(DB).ingest_game(999999)
+check("ingest_game de un gamePk que no existe: no revienta", (u4["ingested"], u4["game_id"]), (False, None))
+u5 = bi.BoxscoreIngestor(DB).ingest_game(826345)
+check("ingest_game contra un equipo fuera de LIDOM: se descarta", u5["game_id"], None)
 
 print()
 if fails:

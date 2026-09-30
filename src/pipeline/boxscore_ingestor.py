@@ -271,6 +271,124 @@ class BoxscoreIngestor:
         logger.success(f"✅ Ingesta de boxscores completa para {season_id}: {summary}")
         return summary
 
+    # ── Un solo juego ─────────────────────────────────────────────────────────
+
+    def ingest_game(self, game_pk: int, season: Optional[str] = None) -> dict:
+        """
+        Ingesta UN juego: su entrada del calendario y su boxscore.
+
+        Es lo que dispara el poller cuando un juego termina (`on_final`). Antes
+        ese aviso corría `ingest(season)` completo: el calendario entero de la
+        temporada (~150 juegos) reescrito en `games` y una consulta de la base
+        para ver qué faltaba, seis veces por jornada. Además `ingest()` filtra
+        por tipo de juego y por defecto pide solo la temporada regular: un juego
+        del round robin o de la final que terminaba NO se ingestaba.
+
+        Aquí son dos o tres peticiones —el juego en /schedule, su boxscore, y
+        /people solo si hay jugadores nuevos— y se escribe solo ese juego.
+
+        Reglas que respeta, las mismas de la ingesta por temporada:
+
+        - **La colisión de game_id (regla 7).** Si el gamePk pedido no es final
+          y la fila de su game_id ya lo es —la entrada pospuesta de un juego que
+          sí se jugó— no se toca: final gana.
+        - **innings_played** sale de los outs reales del boxscore
+          (`_ingest_game_chunk`) y `_upsert_games` preserva el que ya hubiera.
+        - **La temporada no se reescribe**: `_upsert_season` tomaría las fechas
+          de este único juego como inicio y fin. `_ensure_season` solo la crea
+          si falta y corre la fecha final si este juego es posterior.
+        - **Idempotente**: todo es `merge`. Volver a ingestar el mismo juego
+          deja las mismas filas.
+
+        Returns:
+            dict con `season` (la de la MLB, "2025"), `game_id`, `status`,
+            `ingested` (si se escribieron sus líneas) y cuántas líneas de
+            bateo y pitcheo.
+        """
+        summary = {
+            "game_pk": game_pk,
+            "season": None,
+            "game_id": None,
+            "status": None,
+            "ingested": False,
+            "players": 0,
+            "batting_lines": 0,
+            "pitching_lines": 0,
+        }
+
+        with MLBAPIClient() as client:
+            self._upsert_teams()
+
+            # Sin filtro de tipo: regular, round robin, final o Serie del Caribe.
+            games = self._fetch_schedule(client, season, None, game_pk=game_pk)
+            g = next((x for x in games if x["game_pk"] == game_pk), None)
+            if g is None:
+                logger.warning(
+                    f"⚠️ ingest_game: {game_pk} no está en /schedule o no es un juego LIDOM"
+                )
+                return summary
+
+            temporada = season or g.get("season")
+            if not temporada:
+                logger.warning(f"⚠️ ingest_game: {game_pk} llegó sin temporada")
+                return summary
+            season_id = mlb_season_to_season_id(str(temporada))
+            summary["season"] = str(temporada)
+            summary["game_id"] = g["game_id"]
+            summary["status"] = g["status"]
+
+            if g["status"] != "final":
+                # Regla 7: una entrada no final nunca pisa un juego ya final
+                # con el mismo game_id.
+                with Session(self.engine) as session:
+                    fila = session.get(Game, g["game_id"])
+                    if fila is not None and fila.status == "final":
+                        logger.info(
+                            f"  ingest_game: {game_pk} está '{g['status']}' y "
+                            f"{g['game_id']} ya es final; no se toca"
+                        )
+                        return summary
+
+            self._ensure_season(season_id, g["game_date"])
+            self._upsert_games(season_id, [g])
+
+            if g["status"] != "final":
+                logger.info(f"  ingest_game: {g['game_id']} queda '{g['status']}', sin boxscore")
+                return summary
+
+            counts = self._ingest_game_chunk(client, [g])
+            summary.update(
+                ingested=counts["batting_lines"] > 0 or counts["pitching_lines"] > 0,
+                players=len(counts["player_ids"]),
+                batting_lines=counts["batting_lines"],
+                pitching_lines=counts["pitching_lines"],
+            )
+
+        logger.success(f"✅ Juego ingestado: {summary}")
+        return summary
+
+    def _ensure_season(self, season_id: str, game_date: str) -> None:
+        """
+        La fila de la temporada para un juego suelto: se crea si falta, y si
+        existe solo se corre la fecha final cuando este juego es posterior. El
+        resto (juegos por equipo, fecha de inicio) es de la ingesta por
+        temporada, que ve el calendario entero.
+        """
+        dia = date.fromisoformat(game_date)
+        with Session(self.engine) as session:
+            fila = session.get(Season, season_id)
+            if fila is None:
+                session.add(Season(
+                    season_id=season_id,
+                    short_label=season_id,
+                    start_date=dia,
+                    end_date=dia,
+                    teams_count=len(LIDOM_TEAMS),
+                ))
+            elif fila.end_date is None or dia > fila.end_date:
+                fila.end_date = dia
+            session.commit()
+
     # ── Paso 1: equipos ───────────────────────────────────────────────────────
 
     def _upsert_teams(self) -> int:
@@ -296,7 +414,11 @@ class BoxscoreIngestor:
     # ── Paso 2: calendario ────────────────────────────────────────────────────
 
     def _fetch_schedule(
-        self, client: MLBAPIClient, season: str, game_type: str
+        self,
+        client: MLBAPIClient,
+        season: Optional[str],
+        game_type: Optional[str],
+        game_pk: Optional[int] = None,
     ) -> list[dict]:
         """
         Aplana /schedule a una lista de dicts normalizados.
@@ -304,7 +426,10 @@ class BoxscoreIngestor:
         Descarta cualquier juego donde alguno de los dos equipos no esté en
         LIDOM_TEAMS — misma validación defensiva que MLBIngestor.
         """
-        raw = client.get_schedule(season=season, game_type=game_type)
+        if game_pk is None:
+            raw = client.get_schedule(season=season, game_type=game_type)
+        else:
+            raw = client.get_schedule(season=season, game_type=game_type, game_pk=game_pk)
         games: list[dict] = []
 
         for date_entry in raw.get("dates", []):
@@ -327,6 +452,9 @@ class BoxscoreIngestor:
 
                 games.append({
                     "game_pk": g.get("gamePk"),
+                    # La temporada de la MLB ("2025"). La usa ingest_game
+                    # cuando no se la pasan: un juego suelto no trae contexto.
+                    "season": g.get("season"),
                     "game_id": build_game_id(official, away_code, home_code, game_number),
                     "game_date": official,
                     "game_datetime_utc": g.get("gameDate"),

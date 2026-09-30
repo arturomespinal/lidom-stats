@@ -307,6 +307,70 @@ except ValueError:
     ajeno_ok = False
 check("acepta un juego de LIDOM", ajeno_ok, True)
 
+print("\n━━━ Al terminar un juego (on_final de la API) ━━━")
+# Lo que la API hace cuando el poller avisa un final: ingestar SOLO ese juego y,
+# si entró, poner al día las tablas planas. Los ingestores se sustituyen por
+# dobles que anotan las llamadas: aquí se prueba el cableado, no la red.
+import types
+import src.pipeline.boxscore_ingestor as _bi
+import src.pipeline.mlb_ingestor as _mi
+import api.live_routes as _lr
+
+llamadas = []
+resultado = {"ingested": True}
+
+
+class BoxDoble:
+    def __init__(self, *a, **k): pass
+    def ingest(self, *a, **k): llamadas.append(("temporada", a, k)); return {}
+    def ingest_game(self, pk, season=None):
+        llamadas.append(("juego", pk, season))
+        # Como el real: la temporada sale del calendario del juego.
+        return dict(resultado, game_pk=pk, season="2025")
+
+
+class PlanasDoble:
+    def __init__(self, *a, **k): pass
+    def ingest(self, season):
+        llamadas.append(("planas", season))
+        return {}
+
+
+_bi.BoxscoreIngestor, _mi.MLBIngestor = BoxDoble, PlanasDoble
+estado = types.SimpleNamespace(season="2025")
+
+_lr._ingest_finished_game(826343, estado)
+check("ingesta solo ese juego, con su temporada", llamadas[0], ("juego", 826343, "2025"))
+check("no corre la ingesta de la temporada entera", any(c[0] == "temporada" for c in llamadas), False)
+check("y pone al día las tablas planas", llamadas[1:], [("planas", "2025")])
+
+llamadas.clear()
+resultado = {"ingested": False}
+_lr._ingest_finished_game(826343, estado)
+check("si el juego no entró, las planas no se tocan", llamadas, [("juego", 826343, "2025")])
+
+llamadas.clear()
+resultado = {"ingested": True}
+_lr._ingest_finished_game(826343, types.SimpleNamespace(season=None))
+check("sin temporada en el estado, el juego la saca de su calendario",
+      llamadas, [("juego", 826343, None), ("planas", "2025")])
+
+
+class BoxQueFalla(BoxDoble):
+    def ingest_game(self, pk, season=None):
+        raise RuntimeError("la MLB API no responde")
+
+
+_bi.BoxscoreIngestor = BoxQueFalla
+llamadas.clear()
+try:
+    _lr._ingest_finished_game(826343, estado)
+    sin_excepcion = True
+except Exception:
+    sin_excepcion = False
+check("un fallo de la ingesta no tumba el hilo del poller", sin_excepcion, True)
+check("y tras el fallo no intenta las planas", llamadas, [])
+
 print()
 if fails:
     print(f"❌ {len(fails)} fallaron: {fails}")

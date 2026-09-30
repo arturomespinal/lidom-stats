@@ -8,7 +8,8 @@ import Seccion from "@/components/ficha/Seccion";
 import PuestoLiga from "@/components/ficha/PuestoLiga";
 import CurvaCarrera from "@/components/ficha/CurvaCarrera";
 import Trayectoria from "@/components/ficha/Trayectoria";
-import { fetchPlayerProfile } from "@/lib/api";
+import JuegoAJuego from "@/components/ficha/JuegoAJuego";
+import { fetchGamelog, fetchPlayerProfile } from "@/lib/api";
 import { DEFAULT_SEASON } from "@/lib/constants";
 import { entradas } from "@/lib/formato";
 
@@ -58,6 +59,9 @@ export default async function PlayerPage(props: Props) {
   // Un jugador cambiado a mitad de campaña tiene dos filas; gana la de más
   // turnos (o outs), que es donde jugó la temporada.
   const ctx = perfil.context;
+  // El juego a juego de su última temporada, del más reciente al más viejo.
+  const juegos = ctx ? await fetchGamelog(playerId, ctx.latest.season_id) : null;
+  const filasJuego = ctx && juegos ? (ctx.role === "batting" ? juegos.batting : juegos.pitching) : [];
   const equipoPorTemporada: Record<string, string> = {};
   if (ctx) {
     const filas =
@@ -115,6 +119,13 @@ export default async function PlayerPage(props: Props) {
               </section>
             )}
           </div>
+        )}
+
+        {juegos && filasJuego.length > 0 && (
+          <section>
+            <Seccion titulo="Juego a juego" nota={juegos.season_id} />
+            <JuegoAJuego filas={filasJuego} />
+          </section>
         )}
 
         {perfil.teams.length > 0 && (

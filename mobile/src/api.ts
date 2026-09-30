@@ -1,6 +1,7 @@
 import { API_BASE, DEFAULT_SEASON } from './config';
 import {
   BattingRow,
+  Gamelog,
   Jornada,
   JuegoHistorico,
   LiveDetailResponse,
@@ -13,41 +14,61 @@ import {
   WinProbResponse,
 } from './types';
 
+/**
+ * Cuánto se espera a la API antes de darla por caída. `fetch` en React Native
+ * no tiene tiempo límite: sin esto, con la API apagada o inalcanzable, una
+ * pantalla se quedaba en el esqueleto para siempre en vez de decir que no
+ * pudo conectar.
+ */
+const TIEMPO_LIMITE_MS = 10_000;
+
 async function get<T>(path: string, signal?: AbortSignal): Promise<T | null> {
+  const ctrl = new AbortController();
+  const reloj = setTimeout(() => ctrl.abort(), TIEMPO_LIMITE_MS);
+  // Quien llama también puede cancelar (una búsqueda que quedó vieja).
+  signal?.addEventListener('abort', () => ctrl.abort());
   try {
-    const res = await fetch(`${API_BASE}${path}`, { signal });
+    const res = await fetch(`${API_BASE}${path}`, { signal: ctrl.signal });
     if (!res.ok) return null;
-    return res.json() as Promise<T>;
+    return (await res.json()) as T;
   } catch {
     return null;
+  } finally {
+    clearTimeout(reloj);
   }
 }
 
-export async function fetchStandings(season = DEFAULT_SEASON): Promise<StandingRow[]> {
+/**
+ * `null` = no se pudo hablar con la API; `[]` = la API respondió sin filas.
+ * Son dos pantallas distintas: una dice "revisa la conexión", la otra "corre
+ * la ingesta". Antes las dos caían en la segunda y mandaban a buscar el
+ * problema en el lugar equivocado.
+ */
+export async function fetchStandings(season = DEFAULT_SEASON): Promise<StandingRow[] | null> {
   const data = await get<{ data: StandingRow[] }>(`/standings?season=${season}`);
-  return data?.data ?? [];
+  return data ? data.data : null;
 }
 
 export async function fetchBatting(
   season = DEFAULT_SEASON,
   sortBy = 'ops',
   limit = 50,
-): Promise<BattingRow[]> {
+): Promise<BattingRow[] | null> {
   const data = await get<{ data: BattingRow[] }>(
     `/batting?season=${season}&sort_by=${sortBy}&limit=${limit}`,
   );
-  return data?.data ?? [];
+  return data ? data.data : null;
 }
 
 export async function fetchPitching(
   season = DEFAULT_SEASON,
   sortBy = 'era',
   limit = 50,
-): Promise<PitchingRow[]> {
+): Promise<PitchingRow[] | null> {
   const data = await get<{ data: PitchingRow[] }>(
     `/pitching?season=${season}&sort_by=${sortBy}&limit=${limit}`,
   );
-  return data?.data ?? [];
+  return data ? data.data : null;
 }
 
 /* ── En vivo ─────────────────────────────────────────────────────────────── */
@@ -136,4 +157,9 @@ export async function fetchDay(date?: string, signal?: AbortSignal): Promise<Jor
 /** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */
 export async function fetchGame(gameId: string): Promise<JuegoHistorico | null> {
   return get<JuegoHistorico>(`/games/${encodeURIComponent(gameId)}/detail`);
+}
+
+/** El juego a juego de un jugador en una temporada, del más reciente al más viejo. */
+export async function fetchGamelog(playerId: string, season: string): Promise<Gamelog | null> {
+  return get<Gamelog>(`/players/${encodeURIComponent(playerId)}/gamelog?season=${season}&limit=100`);
 }

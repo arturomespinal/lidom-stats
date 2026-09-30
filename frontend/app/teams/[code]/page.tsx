@@ -55,7 +55,7 @@ export default async function TeamPage(props: Props) {
             <Seccion
               titulo={`Últimos ${equipo.last10.length}`}
               nota={`${ganados}-${equipo.last10.length - ganados}`}
-              sub="El más reciente, a la derecha."
+              sub="El más reciente, a la derecha. Cada uno abre su juego."
             />
             <UltimosDiez juegos={equipo.last10} />
           </section>

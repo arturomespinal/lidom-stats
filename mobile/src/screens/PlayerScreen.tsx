@@ -4,7 +4,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { setStatusBarStyle } from 'expo-status-bar';
 
-import { fetchPlayerProfile } from '../api';
+import { fetchGamelog, fetchPlayerProfile } from '../api';
 import { COLORS, FONTS, TEAM_SHORT_NAMES, TEAM_STYLES } from '../constants';
 import { entradas, fechaEs, num, pct3, rangoTemporadas } from '../formato';
 import type { FichasParamList } from '../navigation';
@@ -13,6 +13,7 @@ import type {
   CareerPitching,
   PlayerBattingSeason,
   PlayerPitchingSeason,
+  Gamelog,
   PlayerProfile,
 } from '../types';
 import { EsqueletoFicha } from '../components/Esqueleto';
@@ -24,6 +25,7 @@ import Monograma from '../components/Monograma';
 import PuestoLiga from '../components/PuestoLiga';
 import CurvaCarrera from '../components/CurvaCarrera';
 import Trayectoria from '../components/Trayectoria';
+import JuegoAJuego from '../components/JuegoAJuego';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Jugador'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -142,6 +144,7 @@ export default function PlayerScreen({ route, navigation }: Props) {
   const [perfil, setPerfil] = useState<PlayerProfile | null>(null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [rol, setRol] = useState<Rol | null>(null);
+  const [juegos, setJuegos] = useState<Gamelog | null>(null);
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -152,6 +155,9 @@ export default function PlayerScreen({ route, navigation }: Props) {
     }
     setPerfil(p);
     setEstado('listo');
+    // El juego a juego de su última temporada, después de la ficha: la
+    // cabecera no espera por él.
+    if (p.context) setJuegos(await fetchGamelog(playerId, p.context.latest.season_id));
   }, [playerId]);
 
   useEffect(() => {
@@ -334,6 +340,24 @@ export default function PlayerScreen({ route, navigation }: Props) {
             }
           />
           <CurvaCarrera curva={ctx.curve} equipoPorTemporada={equipoPorTemporada} />
+        </>
+      )}
+
+      {/* ── Juego a juego ── Su última temporada, del más reciente al más
+          viejo. Cada fila abre el juego. */}
+      {ctx && juegos && (ctx.role === 'batting' ? juegos.batting : juegos.pitching).length > 0 && (
+        <>
+          <Seccion titulo="Juego a juego" nota={juegos.season_id} />
+          <JuegoAJuego
+            filas={ctx.role === 'batting' ? juegos.batting : juegos.pitching}
+            onJuego={f =>
+              navigation.push('Juego', {
+                gameId: f.game_id,
+                awayCode: f.side === 'home' ? f.opponent : f.team_code,
+                homeCode: f.side === 'home' ? f.team_code : f.opponent,
+              })
+            }
+          />
         </>
       )}
 

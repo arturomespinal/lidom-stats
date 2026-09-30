@@ -121,6 +121,11 @@ function crearPila(Raiz: React.ComponentType) {
       <Pila.Navigator screenOptions={OPCIONES_PILA}>
         <Pila.Screen name="Raiz" component={Raiz} options={{ headerTitle: () => <Logotipo /> }} />
         <Pila.Screen
+          name="Juego"
+          component={JuegoScreen}
+          options={({ route }) => ({ title: `${route.params.awayCode} vs ${route.params.homeCode}` })}
+        />
+        <Pila.Screen
           name="Equipo"
           component={TeamScreen}
           options={({ route }) => ({ ...OPCIONES_FICHA, title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}

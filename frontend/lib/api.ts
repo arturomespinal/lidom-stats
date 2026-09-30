@@ -1,5 +1,6 @@
 import {
   BattingRow,
+  Gamelog,
   Jornada,
   JuegoHistorico,
   LiveDetailResponse,
@@ -135,6 +136,11 @@ export async function fetchDay(fecha?: string): Promise<Jornada | null> {
 /** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */
 export async function fetchGame(gameId: string): Promise<JuegoHistorico | null> {
   return apiFetch<JuegoHistorico>(`/games/${encodeURIComponent(gameId)}/detail`);
+}
+
+/** El juego a juego de un jugador en una temporada, del más reciente al más viejo. */
+export async function fetchGamelog(playerId: string, season: string): Promise<Gamelog | null> {
+  return apiFetch<Gamelog>(`/players/${encodeURIComponent(playerId)}/gamelog?season=${season}&limit=100`);
 }
 
 /* ── Fichas ──────────────────────────────────────────────────────────────── */

@@ -35,6 +35,9 @@ def _resultados(juegos: Iterable[dict], equipo: str) -> list[dict[str, Any]]:
             "runs_against": ra,
             "home": local,
             "date": g["game_date"],
+            # Para abrir el juego: la página de un juego terminado se pide por
+            # game_id (GET /games/{id}/detail).
+            "game_id": g.get("game_id"),
         })
     return salida
 

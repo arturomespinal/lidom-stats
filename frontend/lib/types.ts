@@ -583,6 +583,8 @@ export interface LastGame {
   runs_against: number;
   home: boolean;
   date: string;
+  /** Para abrir el juego (GET /games/{id}/detail). */
+  game_id: string;
 }
 
 export interface TeamStanding {
@@ -709,4 +711,47 @@ export interface JuegoHistorico {
   boxscore_available: boolean;
   home: TeamBox;
   away: TeamBox;
+}
+
+/* ── Juego a juego (GET /players/{id}/gamelog) ─────────────────────────── */
+
+interface FilaJuegoBase {
+  game_id: string;
+  game_date: string;
+  /** "Mié 15 oct". */
+  date_label: string;
+  team_code: string;
+  opponent: string;
+  side: "home" | "away";
+  /** El resultado del EQUIPO del jugador, no su decisión. */
+  result: "G" | "P" | null;
+  runs_for: number;
+  runs_against: number;
+  innings_played: number | null;
+  /** "2-3 · HR · 5 CI" o "G · 5.0 IP · 6 K · 2 CL": la misma línea que en Hoy. */
+  line: string;
+}
+
+export interface FilaJuegoBateo extends FilaJuegoBase {
+  plate_appearances: number;
+  at_bats: number;
+  hits: number;
+  home_runs: number;
+  rbi: number;
+}
+
+export interface FilaJuegoPitcheo extends FilaJuegoBase {
+  decision: string | null;
+  outs_recorded: number;
+  /** "5.1", en notación de béisbol. */
+  innings: string;
+  earned_runs: number;
+  strikeouts: number;
+}
+
+export interface Gamelog {
+  player_id: string;
+  season_id: string;
+  batting: FilaJuegoBateo[];
+  pitching: FilaJuegoPitcheo[];
 }

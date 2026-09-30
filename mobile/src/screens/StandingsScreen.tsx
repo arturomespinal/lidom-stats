@@ -150,6 +150,7 @@ function TeamRow({
 export default function StandingsScreen() {
   const nav = useFichas();
   const [data, setData] = useState<StandingRow[]>([]);
+  const [sinConexion, setSinConexion] = useState(false);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
@@ -160,7 +161,10 @@ export default function StandingsScreen() {
     // NO se reordena aquí. La API ya ordena por PCT y calcula playoff_spot
     // sobre ESE orden; reordenar en el cliente desincronizaría la bandera de
     // la posición mostrada y el corte caería en el equipo equivocado.
-    setData(await fetchStandings());
+    const filas = await fetchStandings();
+    // null = la API no respondió; [] = respondió sin filas. Ver api.ts.
+    setSinConexion(filas === null);
+    if (filas) setData(filas);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -182,6 +186,7 @@ export default function StandingsScreen() {
     );
   }
 
+  if (sinConexion && data.length === 0) return <EmptyState sinConexion onReintentar={() => load()} />;
   if (data.length === 0) return <EmptyState />;
 
   return (

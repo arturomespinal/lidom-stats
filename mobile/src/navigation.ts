@@ -29,6 +29,14 @@ export type FichasParamList = {
    * enlace desde otro sitio puede no tenerlo.
    */
   Jugador: { playerId: string; nombre?: string };
+  /**
+   * Un juego terminado armado desde la base (GET /games/{id}/detail): para
+   * los que el motor en vivo no siguió, que son casi todos los de la
+   * historia. Está en todas las pilas porque se abre desde las fichas (los
+   * últimos diez de un equipo, el juego a juego de un jugador), no solo
+   * desde Hoy.
+   */
+  Juego: { gameId: string; awayCode: string; homeCode: string };
 };
 
 export type LiveStackParamList = FichasParamList & {
@@ -44,11 +52,6 @@ export type LiveStackParamList = FichasParamList & {
    * pantalla abre con el encabezado vacío y parpadea.
    */
   GameDetail: { gamePk: number; awayCode: string; homeCode: string };
-  /**
-   * Un juego terminado armado desde la base (GET /games/{id}/detail): para
-   * los que el motor en vivo no siguió, que son casi todos los de la historia.
-   */
-  Juego: { gameId: string; awayCode: string; homeCode: string };
 };
 
 /**

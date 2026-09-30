@@ -163,7 +163,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 299 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 307 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -198,7 +198,7 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /games/{game_id}/detail` | La página de un juego terminado: cabecera, titular, figuras y boxscore con la forma del detalle en vivo |
 | `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
 | `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera + `context` (contra la liga y curva) |
-| `GET /players/{player_id}/gamelog` | Juego por juego — lo que las tablas planas no pueden dar |
+| `GET /players/{player_id}/gamelog` | Juego por juego, con resultado del equipo, fecha legible y la línea compuesta de la portada |
 | `GET /leaderboards/batting` | Líderes con calificación por PA |
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
 | `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
@@ -1185,9 +1185,24 @@ Reglas que no conviene deshacer:
 ## Un juego terminado, desde la base
 
 `GET /games/{game_id}/detail` — web en `app/juegos/[gameId]`, móvil en
-`screens/JuegoScreen.tsx` (ruta `Juego` de la pila de Hoy). Es la puerta a los
-~2.000 juegos que el motor en vivo no siguió: la portada abre el detalle en
-vivo si la caché lo tiene y, si no, esta página.
+`screens/JuegoScreen.tsx`. Es la puerta a los ~2.000 juegos que el motor en
+vivo no siguió: la portada abre el detalle en vivo si la caché lo tiene y, si
+no, esta página.
+
+**Se llega desde tres sitios**: los resultados de Hoy, los últimos diez de la
+ficha de equipo (`last10` trae `game_id`) y el juego a juego de la ficha de
+jugador. Por eso en el móvil la ruta `Juego` está en `FichasParamList`, en
+todas las pilas. El detalle en vivo (`GameDetail`) solo existe en la pila de
+Hoy, así que `JuegoScreen` pregunta si la ruta existe antes de ofrecer
+"Relato y línea".
+
+El juego a juego (`/players/{id}/gamelog`) trae la línea ya compuesta con
+`linea_bateo`/`linea_pitcheo` de `src/jornada.py` —la misma de la portada—,
+el resultado del **equipo** del jugador (`result`, `runs_for`,
+`runs_against`, desde su lado) y la fecha legible. El resultado va en una teja
+aparte de la línea porque no es la decisión del lanzador: un relevista que no
+decidió no tiene "G" propia. Solo juegos terminados, y una doble cartelera en
+el orden en que se jugó.
 
 - **El boxscore viaja con la forma del detalle en vivo** (`TeamDetail`),
   armado en `src/boxscore.py`, para que los dos clientes reusen su
@@ -1205,6 +1220,20 @@ vivo si la caché lo tiene y, si no, esta página.
   jugarse. `armar_juego` compara contra hoy en RD.
 - La decisión va como nota junto al lanzador — (G), (P), (SV) — igual que en
   el detalle en vivo.
+
+### Sin conexión no es lo mismo que sin datos (móvil)
+
+`fetch` en React Native **no tiene tiempo límite**: con la API apagada o
+inalcanzable desde el teléfono, Hoy se quedaba en el esqueleto para siempre.
+`get()` en `mobile/src/api.ts` corta a los 10 segundos.
+
+Y `/standings`, `/batting` y `/pitching` devuelven `null` cuando la API no
+respondió y `[]` cuando respondió sin filas. Antes las dos caían en "No hay
+datos disponibles. Corre: python main.py ingest", que manda a buscar el
+problema en la base cuando está en la red. Ahora `EmptyState sinConexion`
+dice "No se pudo conectar con la API", muestra **a qué dirección** se intentó
+(`API_BASE`, lo primero que hay que revisar si la IP de la PC cambió) y trae
+Reintentar.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

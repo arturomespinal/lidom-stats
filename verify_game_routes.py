@@ -692,6 +692,31 @@ check("…y no se pinta como programado para las 7:15 de 2016",
       (vacio["game"]["status"], vacio["game"]["status_label"]), ("no_result", "SIN RESULTADO"))
 call("/games/no-existe/detail", expect=404)
 
+print("\n━━━ juego a juego y últimos diez: llevan al juego ━━━")
+gl = call("/players/rodolfo-castro-1999-05-21/gamelog?season=2025")
+inaug = next(f for f in gl["batting"] if f["game_id"] == "2025-10-15-TOR-EST-1")
+check("la línea del juego a juego es la de la portada",
+      (inaug["date_label"], inaug["side"], inaug["opponent"], inaug["line"]),
+      ("Mié 15 oct", "home", "TOR", "2-3 · HR · 5 CI"))
+check("el resultado es el del equipo del jugador, desde su lado",
+      (inaug["result"], inaug["runs_for"], inaug["runs_against"]), ("G", 7, 3))
+check("del más reciente al más viejo", gl["batting"][0]["game_date"] >= gl["batting"][-1]["game_date"], True)
+check("cada fila del juego a juego abre su juego",
+      all(call(f"/games/{f['game_id']}/detail")["boxscore_available"] for f in gl["batting"][:3]), True)
+glp = call("/players/esmil-rogers-1985-08-14/gamelog?season=2025")
+pi = next(f for f in glp["pitching"] if f["game_id"] == "2025-10-15-TOR-EST-1")
+check("pitcheo: entradas en notación de béisbol y la decisión en la línea",
+      (pi["innings"], pi["line"]), ("5.0", "G · 5.0 IP · 6 K · 2 CL"))
+check("un relevo de dos outs es 0.2, no 0.7",
+      next(f["innings"] for f in glp["pitching"] if f["outs_recorded"] == 2), "0.2")
+u10 = call("/teams/AGU?season=2025")["last10"]
+check("los últimos diez traen el juego que abrir",
+      all(j["game_id"] and j["game_id"].startswith(j["date"]) for j in u10), True)
+ult = u10[-1]
+gj = call(f"/games/{ult['game_id']}/detail")["game"]
+lado = gj["home"] if ult["home"] else gj["away"]
+check("…y ese juego es el que dice la celda", (lado["code"], lado["runs"]), ("AGU", ult["runs_for"]))
+
 # Con la caché en vivo: el juego inaugural a medias, sembrado desde fixtures/
 # por el mismo camino que el poller. Sin capturas se salta — no son parte del
 # repositorio (ver CLAUDE.md).

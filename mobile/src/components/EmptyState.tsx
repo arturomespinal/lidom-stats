@@ -1,15 +1,44 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { API_BASE } from '../config';
 import { COLORS } from '../constants';
 
-export default function EmptyState({ message }: { message?: string }) {
+/**
+ * Pantalla vacía. Dos casos que NO son el mismo:
+ *
+ * - `sinConexion`: la API no respondió. Se dice a qué dirección se intentó,
+ *   porque en el teléfono es lo primero que hay que revisar (la IP de la PC
+ *   cambia, el firewall, la API apagada), y hay botón de reintentar.
+ * - Sin eso: la API respondió pero no hay filas. Ahí sí toca correr la
+ *   ingesta.
+ */
+export default function EmptyState({
+  message,
+  sinConexion = false,
+  onReintentar,
+}: {
+  message?: string;
+  sinConexion?: boolean;
+  onReintentar?: () => void;
+}) {
   return (
     <View style={styles.container}>
       <Text style={styles.icon}>⚾</Text>
-      <Text style={styles.msg}>{message ?? 'No hay datos disponibles.'}</Text>
-      <Text style={styles.hint}>
-        Corre: python main.py ingest 2025
+      <Text style={styles.msg}>
+        {sinConexion ? 'No se pudo conectar con la API.' : message ?? 'No hay datos disponibles.'}
       </Text>
+      <Text style={styles.hint}>
+        {sinConexion ? `Se intentó en ${API_BASE}` : 'Corre: python main.py ingest 2025'}
+      </Text>
+      {!!onReintentar && (
+        <Pressable
+          onPress={onReintentar}
+          style={({ pressed }) => [styles.boton, pressed && { backgroundColor: COLORS.bgRaised }]}
+          accessibilityRole="button"
+        >
+          <Text style={styles.botonTexto}>Reintentar</Text>
+        </Pressable>
+      )}
     </View>
   );
 }
@@ -25,4 +54,15 @@ const styles = StyleSheet.create({
   icon: { fontSize: 48, marginBottom: 16 },
   msg: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', marginBottom: 8 },
   hint: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
+  boton: {
+    marginTop: 20,
+    minHeight: 44,
+    paddingHorizontal: 24,
+    justifyContent: 'center',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
 });

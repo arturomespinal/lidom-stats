@@ -4,14 +4,16 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { fetchGame } from '../api';
 import { COLORS } from '../constants';
-import type { LiveStackParamList } from '../navigation';
+import type { FichasParamList, LiveStackParamList } from '../navigation';
 import type { JuegoHistorico } from '../types';
 import Seccion from '../components/Seccion';
 import BoxScore from '../components/BoxScore';
 import { Bloque } from '../components/Esqueleto';
 import { CarruselFiguras, TarjetaDestacado } from '../components/Jornada';
 
-type Props = NativeStackScreenProps<LiveStackParamList, 'Juego'>;
+// La pantalla vive en todas las pilas (FichasParamList). El detalle en vivo,
+// solo en la de Hoy: por eso se pregunta si la ruta existe antes de ofrecerlo.
+type Props = NativeStackScreenProps<FichasParamList & Partial<LiveStackParamList>, 'Juego'>;
 
 /**
  * Un juego terminado, armado desde la base (GET /games/{id}/detail).
@@ -70,8 +72,9 @@ export default function JuegoScreen({ route, navigation }: Props) {
   }
 
   const g = juego.game;
+  const hayDetalle = navigation.getState().routeNames.includes('GameDetail');
   const enVivo =
-    g.has_detail && g.game_pk
+    hayDetalle && g.has_detail && g.game_pk
       ? () => navigation.push('GameDetail', { gamePk: g.game_pk!, awayCode, homeCode })
       : undefined;
 

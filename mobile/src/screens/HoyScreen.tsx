@@ -8,6 +8,7 @@ import { COLORS, FONTS } from '../constants';
 import type { LiveStackParamList } from '../navigation';
 import type { Jornada, JuegoJornada } from '../types';
 import Seccion from '../components/Seccion';
+import EmptyState from '../components/EmptyState';
 import { Bloque } from '../components/Esqueleto';
 import {
   CarruselFiguras,
@@ -102,18 +103,7 @@ export default function HoyScreen({ navigation }: Props) {
 
   if (!jornada) {
     if (estado === 'error') {
-      return (
-        <View style={styles.vacio}>
-          <Text style={styles.vacioTexto}>No se pudo cargar la jornada.</Text>
-          <Pressable
-            onPress={() => cargar()}
-            style={({ pressed }) => [styles.boton, pressed && styles.presionado]}
-            accessibilityRole="button"
-          >
-            <Text style={styles.botonTexto}>Reintentar</Text>
-          </Pressable>
-        </View>
-      );
+      return <EmptyState sinConexion onReintentar={() => cargar()} />;
     }
     return <EsqueletoHoy />;
   }

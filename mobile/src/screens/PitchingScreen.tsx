@@ -118,6 +118,7 @@ function PitcherRow({
 export default function PitchingScreen() {
   const nav = useFichas();
   const [data, setData] = useState<PitchingRow[]>([]);
+  const [sinConexion, setSinConexion] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('era');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -126,7 +127,9 @@ export default function PitchingScreen() {
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
     const rows = await fetchPitching(undefined, key);
-    setData(rows);
+    // null = la API no respondió; [] = respondió sin filas. Ver api.ts.
+    setSinConexion(rows === null);
+    if (rows) setData(rows);
     setLoading(false);
     setRefreshing(false);
   }, []);
@@ -145,6 +148,8 @@ export default function PitchingScreen() {
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.accent} />
         </View>
+      ) : sinConexion && data.length === 0 ? (
+        <EmptyState sinConexion onReintentar={() => load(sortKey)} />
       ) : data.length === 0 ? (
         <EmptyState message="No hay datos de pitcheo." />
       ) : (

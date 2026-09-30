@@ -48,8 +48,11 @@ from src.contexto import (
     titular_puesto,
 )
 from src.boxscore import equipo_detalle
+from src.jornada import entradas as entradas_nb
 from src.jornada import (
     armar_juego,
+    linea_bateo,
+    linea_pitcheo,
     destacado,
     etiqueta_estado,
     etiqueta_fecha,
@@ -507,47 +510,78 @@ def get_player_gamelog(
     season: str = Query("2025"),
     limit: int = Query(50, le=200),
 ):
-    """Juego por juego — lo que las tablas planas no pueden dar."""
+    """
+    Juego por juego — lo que las tablas planas no pueden dar.
+
+    Cada fila trae, además de los conteos, lo que la ficha pinta sin calcular:
+    el resultado del equipo del jugador (`result`, "G" o "P", y el marcador
+    desde su lado), la fecha legible y la línea compuesta ("2-3 · HR · 5 CI",
+    "G · 5.0 IP · 6 K · 2 CL") con las mismas funciones de la portada. Así la
+    línea de un jugador se lee igual en su ficha, en Hoy y en el juego.
+
+    Del más reciente al más viejo; una doble cartelera va en el orden en que
+    se jugó (por hora, no solo por fecha).
+    """
     season_id = normalize_season_id(season)
     exists = query_db("SELECT 1 FROM players WHERE player_id = :pid", {"pid": player_id})
     if not exists:
         raise HTTPException(404, f"Jugador '{player_id}' no encontrado")
 
+    comunes = """
+        g.game_id, g.game_date, g.home_team_code, g.away_team_code,
+        g.home_score, g.away_score, g.innings_played,
+        CASE WHEN g.home_team_code = {t}.team_code
+             THEN g.away_team_code ELSE g.home_team_code END AS opponent,
+        CASE WHEN g.home_team_code = {t}.team_code THEN 'home' ELSE 'away' END AS side
+    """
     batting = query_db(
-        """
-        SELECT g.game_id, g.game_date, bl.team_code,
-               CASE WHEN g.home_team_code = bl.team_code
-                    THEN g.away_team_code ELSE g.home_team_code END AS opponent,
-               CASE WHEN g.home_team_code = bl.team_code THEN 'home' ELSE 'away' END AS side,
+        f"""
+        SELECT {comunes.format(t="bl")}, bl.team_code,
                bl.batting_order, bl.position, bl.plate_appearances, bl.at_bats,
                bl.runs, bl.hits, bl.doubles, bl.triples, bl.home_runs, bl.rbi,
-               bl.walks, bl.strikeouts, bl.stolen_bases
+               bl.walks, bl.strikeouts, bl.stolen_bases, bl.caught_stealing,
+               bl.hit_by_pitch
         FROM batting_lines bl
         JOIN games g ON g.game_id = bl.game_id
-        WHERE bl.player_id = :pid AND g.season_id = :season_id
-        ORDER BY g.game_date DESC LIMIT :limit
+        WHERE bl.player_id = :pid AND g.season_id = :season_id AND g.status = 'final'
+        ORDER BY g.game_date DESC, g.game_datetime_utc DESC, g.game_id DESC
+        LIMIT :limit
         """,
         {"pid": player_id, "season_id": season_id, "limit": limit},
     )
     pitching = query_db(
-        """
-        SELECT g.game_id, g.game_date, pl.team_code,
-               CASE WHEN g.home_team_code = pl.team_code
-                    THEN g.away_team_code ELSE g.home_team_code END AS opponent,
-               pl.is_starter, pl.decision,
+        f"""
+        SELECT {comunes.format(t="pl")}, pl.team_code,
+               pl.is_starter, pl.decision, pl.outs_recorded,
                ROUND(pl.outs_recorded / 3.0, 1) AS innings_pitched,
                pl.hits_allowed, pl.runs_allowed, pl.earned_runs,
                pl.walks_allowed, pl.strikeouts, pl.pitches_thrown
         FROM pitching_lines pl
         JOIN games g ON g.game_id = pl.game_id
-        WHERE pl.player_id = :pid AND g.season_id = :season_id
-        ORDER BY g.game_date DESC LIMIT :limit
+        WHERE pl.player_id = :pid AND g.season_id = :season_id AND g.status = 'final'
+        ORDER BY g.game_date DESC, g.game_datetime_utc DESC, g.game_id DESC
+        LIMIT :limit
         """,
         {"pid": player_id, "season_id": season_id, "limit": limit},
     )
 
     if not batting and not pitching:
         raise HTTPException(404, f"Sin juegos de '{player_id}' en {season_id}")
+
+    for filas, linea in ((batting, linea_bateo), (pitching, linea_pitcheo)):
+        for f in filas:
+            propio = f["home_score"] if f["side"] == "home" else f["away_score"]
+            rival = f["away_score"] if f["side"] == "home" else f["home_score"]
+            f["runs_for"], f["runs_against"] = propio, rival
+            f["result"] = None if propio == rival else ("G" if propio > rival else "P")
+            f["date_label"] = etiqueta_fecha(date.fromisoformat(str(f["game_date"])[:10]))
+            f["line"] = linea(f)
+            for k in ("home_score", "away_score", "home_team_code", "away_team_code"):
+                f.pop(k, None)
+        for f in filas:
+            if "outs_recorded" in f:
+                # En notación de béisbol: 16 outs son "5.1", no 5.3.
+                f["innings"] = entradas_nb(f["outs_recorded"])
 
     return {"player_id": player_id, "season_id": season_id,
             "batting": batting, "pitching": pitching}
@@ -861,7 +895,7 @@ def team_profile(
     # La temporada juego a juego: la carrera de los seis y los últimos diez.
     juegos_temporada = query_db(
         """
-        SELECT game_date, home_team_code, away_team_code, home_score, away_score
+        SELECT game_id, game_date, home_team_code, away_team_code, home_score, away_score
         FROM games
         WHERE season_id = :s AND status = 'final' AND stage = 'regular'
         ORDER BY game_datetime_utc, game_id

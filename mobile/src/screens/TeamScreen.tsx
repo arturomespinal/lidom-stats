@@ -267,9 +267,18 @@ export default function TeamScreen({ route, navigation }: Props) {
             <Seccion
               titulo={`Últimos ${equipo.last10.length}`}
               nota={`${equipo.last10.filter(j => j.result === 'G').length}-${equipo.last10.filter(j => j.result === 'P').length}`}
-              sub="El más reciente, a la derecha."
+              sub="El más reciente, a la derecha. Toca uno para abrir el juego."
             />
-            <UltimosDiez juegos={equipo.last10} />
+            <UltimosDiez
+              juegos={equipo.last10}
+              onJuego={j =>
+                navigation.push('Juego', {
+                  gameId: j.game_id,
+                  awayCode: j.home ? j.opponent : code,
+                  homeCode: j.home ? code : j.opponent,
+                })
+              }
+            />
           </>
         )}
 

@@ -902,8 +902,16 @@ python dev_live_offline.py --host 0.0.0.0     # para probar desde el teléfono
 ```
 
 Por defecto escucha en `127.0.0.1`, que alcanza para la web. **El teléfono
-necesita `--host 0.0.0.0`**: Expo Go llega por la IP de la WiFi
-(`mobile/src/config.ts`) y a `127.0.0.1` de la PC no puede.
+necesita `--host 0.0.0.0`**: Expo Go llega por la IP de la WiFi y a
+`127.0.0.1` de la PC no puede.
+
+**La IP de la PC la saca la app sola** (`mobile/src/config.ts`): Expo Go ya
+descarga el código desde la PC, y `Constants.expoConfig.hostUri` trae esa IP
+("10.0.0.250:8081"); la API está en la misma máquina, en el 8000. Antes iba
+escrita a mano, y cuando el router le cambió la IP a la PC (10.0.0.127 →
+.250) la app dejó de conectar sin decir por qué. `EXPO_PUBLIC_API_URL` manda
+sobre todo, para apuntar a otra máquina. Necesita el paquete
+`expo-constants` (`npx expo install expo-constants`).
 
 Carga las capturas de `fixtures/` en la caché por el mismo camino que el poller
 (`parse_live_feed` → `store.update`) y levanta la API. A diferencia de

@@ -48,10 +48,10 @@ python main.py ingest-game 826343             # un solo juego (lo que hace el mo
 
 # Capa histórica desde DIGIMETRICS (estadisticas.lidom.com). Necesita red.
 python main.py ingest-historia --smoke        # solo 1990-91 (~35 pedidos, menos de un minuto)
-python main.py ingest-historia                # 1951-2023, ~2.500 pedidos a 1 por segundo: ~1 hora
+python main.py ingest-historia                # 1951-2019, ~2.300 pedidos a 1 por segundo: ~1 hora
 python main.py ingest-historia 1951 2011      # un rango
 python main.py ingest-historia --sin-red      # reprocesar solo desde la caché
-python main.py cruzar-historia                # DIGIMETRICS contra la MLB API, 2012-13 a 2023-24
+python main.py cruzar-historia                # DIGIMETRICS contra la MLB API, 2012-13 a 2019-20
 
 # Levantar la API
 uvicorn api.main:app --reload          # http://localhost:8000
@@ -191,7 +191,7 @@ la 2015-16. No cambiar esa clave.
 | `src/models/hist_models.py` | La capa histórica `hist_*` y `etiqueta_historica()` |
 | `src/pipeline/historia_ingestor.py` | `HistoriaIngestor.ingest(temporadas)` — DIGIMETRICS → `hist_*` |
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
-| `verify_digimetrics.py` | 58 comprobaciones del scraper, sin red; parsea también la caché real si existe |
+| `verify_digimetrics.py` | 59 comprobaciones del scraper sin red (66 con la capa histórica cargada); parsea también la caché real si existe |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
@@ -1616,10 +1616,17 @@ redirige a HTTP. No tiene `robots.txt` (404) ni pide sesión.
 - Caché en disco de cada respuesta buena, en `data/raw/digimetrics/`
   (ignorada por git). Repetir la ingesta o reprocesar tras tocar el parser no
   vuelve a pedir nada. `--refrescar` para re-bajar; `--sin-red` para no salir.
-- **Desde 2024-25 cada fila trae la foto del jugador en base64**: una página de
-  un equipo pesa 20-45 MB y tarda 40 s. No se piden (el ingestor para en
-  2023), y el cliente corta cualquier respuesta de más de 5 MB. Las fotos no
-  se guardan nunca.
+- **En los años recientes cada fila trae la foto del jugador en base64.**
+  Hasta 2019-20 todas las páginas quedan por debajo de 5 MB; desde 2020-21
+  casi todas pesan 5-11 MB (medido con `Content-Length`: el bateo de Águilas
+  2023-24, 11 MB), y desde 2024-25, 20-45 MB y 40 s cada una. El ingestor
+  para en 2019 y el cliente corta cualquier respuesta de más de 5 MB. Si aun
+  así una página pasa del tope, esa temporada entera se salta con un aviso y
+  la ingesta sigue: nunca queda una temporada a medias. Las fotos no se
+  guardan nunca.
+- Primer intento real (30-sep): la corrida de 1951 a 2023 se detuvo en
+  2020-21 por esto. Por eso el tope de años es 2019 y una página pesada ya no
+  detiene la ingesta.
 - A los equipos que no jugaron una temporada (el bateo de la regular viene
   vacío) no se les pide nada más.
 
@@ -1654,17 +1661,43 @@ usando el esquema de juego.
 
 ### El cruce con la MLB API
 
-De 2012-13 a 2023-24 hay dos anotaciones independientes de los mismos
+De 2012-13 a 2019-20 hay dos anotaciones independientes de los mismos
 juegos. `python main.py cruzar-historia` compara los totales de la regular
 equipo por equipo (VB, H, 2B, 3B, HR, C, CI, BB, K, BR; G, P, SV, outs, CL, H,
 BB, K). Es la comparación contra otra fuente que "Validación cruzada" dejaba
-pendiente. Sus resultados reales, cuando se corra, deben fijarse EXACTOS en una
-suite, igual que `verify_capas.py`.
+pendiente.
+
+**Resultado con la carga real (30-sep-2026): ninguno de los 48 equipo-temporadas
+coincide al dígito.** Las diferencias caen en tres grupos:
+
+| Temporada | Suma de \|dif\| | Qué es |
+|-----------|---------------|--------|
+| 2014-15, 2017-18, 2018-19, 2019-20 | 23-39 | Anotación: 5 como mucho por total. Dos anotadores independientes (la liga y el de la MLB) no coinciden en cada hit, error o carrera limpia. |
+| 2016-17 | 256 | El forfeit Gigantes-Licey: DIGIMETRICS guarda las estadísticas de ese juego (33 y 37 VB de más) y la MLB no tiene su boxscore. El resto, 2 como mucho. |
+| 2012-13 | 293 | A DIGIMETRICS le faltan de 4 a 49 outs de pitcheo por equipo. |
+| 2013-14 | 189 | Boletos: hasta 35 de diferencia en un equipo. |
+| 2015-16 | 13.438 | **DIGIMETRICS está incompleta**: tiene entre el 46 y el 69% de la temporada de cada equipo (en VB). |
+
+Además, en doce etapas de la historia los ganados de todos los lanzadores no
+igualan a los perdidos (1963: 120 contra 111): decisiones que faltan o sobran
+en la fuente.
+
+Conclusiones:
+- Para 2012-13 en adelante manda la MLB API, como ya estaba decidido. La capa
+  histórica de esos años solo sirve para este cruce.
+- Antes de 2012-13 DIGIMETRICS es la única fuente y es la oficial. Se usa,
+  pero no es infalible: el récord de un equipo reconstruido con decisiones
+  puede no cuadrar (ver las doce etapas).
+
+`verify_digimetrics.py` (sección 7) fija todo esto cuando la base tiene la capa
+histórica: las 66 temporadas, las doce etapas descuadradas, una huella por
+temporada (la suma de diferencias absolutas, exacta) y los diagnósticos de
+arriba.
 
 ## Próximos pasos
 
 1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Correr `python main.py ingest-historia` y `cruzar-historia`, y fijar las diferencias del cruce en una suite. Después, exponer la historia: endpoints y pantallas (líderes de todos los tiempos, la carrera completa de un jugador), y enlazar `idMiembro` con los jugadores de la MLB API.
+2. Exponer la historia (1951-2019 ya cargada y cruzada): endpoints y pantallas (líderes de todos los tiempos, la carrera completa de un jugador), y enlazar `idMiembro` con los jugadores de la MLB API.
 3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal

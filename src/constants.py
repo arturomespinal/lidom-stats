@@ -153,10 +153,11 @@ DIGIMETRICS_BASE_URL = "http://estadisticas.lidom.com"
 # histórica; más rápido que esto no ganamos nada y le cargamos la mano.
 DIGIMETRICS_INTERVALO_SEGUNDOS = 1.0
 
-# Desde 2024-25 cada fila de las tablas trae la foto del jugador incrustada en
-# base64: una página de un equipo pesa 20-45 MB y tarda 40 s. No se piden (y
-# las fotos no se usan: ver claude/guia-legal-ads.md). El cliente corta
-# cualquier respuesta que pase de este tamaño.
+# En los años recientes cada fila de las tablas trae la foto del jugador
+# incrustada en base64: desde 2020-21 casi todas las páginas pesan 5-11 MB, y
+# desde 2024-25 entre 20 y 45 (40 s cada una). No se piden (y las fotos no se
+# usan: ver claude/guia-legal-ads.md). Hasta 2019-20 todas quedan por debajo.
+# El cliente corta cualquier respuesta que pase de este tamaño.
 DIGIMETRICS_MAX_BYTES = 5 * 1024 * 1024
 
 # Caché de las respuestas crudas. data/raw/ ya está en .gitignore.

@@ -18,8 +18,11 @@ Por cada temporada:
 Las páginas quedan en la caché del cliente, así que repetir la ingesta, o
 reprocesar después de tocar el parser, no vuelve a pedir nada al servidor.
 
-Las temporadas desde 2024-25 no se piden: sus páginas traen fotos en base64
-(20-45 MB cada una) y para esos años ya está la MLB API.
+Las temporadas desde 2020-21 no se piden: casi todas sus páginas traen las
+fotos de los jugadores en base64 (5-11 MB cada una; 20-45 MB desde 2024-25), y
+para esos años ya está la MLB API. Si aun así una página de una temporada
+pedida pasa del tope, esa temporada entera se salta con un aviso y la ingesta
+sigue con la próxima: nunca se guarda una temporada a medias.
 """
 
 from __future__ import annotations
@@ -29,7 +32,7 @@ from typing import Any, Iterable, Optional
 from sqlalchemy import delete
 from sqlalchemy.orm import Session
 
-from src.clients.digimetrics import DigimetricsClient
+from src.clients.digimetrics import DigimetricsClient, PaginaDemasiadoPesada
 from src.constants import DEFAULT_DB_URL, DIGIMETRICS_EQUIPOS
 from src.models.database import init_db
 from src.models.hist_models import (
@@ -49,8 +52,10 @@ from src.scrapers.digimetrics import (
 from src.utils.logger import logger
 
 PRIMERA_TEMPORADA = 1951
-# La última cuyas páginas son livianas. Ver DIGIMETRICS_MAX_BYTES.
-ULTIMA_TEMPORADA = 2023
+# La última cuyas páginas pasan todas por debajo del tope (medido el 30-sep:
+# en 2020-21 el bateo de Escogido pesa 6,4 MB y en 2023-24 el de Águilas, 11).
+# Ver DIGIMETRICS_MAX_BYTES.
+ULTIMA_TEMPORADA = 2019
 
 
 class HistoriaIngestor:
@@ -92,7 +97,7 @@ class HistoriaIngestor:
     def ingest_temporada(self, temporada: int) -> dict[str, Any]:
         if temporada > ULTIMA_TEMPORADA:
             raise ValueError(
-                f"{temporada}: desde 2024-25 las páginas de DIGIMETRICS pesan 20-45 MB "
+                f"{temporada}: desde 2020-21 las páginas de DIGIMETRICS pesan 5-45 MB "
                 "(fotos en base64) y esos años ya vienen de la MLB API"
             )
         resumen: dict[str, Any] = {
@@ -187,9 +192,17 @@ class HistoriaIngestor:
             "pitcheo": 0,
             "discrepancias": [],
             "avisos": [],
+            "omitidas_por_peso": [],
         }
         for temporada in temporadas:
-            r = self.ingest_temporada(temporada)
+            try:
+                r = self.ingest_temporada(temporada)
+            except PaginaDemasiadoPesada as e:
+                # La excepción salta antes de _guardar(): de esa temporada no
+                # se escribe nada, ni siquiera lo que ya se había bajado.
+                logger.warning(f"{etiqueta_historica(temporada)} se salta entera: {e}")
+                total["omitidas_por_peso"].append(temporada)
+                continue
             if not r["etapas"]:
                 total["no_jugadas"].append(temporada)
                 continue

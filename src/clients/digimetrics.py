@@ -15,8 +15,8 @@ Tres reglas de cortesía, porque el servidor es uno solo y es de la liga:
     - Caché en disco de cada respuesta buena: reprocesar, corregir el parser o
       volver a correr la ingesta NO vuelve a golpear el servidor. Las páginas
       históricas no cambian.
-    - Tope de tamaño: desde 2024-25 las tablas traen fotos en base64 y una
-      página pesa hasta 45 MB. Se corta la descarga al pasar el tope, en vez
+    - Tope de tamaño: desde 2020-21 las tablas traen fotos en base64 y una
+      página pesa de 5 a 45 MB. Se corta la descarga al pasar el tope, en vez
       de bajarla entera para tirarla.
 
 Reintentos: 5xx, timeouts y cortes de conexión, con espera exponencial. Un 4xx
@@ -236,7 +236,7 @@ class DigimetricsClient:
                     if total > self.max_bytes:
                         raise PaginaDemasiadoPesada(
                             f"{ruta} {params} pasa de {self.max_bytes // 1024} KB "
-                            "(fotos en base64: temporada 2024-25 o posterior)"
+                            "(fotos en base64)"
                         )
                     trozos.append(trozo)
         finally:

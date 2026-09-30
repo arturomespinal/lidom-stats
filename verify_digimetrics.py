@@ -14,9 +14,12 @@ Cinco partes:
    corrida no le pide nada al servidor.
 5. El cruce con el esquema de juego, sobre una base sintética.
 
-Y una sexta que solo corre si existe la caché real (data/raw/digimetrics, la
-deja `python main.py ingest-historia`): parsea TODAS las páginas guardadas y
-exige que ninguna tenga tasas que no cuadren.
+Y dos que solo corren si hay datos reales:
+6. La caché (data/raw/digimetrics, la deja `python main.py ingest-historia`):
+   parsea TODAS las páginas guardadas y exige que ninguna tenga tasas que no
+   cuadren.
+7. La capa histórica cargada en data/lidom_stats.db: sus temporadas, el
+   balance de ganados y perdidos, y el cruce con la MLB API fijado exacto.
 """
 import json
 import re
@@ -285,8 +288,29 @@ with tempfile.TemporaryDirectory() as tmp:
     despues = contar(ing.engine)
     check("tras la corrección de la fuente no quedan restos del 03",
           (despues["bateo"], despues["pitcheo"], [e[0] for e in despues["equipos"]]), (54, 42, ["01"]))
-    check("2024-25 en adelante no se pide (fotos en base64)",
-          lanza(lambda: HistoriaIngestor(db_url=base, client=cliente()).ingest_temporada(2024), ValueError), True)
+    check("2020-21 en adelante no se pide (fotos en base64)",
+          lanza(lambda: HistoriaIngestor(db_url=base, client=cliente()).ingest_temporada(2020), ValueError), True)
+
+    # Una página que pasa del tope a mitad de temporada (lo que detuvo la
+    # primera corrida real en 2020-21): esa temporada se salta ENTERA, sin
+    # dejar nada a medias, y la ingesta sigue con la siguiente.
+    def fuente_con_pesada(req):
+        q = dict(req.url.params)
+        if q.get("idTemporada") == "1991" and req.url.path == "/Equipo/SelectEtapasTemporada":
+            return httpx.Response(200, content=ETAPAS_1990)
+        if q.get("idTemporada") == "1991" and q.get("idEquipo") == "03":
+            return httpx.Response(200, content=b"x" * 300_000)
+        if q.get("idTemporada") == "1991":
+            return fuente(httpx.Request(req.method, str(req.url).replace("idTemporada=1991", "idTemporada=1990")))
+        return fuente(req)
+
+    with DigimetricsClient(cache_dir=f"{tmp}/cache2", intervalo=0, max_bytes=200_000, http=httpx.Client(
+            base_url="http://x", transport=httpx.MockTransport(fuente_con_pesada))) as c4:
+        r4 = HistoriaIngestor(db_url=base, client=c4).ingest([1991, 1990])
+    with Session(ing.engine) as s:
+        de_1991 = s.scalar(select(func.count()).select_from(HistBateo).where(HistBateo.temporada == 1991))
+    check("temporada con una página pesada: se salta entera y la ingesta sigue",
+          (r4["omitidas_por_peso"], r4["temporadas"], de_1991), ([1991], 1, 0))
 
 print("\n━━━ 5. El cruce con el esquema de juego ━━━")
 from src.models.database import (  # noqa: E402
@@ -348,6 +372,58 @@ else:
     for m in malas[:20]:
         print(f"    {m}")
     check("ninguna fila de la caché con tasas que no cuadren", len(malas), 0)
+
+print("\n━━━ 7. La capa histórica cargada (si está en data/lidom_stats.db) ━━━")
+import sqlite3  # noqa: E402
+
+base_real = Path("data/lidom_stats.db")
+con = sqlite3.connect(base_real) if base_real.exists() else None
+tiene_historia = bool(con and con.execute(
+    "SELECT 1 FROM sqlite_master WHERE name = 'hist_bateo'").fetchone() and con.execute(
+    "SELECT 1 FROM hist_bateo LIMIT 1").fetchone())
+if not tiene_historia:
+    print("  (la base no tiene la capa histórica: corre `python main.py ingest-historia`)")
+else:
+    temporadas = [t for (t,) in con.execute("SELECT DISTINCT temporada FROM hist_bateo ORDER BY 1")]
+    check("66 temporadas, de 1951 a 2019, sin 1961, 1962 ni 1965",
+          (len(temporadas), temporadas[0], temporadas[-1], {1961, 1962, 1965} & set(temporadas)), (66, 1951, 2019, set()))
+    # En cada etapa, los ganados de todos los lanzadores deberían igualar a
+    # los perdidos. En estas doce no: decisiones que faltan o sobran en la
+    # propia fuente (verificado el 30-sep-2026 con la carga completa).
+    desbalance = con.execute("""
+        SELECT temporada, etapa, SUM(wins), SUM(losses) FROM hist_pitcheo
+        GROUP BY temporada, etapa HAVING SUM(wins) != SUM(losses) ORDER BY 1, 2""").fetchall()
+    check("ganados = perdidos salvo en las doce etapas conocidas", desbalance, [
+        (1953, "SR", 108, 109), (1963, "SR", 120, 111), (1964, "SR", 111, 105), (1968, "SF", 7, 6),
+        (1971, "SF", 8, 10), (1982, "SR", 116, 118), (1987, "SR", 186, 180), (1993, "RR", 33, 35),
+        (2008, "SR", 151, 149), (2009, "SR", 152, 146), (2013, "SR", 151, 147), (2014, "SR", 149, 150)])
+
+    from sqlalchemy import create_engine  # noqa: E402
+
+    cruce = cruzar(create_engine(f"sqlite:///{base_real}"))
+    if not cruce["equipos"]:
+        print("  (la base no tiene el esquema de juego de 2012-13 en adelante: no hay cruce)")
+    else:
+        def difs(season_id, excluir=()):
+            return [abs(a - b) for team, f in cruce["temporadas"][season_id].items() if team not in excluir
+                    for tipo in ("bateo", "pitcheo") for a, b in f[tipo].values()]
+
+        # Una cifra por temporada: la suma de |DIGIMETRICS - MLB| de todos los
+        # totales de todos los equipos. Fija exacta: si cualquiera de las dos
+        # fuentes cambia algo, esto lo delata.
+        check("huella del cruce por temporada (suma de diferencias absolutas)",
+              {s: sum(difs(s)) for s in cruce["temporadas"]},
+              {"2012-13": 293, "2013-14": 189, "2014-15": 28, "2015-16": 13438,
+               "2016-17": 256, "2017-18": 39, "2018-19": 23, "2019-20": 29})
+        check("2014-15 y 2017-18 a 2019-20: solo diferencias de anotador (5 como mucho)",
+              max(d for s in ("2014-15", "2017-18", "2018-19", "2019-20") for d in difs(s)), 5)
+        check("2016-17: fuera del forfeit Gigantes-Licey, 2 como mucho", max(difs("2016-17", excluir=("GIG", "LIC"))), 2)
+        forfeit = cruce["temporadas"]["2016-17"]
+        check("y Gigantes y Licey tienen de más en DIGIMETRICS el juego perdido por forfeit",
+              (forfeit["GIG"]["bateo"]["VB"], forfeit["LIC"]["bateo"]["VB"]), ((1695, 1662), (1663, 1626)))
+        incompleta = cruce["temporadas"]["2015-16"]
+        check("2015-16 está INCOMPLETA en DIGIMETRICS: a cada equipo le falta más de un tercio",
+              all(f["bateo"]["VB"][0] < 0.7 * f["bateo"]["VB"][1] for f in incompleta.values()), True)
 
 print()
 if fails:

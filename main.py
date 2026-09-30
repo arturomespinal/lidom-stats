@@ -22,7 +22,7 @@ Modos:
   ingest-game <gamePk>            Un solo juego: su calendario y su boxscore
                                   (lo mismo que hace el motor en vivo al final)
   ingest-historia [desde] [hasta] DIGIMETRICS (estadisticas.lidom.com) → capa
-                                  histórica hist_*. Por defecto 1951-2023.
+                                  histórica hist_*. Por defecto 1951-2019.
       --smoke                     Solo 1990-91, para probar (~35 pedidos)
       --sin-red                   Solo lo que ya está en data/raw/digimetrics
       --refrescar                 Vuelve a bajar aunque esté en la caché
@@ -124,6 +124,10 @@ def main():
             f"desde la caché: {r['pedidos_cache']}"
             + (f". No se jugaron: {r['no_jugadas']}" if r["no_jugadas"] else "")
         )
+        if r["omitidas_por_peso"]:
+            logger.warning(
+                f"Saltadas por páginas de más de 5 MB (fotos en base64): {r['omitidas_por_peso']}"
+            )
         for aviso in r["avisos"]:
             logger.warning(aviso)
         if r["discrepancias"]:
@@ -140,7 +144,7 @@ def main():
         from src.pipeline.cruce_historia import cruzar, informe
         r = cruzar(get_engine())
         if not r["equipos"]:
-            print("No hay temporadas en las dos capas. Corre antes: python main.py ingest-historia 2012 2023")
+            print("No hay temporadas en las dos capas. Corre antes: python main.py ingest-historia 2012 2019")
             sys.exit(1)
         print(informe(r))
 

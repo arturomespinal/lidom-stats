@@ -156,7 +156,7 @@ def list_games(
     date_from: str | None = Query(None, description="YYYY-MM-DD inclusive"),
     date_to: str | None = Query(None, description="YYYY-MM-DD inclusive"),
     order: str = Query("desc", description="asc o desc por fecha"),
-    limit: int = Query(50, le=500),
+    limit: int = Query(50, ge=1, le=500),
     offset: int = Query(0, ge=0),
 ):
     """Listado de juegos. Sin filtros devuelve los más recientes de la temporada."""
@@ -316,8 +316,8 @@ def get_game(game_id: str):
 
 @router.get("/players/search", tags=["Jugadores"])
 def search_players(
-    q: str = Query(..., min_length=2, description="Parte del nombre"),
-    limit: int = Query(20, le=100),
+    q: str = Query(..., min_length=2, max_length=60, description="Parte del nombre"),
+    limit: int = Query(20, ge=1, le=100),
 ):
     """
     Busca por nombre y devuelve player_id.
@@ -509,7 +509,7 @@ def contexto_del_jugador(
 def get_player_gamelog(
     player_id: str,
     season: str = Query("2025"),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
 ):
     """
     Juego por juego — lo que las tablas planas no pueden dar.
@@ -621,7 +621,7 @@ def leaderboard_batting(
     sort_by: str = Query("avg"),
     qualified: bool = Query(True, description="Aplica el mínimo de 3.1 PA por juego de equipo"),
     min_pa: int | None = Query(None, description="Sobrescribe el mínimo de calificación"),
-    limit: int = Query(25, le=200),
+    limit: int = Query(25, ge=1, le=200),
 ):
     season_id = normalize_season_id(season)
     team = validate_team(team)
@@ -669,7 +669,7 @@ def leaderboard_pitching(
     sort_by: str = Query("era"),
     qualified: bool = Query(True, description="Aplica el mínimo de 1 IP por juego de equipo"),
     min_ip: float | None = Query(None, description="Sobrescribe el mínimo de calificación"),
-    limit: int = Query(25, le=200),
+    limit: int = Query(25, ge=1, le=200),
 ):
     season_id = normalize_season_id(season)
     team = validate_team(team)

@@ -49,7 +49,7 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las ocho suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las nueve suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -60,6 +60,7 @@ python verify_boxscore_ingestor.py   # ingestor contra boxscore sintético
 python verify_api_models.py          # modelos Pydantic contra JSON real
 python verify_winprob.py             # modelo de probabilidad contra los datos reales
 python verify_capas.py               # tablas planas contra el esquema de juego, temporada por temporada
+python verify_seguridad.py           # la API en modo producción: límite, CORS, diagnóstico con clave
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -170,10 +171,13 @@ la 2015-16. No cambiar esa clave.
 | `verify_boxscore_ingestor.py` | 50 comprobaciones del ingestor contra un boxscore sintético, incluida la ingesta de un solo juego |
 | `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
+| `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
+| `verify_seguridad.py` | 49 comprobaciones de la API levantada en modo producción |
+| `.env.example` | Las variables de entorno de producción, con lo que hace cada una |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
-Las siete suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+Las nueve suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
 
 ## Endpoints
@@ -1483,22 +1487,67 @@ columna nueva y por tanto recrear la tabla y reingestar las 14 temporadas:
 Mientras tanto son 4 temporadas-equipo mal por un juego, de 84. El resto de la
 base está bien.
 
-## Deuda de seguridad conocida
+## Seguridad para desplegar (30-sep-2026)
 
-**Resuelto:** las 3 vulnerabilidades de Next.js (1 crítica, RCE sin autenticar en
-servidores Windows) afectaban el rango `9.3.4 – 16.3.0`, o sea toda la línea 14 y
-15. No había parche dentro de 14.x; se migró a Next 16.3.5.
+**Resuelto antes:** las 3 vulnerabilidades de Next.js (1 crítica, RCE sin
+autenticar en servidores Windows) del rango `9.3.4 – 16.3.0`; se migró a Next
+16.3.5.
 
-**Pendiente, y hay que resolverlo antes de desplegar:** la API no tiene
-autenticación ni límite de tasa, CORS está fijo en el código, y `/health` expone
-conteos internos.
+`api/seguridad.py`, encendido con `LIDOM_ENTORNO=produccion`. Las variables
+están en `.env.example`. En desarrollo no cambia nada: sin límite, CORS a
+localhost:3000, diagnóstico abierto, `/docs` publicado.
+
+La API es de **solo lectura** (todas las rutas son GET) y los datos son
+públicos: no hay cuentas ni nada que escribir, así que no hay login que poner.
+Lo que se protege:
+
+- **Límite por IP**: cubo de fichas, 300 por minuto por defecto, con ráfagas
+  (abrir la app dispara cinco o seis peticiones juntas). Responde 429 con
+  `Retry-After` y un mensaje en JSON. No más bajo porque en RD las redes
+  móviles comparten una IP pública entre muchos clientes (CGNAT). `/health` no
+  cuenta (monitores). Guarda dos números por IP y barre las olvidadas: un
+  barrido de IPs falsas no llena la memoria. **Por proceso**: con varios
+  workers el límite efectivo se multiplica (haría falta Redis).
+- **Detrás de un proxy**, `LIDOM_CONFIAR_PROXY=1` toma la IP del primer
+  `X-Forwarded-For`. Sin proxy NO activarlo: cualquiera se inventaría la
+  cabecera y se saltaría el límite.
+- **El servidor de la web lleva su clave** (`LIDOM_CLAVE_SERVIDOR`, cabecera
+  `X-Clave-Servidor`). Las páginas de Next se arman en su servidor, y todas sus
+  peticiones salen de una IP: sin la clave, el límite sería para toda la web
+  junta. `apiFetch` la añade solo del lado del servidor; va sin el prefijo
+  `NEXT_PUBLIC_`, que es lo que la mantiene fuera del navegador.
+- **CORS por configuración** (`LIDOM_CORS_ORIGINS`), obligatorio en producción
+  y nunca `*`. Va por fuera del límite, así que un 429 también lleva CORS y el
+  navegador lo ve como "espera" y no como un error de CORS.
+- **El diagnóstico, con clave** (`LIDOM_CLAVE_DIAGNOSTICO`, cabecera
+  `X-Clave-Diagnostico`, comparada en tiempo constante): sin ella `/health`
+  responde `{"status": "ok"}` y `/live/status` solo si el poller corre. Antes
+  contaban las filas de cada tabla, los juegos en seguimiento y cómo ingestar.
+  Tampoco se publican `/docs`, `/redoc` ni `/openapi.json`.
+- **Cabeceras** en todas las respuestas: `nosniff`, `no-referrer`, `DENY`.
+- **Parámetros acotados**: `limit` con `ge=1` (en SQLite `LIMIT -1` devuelve la
+  tabla entera) y la búsqueda con 60 letras como mucho. Los `ORDER BY`
+  dinámicos ya iban contra listas cerradas.
+- **Una configuración insegura no arranca** (`ConfigInvalida`): producción sin
+  orígenes, con `*`, con límite 0, o con claves de menos de 24 caracteres o
+  iguales entre sí. Mejor un error al desplegar que una API abierta sin que
+  nadie lo note.
+- El middleware es **ASGI puro**, no `BaseHTTPMiddleware`: este último envuelve
+  la respuesta y con el flujo SSE del en vivo se ha portado mal en varias
+  versiones de Starlette.
+
+**Por qué no hay una clave de API en las apps:** una clave dentro de la app o
+de la web no es secreta —se saca del binario o de las herramientas del
+navegador en un minuto— y el `EventSource` del en vivo ni puede mandar
+cabeceras. Daría sensación de seguridad sin darla. Si un día hace falta
+distinguir clientes (terceros, un plan de pago), el camino es un token firmado
+de corta vida emitido por un servidor nuestro.
 
 ## Próximos pasos
 
 1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
-3. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
-4. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+2. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
+3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal
 

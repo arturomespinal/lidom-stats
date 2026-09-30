@@ -2,7 +2,7 @@
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
@@ -17,6 +17,7 @@ from src.qualification import qualifying_ip, qualifying_pa
 # Estado en vivo. El poller NO arranca solo: se enciende con la variable de
 # entorno LIDOM_LIVE_POLLER=1, para que levantar la API a trabajar en los
 # endpoints históricos no dispare tráfico contra la MLB API.
+from api.seguridad import Proteccion, config as config_seguridad, diagnostico_autorizado
 from api.live_routes import (
     router as live_router,
     maybe_start_poller,
@@ -35,16 +36,29 @@ async def lifespan(app: FastAPI):
     stop_poller()
 
 
+# Seguridad para desplegar: ver api/seguridad.py. Con una configuración de
+# producción inválida esto lanza ConfigInvalida y la API no arranca.
+SEGURIDAD = config_seguridad()
+
 app = FastAPI(
     title="LIDOM Stats API",
     description="Estadísticas de la Liga de Béisbol Profesional Dominicana",
     version="0.1.0",
     lifespan=lifespan,
+    # En producción no se publica la documentación interactiva: es el mapa
+    # completo de la API para quien quiera rasparla.
+    docs_url=None if SEGURIDAD.produccion else "/docs",
+    redoc_url=None if SEGURIDAD.produccion else "/redoc",
+    openapi_url=None if SEGURIDAD.produccion else "/openapi.json",
 )
 
+# El orden importa: el último que se añade es el de más afuera. CORS va por
+# fuera del límite para que un 429 también lleve sus cabeceras de CORS; si no,
+# el navegador lo reportaría como un error de CORS y no como "espera".
+app.add_middleware(Proteccion, config=SEGURIDAD)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=list(SEGURIDAD.cors_origenes),
     allow_methods=["GET"],
     allow_headers=["*"],
 )
@@ -101,7 +115,13 @@ def _season_team_games(season: str) -> int:
 # ── Health ────────────────────────────────────────────────────────────────────
 
 @app.get("/health")
-def health():
+def health(request: Request):
+    # En producción, sin la clave de diagnóstico solo se dice que está viva:
+    # cuántas filas tiene cada tabla y cómo se ingesta no le importa a nadie
+    # de afuera. En desarrollo, todo como siempre.
+    if not diagnostico_autorizado(SEGURIDAD, request.headers):
+        return {"status": "ok"}
+
     def count(table: str) -> int:
         try:
             return query_db(f"SELECT COUNT(*) as c FROM {table}")[0]["c"]
@@ -196,7 +216,7 @@ def get_batting(
     min_pa: int = Query(None, description="Mínimo de apariciones al plato; si se omite se calcula"),
     qualified: bool = Query(True, description="Aplica el mínimo en las tablas de tasa"),
     sort_by: str = Query("ops", description="Campo para ordenar"),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
 ):
     safe_sort = sort_by if sort_by in {
         "batting_avg", "on_base_pct", "slugging_pct", "ops",
@@ -254,7 +274,7 @@ def get_pitching(
     min_ip: float = Query(None, description="Mínimo de entradas lanzadas; si se omite se calcula"),
     qualified: bool = Query(True, description="Aplica el mínimo en las tablas de tasa"),
     sort_by: str = Query("era", description="Campo para ordenar"),
-    limit: int = Query(50, le=200),
+    limit: int = Query(50, ge=1, le=200),
 ):
     asc_fields = {"era", "whip", "hits_per_nine", "walks_per_nine"}
     safe_sort = sort_by if sort_by in {

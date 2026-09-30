@@ -28,7 +28,7 @@ import json
 import os
 from typing import AsyncIterator, Optional
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException, Query, Request
 from fastapi.responses import StreamingResponse
 
 from src.fichas import anotar_fichas
@@ -109,8 +109,15 @@ def _ingest_finished_game(game_pk: int, state) -> None:
 
 
 @router.get("/status")
-def live_status():
-    """Qué está siguiendo el poller y cuánto ha ahorrado con los parches."""
+def live_status(request: Request):
+    """Qué está siguiendo el poller y cuánto ha ahorrado con los parches.
+
+    Es diagnóstico interno: en producción, sin la clave, solo dice si el
+    poller corre (ver api/seguridad.py).
+    """
+    from api.seguridad import config as config_seguridad, diagnostico_autorizado
+    if not diagnostico_autorizado(config_seguridad(), request.headers):
+        return {"poller_running": _poller is not None}
     stats = store.stats()
     total = stats["full_fetches"] + stats["patch_applications"]
     stats["patch_ratio"] = (

@@ -19,9 +19,29 @@ import {
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
 
+/**
+ * La clave del servidor de la web (ver api/seguridad.py). Las páginas se arman
+ * en el servidor de Next, y todas sus peticiones a la API salen de su única
+ * IP: sin esta cabecera el límite por IP sería para toda la web junta.
+ *
+ * Va en `LIDOM_CLAVE_SERVIDOR`, SIN el prefijo NEXT_PUBLIC_: Next no la
+ * incluye en lo que llega al navegador, así que en los componentes de
+ * cliente vale `undefined` y esas peticiones salen sin ella, con la IP de
+ * quien navega. Se comprueba además `typeof window`, por si alguien un día le
+ * pone el prefijo: aun así no viajaría desde el navegador.
+ */
+function cabecerasServidor(): HeadersInit | undefined {
+  const clave = process.env.LIDOM_CLAVE_SERVIDOR;
+  if (typeof window !== "undefined" || !clave) return undefined;
+  return { "X-Clave-Servidor": clave };
+}
+
 async function apiFetch<T>(path: string): Promise<T | null> {
   try {
-    const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+    const res = await fetch(`${API_BASE}${path}`, {
+      cache: "no-store",
+      headers: cabecerasServidor(),
+    });
     if (!res.ok) return null;
     return res.json() as Promise<T>;
   } catch {

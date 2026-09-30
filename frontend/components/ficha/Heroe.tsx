@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { anchoBebas } from "@/lib/bebas";
 
 /**
  * La cabecera de las fichas: franja navy a sangre con un plano del color del
@@ -53,7 +54,17 @@ export default function Heroe({
           {marca && (
             // Tono sobre tono: el navy al 16%. Textura, no texto; por eso
             // aria-hidden en el contenedor.
-            <span className="absolute -right-2 top-4 font-cond text-[150px] leading-none text-[rgb(9_28_58/0.16)] sm:right-4 sm:top-1/2 sm:-translate-y-1/2 sm:text-[240px]">
+            //
+            // El tamaño sale del ancho real del código en Bebas contra lo que
+            // deja ver el plano: a 150 px fijos "TOR" medía 175 y el plano de
+            // un teléfono deja ~110, así que la R quedaba cortada (30-sep). En
+            // el teléfono el plano mide el 42 % del ancho y por la diagonal
+            // deja ver ~78 % de eso a la altura de la letra; desde `sm`, el
+            // 40 % y ~85 % a media altura. Mismo cálculo que el móvil.
+            <span
+              className="absolute bottom-3 right-3 font-cond leading-none text-[rgb(9_28_58/0.16)] text-[length:min(150px,calc((32.76vw_-_16px)/var(--em)))] sm:bottom-auto sm:right-6 sm:top-1/2 sm:-translate-y-1/2 sm:text-[length:min(240px,calc((34vw_-_32px)/var(--em)))]"
+              style={{ ["--em" as string]: anchoBebas(marca).toFixed(3) }}
+            >
               {marca}
             </span>
           )}
@@ -88,11 +99,18 @@ export function CifraHeroe({
   grande?: boolean;
 }) {
   return (
-    <div className="min-w-0">
+    // La caja es un contenedor de consultas (`container-type`) y la cifra
+    // mide `100cqw / ancho en em`, con tope en el tamaño de diseño: cabe
+    // entera en su columna. Con `truncate` y tamaño fijo, "301-366" salía
+    // "301-…" en una pantalla de 640 (30-sep).
+    <div className="min-w-0 [container-type:inline-size]">
       <div
-        className={`num truncate font-cond leading-none text-ink-fg ${
-          grande ? "text-[84px] sm:text-[104px]" : "text-[40px] sm:text-[48px]"
+        className={`num whitespace-nowrap font-cond leading-none text-ink-fg ${
+          grande
+            ? "text-[length:min(84px,calc(98cqw/var(--em)))] sm:text-[length:min(104px,calc(98cqw/var(--em)))]"
+            : "text-[length:min(40px,calc(98cqw/var(--em)))] sm:text-[length:min(48px,calc(98cqw/var(--em)))]"
         }`}
+        style={{ ["--em" as string]: anchoBebas(valor).toFixed(3) }}
       >
         {valor}
       </div>

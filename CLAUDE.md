@@ -1369,6 +1369,16 @@ puntos es `w / Σ anchos`, con tope en el de diseño.
 - `tamanoNombre`: el nombre de la cabecera, decidido por la palabra más larga
   contra la columna del 52 % — el mismo cálculo que `NombreHeroe` en la web.
 
+- El código gigante del plano ("TOR") en la cabecera de equipo: a 150 pt
+  fijos medía 175 y el plano deja ~110, así que la última letra quedaba
+  cortada por el borde (30-sep). `medidaMarca()` en `Heroe.tsx` lo ajusta al
+  ancho que deja el plano, que por la diagonal crece hacia abajo, y lo apoya
+  abajo. La web hace lo mismo con `anchoBebas()` (`frontend/lib/bebas.ts`,
+  misma tabla) y `calc()` sobre `vw`.
+- En la web las cifras de la cabecera tampoco se cortan ya con "…": cada
+  columna es un contenedor de consultas y la cifra mide
+  `min(tamaño, 98cqw / ancho en em)`.
+
 **No volver a usar `adjustsFontSizeToFit`** en textos en Bebas. Si hace falta
 en otra fuente, medir antes en un iPhone.
 

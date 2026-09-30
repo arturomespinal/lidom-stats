@@ -222,7 +222,9 @@ export default function TeamScreen({ route, navigation }: Props) {
       {/* 0 ── Cabecera: navy con el plano del club y su código gigante ── */}
       <Heroe color={color ?? COLORS.textSecondary} marca={code}>
         <View style={styles.nombreCaja}>
-          <Text style={styles.micro} numberOfLines={1}>
+          {/* Dos renglones: "SAN PEDRO DE MACORÍS · DESDE 1935" no cabe en uno
+              dentro de la columna del 52 %, y cortarlo con "…" se comía el año. */}
+          <Text style={styles.micro} numberOfLines={2}>
             {[equipo.city, equipo.founded_year && `desde ${equipo.founded_year}`].filter(Boolean).join(' · ')}
           </Text>
           {/* El tamaño lo decide la palabra más larga contra la columna del

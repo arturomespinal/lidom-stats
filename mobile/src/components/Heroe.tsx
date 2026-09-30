@@ -1,7 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
-import { CifraAjustada } from './Ajuste';
+import { anchoBebas, CifraAjustada } from './Ajuste';
 
 const CORTE = 32;
 
@@ -49,7 +49,7 @@ export default function Heroe({
       )}
       {!!marca && (
         <Text
-          style={styles.marca}
+          style={[styles.marca, medidaMarca(marca)]}
           accessibilityElementsHidden
           importantForAccessibility="no"
         >
@@ -63,6 +63,26 @@ export default function Heroe({
       />
     </View>
   );
+}
+
+/**
+ * El código gigante del plano, entero y dentro del plano.
+ *
+ * A 150 pt fijos "TOR" medía 175 pt y el plano deja unos 110: la R quedaba
+ * cortada por el borde de la pantalla (capturas de Arturo, 30-sep). Ahora el
+ * tamaño sale del ancho real del código en Bebas (Ajuste.tsx) contra el ancho
+ * que deja el plano, que por la diagonal crece hacia abajo: 80 pt arriba y
+ * ~27 pt más por cada 100 de alto. La letra se apoya abajo, donde el plano es
+ * más ancho, y su borde superior es el que manda:
+ *
+ *   ancho(código) + 10 de margen ≤ 80 + 0.267 × (y del borde superior)
+ *
+ * que despejado da el divisor de abajo. Bebas con lineHeight = tamaño deja la
+ * letra entre 0.1 y 0.8 del alto de la línea (mayúsculas de 0.7 em).
+ */
+function medidaMarca(marca: string) {
+  const t = Math.min(150, Math.floor(114 / (anchoBebas(marca) + 0.19)));
+  return { fontSize: t, lineHeight: t, top: Math.round(146 - 0.8 * t) };
 }
 
 /** Una cifra grande de la cabecera: valor en Bebas, etiqueta chica debajo. */
@@ -120,13 +140,11 @@ const styles = StyleSheet.create({
   },
   // Tono sobre tono: el navy al 16% sobre el plano. No es texto que se lea,
   // es textura; por eso queda fuera del lector de pantalla.
+  // Tamaño y altura los pone medidaMarca().
   marca: {
     position: 'absolute',
-    top: 18,
-    right: -8,
+    right: 10,
     fontFamily: FONTS.display,
-    fontSize: 150,
-    lineHeight: 150,
     color: 'rgba(9, 28, 58, 0.16)',
   },
   contenido: { gap: 16 },

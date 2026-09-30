@@ -74,7 +74,7 @@ export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: stri
             );
           }
           return (
-            <Link key={d.date} href={`/?fecha=${d.date}`} className={clase} aria-label={`${d.label}, ${d.games} juegos`}>
+            <Link key={d.date} href={`/?fecha=${d.date}`} className={`tocable ${clase}`} aria-label={`${d.label}, ${d.games} juegos`}>
               {cuerpo}
             </Link>
           );
@@ -260,7 +260,7 @@ export function Figuras({ figuras }: { figuras: FiguraJornada[] }) {
         <Link
           key={`${f.kind}-${f.player_id}`}
           href={`/players/${f.player_id}`}
-          className="group flex min-h-[120px] flex-col gap-1 rounded-xl border border-line bg-card p-3 transition-colors hover:border-fg2"
+          className="tocable group flex min-h-[120px] flex-col gap-1 rounded-xl border border-line bg-card p-3 hover:border-fg2"
         >
           <span className="mb-1 flex items-center gap-2">
             <TeamBadge code={f.team_code} size="sm" />

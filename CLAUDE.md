@@ -885,10 +885,10 @@ mismas razones; lo que cambia es cómo se toca.
 - **Lector de pantalla**: la franja es `adjustable`; deslizar arriba o abajo
   recorre los momentos, como las flechas en la web.
 
-En `GameDetailScreen` el marcador y la franja pasaron **dentro** del scroll, y
-las pestañas se quedan pegadas arriba (`stickyHeaderIndices`). Con el marcador
-fijo, la franja dejaba al relato unos 300 px en un teléfono de 844. Las
-pestañas son de subrayado y miden 44 pt de alto de verdad, sin `hitSlop`.
+En `GameDetailScreen` el marcador y la franja van **dentro** del scroll: con el
+marcador fijo, la franja dejaba al relato unos 300 px en un teléfono de 844. Las
+pestañas ya no se quedan pegadas arriba: ver "El detalle de juego: cabecera
+navy y pestañas al pie".
 
 Para instalar las dependencias: `npx expo install react-native-svg expo-font
 @expo-google-fonts/bebas-neue` desde `mobile/`. Elige la versión que corresponde al SDK (15.15.4 en el 57, según
@@ -1071,7 +1071,9 @@ Lo que cambia respecto a la web:
 - **Esqueletos, no spinners** (`components/Esqueleto.tsx`), como piden las
   reglas: la forma de la ficha aparece al instante y no salta al llegar el dato.
 - `components/Pestanas.tsx` es la pestaña de subrayado genérica; `GameTabs` la
-  usa por debajo. Una sola implementación, una sola altura (44 pt).
+  usa por debajo. Una sola implementación, una sola altura (44 pt). La raya es
+  UNA que se desliza a la pestaña elegida (ver "Micro-animaciones"), y `abajo`
+  la pone arriba del borde para la barra que va al pie.
 - Escala de las fichas: 28 / 22 / 14 / 11. Sin Bebas en las tablas: sus cifras
   no son tabulares y en una columna alineada a la derecha no cuadran.
 
@@ -1253,6 +1255,68 @@ problema en la base cuando está en la red. Ahora `EmptyState sinConexion`
 dice "No se pudo conectar con la API", muestra **a qué dirección** se intentó
 (`API_BASE`, lo primero que hay que revisar si la IP de la PC cambió) y trae
 Reintentar.
+
+## El detalle de juego: cabecera navy y pestañas al pie (30-sep-2026)
+
+Lo que quedaba pendiente de las reglas de diseño móvil: la zona del pulgar en
+el detalle de juego. Móvil (`GameDetailScreen.tsx`) y web
+(`components/game/GameDetail.tsx`) cambian igual.
+
+- **La cabecera es la franja navy de las fichas** (`Heroe`), con su corte en
+  diagonal, pero **sin el plano de color**: un juego es de dos clubes, y pintar
+  el color de uno solo diría que el juego es suyo. `Heroe` acepta `color`
+  opcional por eso; las fichas siguen pasándolo. Cada club se identifica con
+  su teja sólida y su código.
+- Dos filas de marcador: teja, nombre, `H · E`, carreras en Bebas de 56. Quien
+  va abajo se apaga a `inkDim` (8.3:1 sobre el navy) y el ganador de un juego
+  terminado lleva ◂ escrito. Junto al estado, una línea de contexto: la media
+  entrada del último punto del recorrido en vivo ("Baja del 7mo"),
+  "Resultado definitivo" o "Sin señal".
+- **Las pestañas van al pie**, en la zona del pulgar. En el móvil, fijas sobre
+  la barra de la app y repartiendo el ancho (`GameTabs` → `Pestanas llenar
+  abajo`). En la web, fijas al pie en el teléfono y de vuelta arriba del
+  contenido desde `sm`: con ratón no hay pulgar que cuidar. La página deja
+  `pb-24` en el teléfono para que la barra no tape la última fila.
+- Al cambiar de pestaña con el relato bajado, el scroll vuelve al comienzo del
+  contenido (no al tope: el marcador queda fuera de la vista). Sin eso, la
+  pestaña nueva abría a media página.
+- La barra de navegación del detalle en el móvil es navy (`OPCIONES_JUEGO` en
+  `App.tsx`) y la barra de estado pasa a clara con el foco, como en las fichas.
+  El título "TOR vs EST" se conserva: cuando el marcador se va por arriba, es
+  lo único que dice qué juego es.
+- Cargando: esqueleto con la franja navy, no un spinner.
+- La web: `app/live/[gamePk]/page.tsx` ya no envuelve en `<main>`; la cabecera
+  va a sangre y el enlace "← En Vivo" vive dentro de ella.
+
+## Micro-animaciones (30-sep-2026)
+
+Tres, y ninguna decora: cada una confirma algo. Viven en
+`mobile/src/components/Movimiento.tsx` y en `globals.css` de la web.
+
+| Qué | Móvil | Web |
+|-----|-------|-----|
+| La tarjeta se hunde al tocarla (0.97 / 0.98) | `<Tocable>` | clase `.tocable` |
+| El contenido de una pestaña entra con un fundido y 6 px de subida | `<Aparecer key={pestaña}>` | clase `.aparecer` con `key` |
+| La raya de las pestañas se desliza a la elegida | `Pestanas.tsx` | `PestanasJuego` en `GameDetail.tsx` |
+
+- **"Reducir movimiento" las apaga todas.** En el móvil,
+  `useReducirMovimiento()` escucha el ajuste (y su cambio con la app abierta) y
+  recuerda el último valor para que un componente nuevo no anime su primer
+  cuadro mientras llega la respuesta asíncrona. En la web,
+  `prefers-reduced-motion` y `motion-reduce:`.
+- `Tocable` pone la escala en una vista **externa** y deja el `Pressable`
+  dentro con su estilo intacto, función `({ pressed })` incluida: el fondo de
+  "presionado" que ya tenía cada tarjeta sigue funcionando. Si la tarjeta vivía
+  en una fila con `flex: 1`, ese estilo pasa a `contenedor`.
+- Escala y opacidad van con `useNativeDriver`. La raya de las pestañas anima
+  `left` y `width`, que no lo admiten: corre en JS, 180 ms una vez por toque.
+  La primera vez se coloca sin animar, para que no entre volando.
+- Dónde hay `Tocable`/`.tocable`: días de la franja y del calendario, tarjetas
+  de juego y de figuras en Hoy, el botón Calendario y "Marcadores en vivo",
+  los últimos diez, los destacados del equipo. Las filas de tabla no: ya
+  tienen su fondo de presionado y veinte filas hundiéndose serían ruido.
+- `Aparecer` va en el contenido de las pestañas del juego, en la tabla de
+  bateo/pitcheo del jugador y en la plantilla del equipo.
 
 ## Los forfeits no entran en las posiciones — deuda conocida
 

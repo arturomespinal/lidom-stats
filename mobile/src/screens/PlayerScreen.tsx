@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import { EsqueletoFicha } from '../components/Esqueleto';
 import Pestanas from '../components/Pestanas';
+import { Aparecer } from '../components/Movimiento';
 import Seccion from '../components/Seccion';
 import TablaTemporadas, { Col } from '../components/TablaTemporadas';
 import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
@@ -397,22 +398,25 @@ export default function PlayerScreen({ route, navigation }: Props) {
         />
       ) : null}
 
-      {activo === 'bateo' && (
-        <TablaTemporadas<FilaBateo>
-          temporadas={perfil.batting}
-          carrera={perfil.career_batting}
-          cols={COLS_BATEO}
-          onEquipo={abrirEquipo}
-        />
-      )}
-      {activo === 'pitcheo' && (
-        <TablaTemporadas<FilaPitcheo>
-          temporadas={perfil.pitching}
-          carrera={perfil.career_pitching}
-          cols={COLS_PITCHEO}
-          onEquipo={abrirEquipo}
-        />
-      )}
+      {/* key: la tabla del otro rol entra con su fundido. */}
+      <Aparecer key={activo ?? 'ninguno'}>
+        {activo === 'bateo' && (
+          <TablaTemporadas<FilaBateo>
+            temporadas={perfil.batting}
+            carrera={perfil.career_batting}
+            cols={COLS_BATEO}
+            onEquipo={abrirEquipo}
+          />
+        )}
+        {activo === 'pitcheo' && (
+          <TablaTemporadas<FilaPitcheo>
+            temporadas={perfil.pitching}
+            carrera={perfil.career_pitching}
+            cols={COLS_PITCHEO}
+            onEquipo={abrirEquipo}
+          />
+        )}
+      </Aparecer>
 
       {!activo && (
         <Text style={styles.sinTabla}>

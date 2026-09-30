@@ -1,5 +1,6 @@
 import React from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { Tocable } from './Movimiento';
 import { COLORS, FONTS } from '../constants';
 import type { LastGame } from '../types';
 
@@ -22,8 +23,9 @@ export default function UltimosDiez({
       {juegos.map((j, i) => {
         const g = j.result === 'G';
         return (
-          <Pressable
+          <Tocable
             key={`${j.date}-${i}`}
+            contenedor={styles.caja}
             style={({ pressed }) => [styles.celda, pressed && { opacity: 0.6 }]}
             disabled={!onJuego || !j.game_id}
             onPress={() => onJuego?.(j)}
@@ -34,7 +36,7 @@ export default function UltimosDiez({
               <Text style={[styles.letra, { color: g ? COLORS.inkFg : COLORS.textSecondary }]}>{j.result}</Text>
             </View>
             <Text style={styles.rival}>{j.opponent}</Text>
-          </Pressable>
+          </Tocable>
         );
       })}
     </View>
@@ -43,7 +45,8 @@ export default function UltimosDiez({
 
 const styles = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4, paddingHorizontal: 16 },
-  celda: { flex: 1, alignItems: 'center', gap: 4 },
+  caja: { flex: 1 },
+  celda: { alignItems: 'center', gap: 4 },
   cuadro: { alignSelf: 'stretch', height: 32, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
   ganado: { backgroundColor: COLORS.ink },
   perdido: { backgroundColor: COLORS.bgCard, borderWidth: 1, borderColor: COLORS.border },

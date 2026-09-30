@@ -27,8 +27,10 @@ export default function Heroe({
   marca,
   children,
 }: {
-  /** El primario del club: pinta el plano. */
-  color: string;
+  /** El primario del club: pinta el plano. Sin color no hay plano: la
+   *  cabecera de un juego es de dos clubes, y pintar uno solo diría que el
+   *  juego es suyo. */
+  color?: string;
   /** Texto gigante en tono sobre tono sobre el plano (el código del equipo). */
   marca?: string;
   children: React.ReactNode;
@@ -36,12 +38,14 @@ export default function Heroe({
   const { width } = useWindowDimensions();
   return (
     <View style={styles.caja}>
-      <View
-        pointerEvents="none"
-        style={[styles.plano, { backgroundColor: color }]}
-        accessibilityElementsHidden
-        importantForAccessibility="no-hide-descendants"
-      />
+      {!!color && (
+        <View
+          pointerEvents="none"
+          style={[styles.plano, { backgroundColor: color }]}
+          accessibilityElementsHidden
+          importantForAccessibility="no-hide-descendants"
+        />
+      )}
       {!!marca && (
         <Text
           style={styles.marca}

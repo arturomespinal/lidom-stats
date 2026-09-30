@@ -57,6 +57,16 @@ const OPCIONES_FICHA = {
 };
 
 /**
+ * El detalle de juego también abre con la franja navy, pero conserva el
+ * título ("AGU vs LIC") en blanco: el marcador se va al desplazar, y el
+ * título es lo único que queda diciendo qué juego es.
+ */
+const OPCIONES_JUEGO = {
+  headerStyle: { backgroundColor: COLORS.ink },
+  headerTintColor: COLORS.inkFg,
+};
+
+/**
  * Cada pestaña es una PILA, no una pantalla suelta.
  *
  * Antes solo "En Vivo" lo era; ahora las cinco, porque las fichas de equipo y
@@ -91,6 +101,7 @@ function HoyTab() {
         name="GameDetail"
         component={GameDetailScreen}
         options={({ route }) => ({
+          ...OPCIONES_JUEGO,
           // Del parámetro y no de la respuesta: así el título está puesto antes
           // del primer fetch y la cabecera no parpadea.
           title: `${route.params.awayCode} vs ${route.params.homeCode}`,

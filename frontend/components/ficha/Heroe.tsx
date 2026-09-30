@@ -26,8 +26,10 @@ export default function Heroe({
   lado,
   children,
 }: {
-  /** El primario del club: pinta el plano. */
-  color: string;
+  /** El primario del club: pinta el plano. Sin color no hay plano: la
+   *  cabecera de un juego es de dos clubes, y pintar uno solo diría que el
+   *  juego es suyo. */
+  color?: string;
   /** Texto gigante tono sobre tono en el plano: el código del equipo. */
   marca?: string;
   /** Lo que va ENCIMA del plano (el monograma). Nunca texto que se lea. */
@@ -39,22 +41,24 @@ export default function Heroe({
       className="relative overflow-hidden bg-ink text-ink-fg"
       style={{ clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 32px), 0 100%)" }}
     >
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute right-0 top-0 h-[176px] w-[42%] sm:bottom-0 sm:h-auto sm:w-[40%]"
-        style={{
-          backgroundColor: color,
-          clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%)",
-        }}
-      >
-        {marca && (
-          // Tono sobre tono: el navy al 16%. Textura, no texto; por eso
-          // aria-hidden en el contenedor.
-          <span className="absolute -right-2 top-4 font-cond text-[150px] leading-none text-[rgb(9_28_58/0.16)] sm:right-4 sm:top-1/2 sm:-translate-y-1/2 sm:text-[240px]">
-            {marca}
-          </span>
-        )}
-      </div>
+      {color && (
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute right-0 top-0 h-[176px] w-[42%] sm:bottom-0 sm:h-auto sm:w-[40%]"
+          style={{
+            backgroundColor: color,
+            clipPath: "polygon(30% 0, 100% 0, 100% 100%, 0 100%)",
+          }}
+        >
+          {marca && (
+            // Tono sobre tono: el navy al 16%. Textura, no texto; por eso
+            // aria-hidden en el contenedor.
+            <span className="absolute -right-2 top-4 font-cond text-[150px] leading-none text-[rgb(9_28_58/0.16)] sm:right-4 sm:top-1/2 sm:-translate-y-1/2 sm:text-[240px]">
+              {marca}
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="relative mx-auto max-w-5xl px-4 pb-14 pt-6 sm:pb-16 sm:pt-10">
         {lado && (

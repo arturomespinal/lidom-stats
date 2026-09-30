@@ -69,7 +69,7 @@ export default async function CalendarioPage(props: Props) {
               {cal.first_date && (
                 <Link
                   href={`/?fecha=${cal.first_date}`}
-                  className="inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 text-sm font-semibold text-fg hover:bg-raised"
+                  className="tocable inline-flex min-h-11 items-center rounded-lg border border-line bg-card px-4 text-sm font-semibold text-fg hover:bg-raised"
                 >
                   Ir al inaugural ›
                 </Link>
@@ -115,7 +115,7 @@ export default async function CalendarioPage(props: Props) {
                           <Link
                             key={i}
                             href={`/?fecha=${c.date}`}
-                            className={`${clase} ${es ? "" : "hover:bg-raised"}`}
+                            className={`tocable ${clase} ${es ? "" : "hover:bg-raised"}`}
                             aria-label={`${c.day} de ${m.label}, ${c.games} ${c.games === 1 ? "juego" : "juegos"}`}
                             aria-current={es ? "date" : undefined}
                           >

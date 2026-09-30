@@ -112,3 +112,43 @@ body {
   background: rgb(var(--line));
   border-radius: 2px;
 }
+
+/* ── Micro-animaciones ────────────────────────────────────────────────────
+   Las mismas tres del móvil (mobile/src/components/Movimiento.tsx), y
+   ninguna decora: cada una confirma algo.
+   - `.tocable`: la tarjeta se hunde un poco al hacer clic o tocarla.
+   - `.aparecer`: el contenido de una pestaña entra con un fundido corto.
+   - El subrayado de las pestañas del juego se desliza (GameDetail.tsx).
+   Quien pidió menos movimiento en su sistema no ve ninguna: la tarjeta se
+   queda quieta y el contenido aparece de una vez. */
+.tocable {
+  transition: transform 120ms ease-out, background-color 120ms ease-out;
+}
+.tocable:active {
+  transform: scale(0.98);
+}
+
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.aparecer {
+  animation: aparecer 180ms cubic-bezier(0.33, 1, 0.68, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tocable,
+  .tocable:active {
+    transition: none;
+    transform: none;
+  }
+  .aparecer {
+    animation: none;
+  }
+}

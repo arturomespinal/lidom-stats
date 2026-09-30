@@ -20,7 +20,7 @@ export default function UltimosDiez({ juegos }: { juegos: LastGame[] }) {
             {/* Cada celda abre su juego. */}
             <Link
               href={`/juegos/${j.game_id}`}
-              className="group flex flex-col items-center gap-1"
+              className="tocable group flex flex-col items-center gap-1"
               title={texto}
             >
             <span className="sr-only">{texto}. Abrir el juego</span>

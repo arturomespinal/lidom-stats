@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
@@ -152,7 +153,7 @@ export default function HoyScreen({ navigation, route }: Props) {
               {titulo}
             </Text>
             {/* Saltar a cualquier fecha: la franja solo camina de siete en siete. */}
-            <Pressable
+            <Tocable
               onPress={() =>
                 navigation.push('Calendario', { season: jornada.season_id ?? undefined, activa: jornada.date })
               }
@@ -162,7 +163,7 @@ export default function HoyScreen({ navigation, route }: Props) {
             >
               <Ionicons name="calendar-outline" size={18} color={COLORS.textPrimary} />
               <Text style={styles.calendarioTexto}>Calendario</Text>
-            </Pressable>
+            </Tocable>
           </View>
           <Text style={styles.nota}>{nota}</Text>
         </View>
@@ -170,7 +171,7 @@ export default function HoyScreen({ navigation, route }: Props) {
         {/* Con juegos en curso, la puerta a los marcadores completos: cuenta,
             outs, corredores. La portada da el resumen; aquello, el detalle. */}
         {jornada.any_live && (
-          <Pressable
+          <Tocable
             onPress={() => navigation.push('LiveList')}
             style={({ pressed }) => [styles.enVivo, pressed && styles.presionado]}
             accessibilityRole="button"
@@ -178,7 +179,7 @@ export default function HoyScreen({ navigation, route }: Props) {
             <View style={styles.punto} />
             <Text style={styles.enVivoTexto}>Marcadores en vivo</Text>
             <Text style={styles.enVivoFlecha}>›</Text>
-          </Pressable>
+          </Tocable>
         )}
 
         {destacado && jornada.featured && (

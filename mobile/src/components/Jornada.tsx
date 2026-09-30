@@ -13,6 +13,7 @@ import type {
 import StatusBadge from './StatusBadge';
 import TeamBadge from './TeamBadge';
 import WinProbBand from './WinProbBand';
+import { Tocable } from './Movimiento';
 
 /*
  * Las piezas de la portada "Hoy". Todo lo que dice algo —qué juego se
@@ -52,8 +53,9 @@ export function FranjaFechas({
         const vacio = d.games === 0;
         const [dia, num] = d.label.split(' ');
         return (
-          <Pressable
+          <Tocable
             key={d.date}
+            contenedor={styles.diaCaja}
             disabled={vacio || es}
             onPress={() => onDia(d.date)}
             style={({ pressed }) => [styles.dia, es && styles.diaActivo, pressed && styles.presionado]}
@@ -66,7 +68,7 @@ export function FranjaFechas({
             <Text style={[styles.diaJuegos, es && styles.diaSubActivo, vacio && styles.diaVacio]}>
               {vacio ? '—' : d.games}
             </Text>
-          </Pressable>
+          </Tocable>
         );
       })}
     </View>
@@ -263,14 +265,14 @@ export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?
     );
   }
   return (
-    <Pressable
+    <Tocable
       onPress={onAbrir}
       style={({ pressed }) => [styles.tarjetaChica, pressed && styles.presionado]}
       accessibilityRole="button"
       accessibilityLabel={`${etiqueta} Ver el juego`}
     >
       {cuerpo}
-    </Pressable>
+    </Tocable>
   );
 }
 
@@ -286,7 +288,7 @@ export function CarruselFiguras({
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.carrusel}>
       {figuras.map(f => (
-        <Pressable
+        <Tocable
           key={`${f.kind}-${f.player_id}`}
           onPress={() => onJugador(f)}
           style={({ pressed }) => [styles.figura, pressed && styles.presionado]}
@@ -302,7 +304,7 @@ export function CarruselFiguras({
           </Text>
           <Text style={styles.figuraLinea}>{f.line}</Text>
           <Text style={styles.figuraRival}>vs {TEAM_SHORT_NAMES[f.opponent] ?? f.opponent}</Text>
-        </Pressable>
+        </Tocable>
       ))}
     </ScrollView>
   );
@@ -358,6 +360,8 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  // La caja de Tocable es la que se reparte el ancho; el día la llena.
+  diaCaja: { flex: 1 },
   dia: {
     flex: 1,
     minHeight: 60,

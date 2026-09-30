@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Aparecer, Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { setStatusBarStyle } from 'expo-status-bar';
@@ -30,7 +31,7 @@ const VISIBLES = 12;
  */
 function Destacado({ l, onPress }: { l: TeamLeader; onPress: () => void }) {
   return (
-    <Pressable
+    <Tocable
       onPress={onPress}
       style={({ pressed }) => [styles.destacado, pressed && styles.presionado]}
       accessibilityRole="button"
@@ -47,7 +48,7 @@ function Destacado({ l, onPress }: { l: TeamLeader; onPress: () => void }) {
       <Text style={styles.destacadoNombre} numberOfLines={2}>
         {l.full_name}
       </Text>
-    </Pressable>
+    </Tocable>
   );
 }
 
@@ -332,7 +333,8 @@ export default function TeamScreen({ route, navigation }: Props) {
             setCompleta(false);
           }}
         />
-        <View style={styles.lista}>
+        {/* key: cada lista entra con su fundido al cambiar de pestaña. */}
+        <Aparecer key={plantilla} style={styles.lista}>
           {plantilla === 'bateadores' &&
             equipo.batters.slice(0, completa ? undefined : VISIBLES).map(j => (
               <FilaJugador
@@ -369,7 +371,7 @@ export default function TeamScreen({ route, navigation }: Props) {
               </Text>
             </Pressable>
           )}
-        </View>
+        </Aparecer>
       </View>
 
       {/* 3 ── Temporada a temporada: el diferencial en barras y la tabla ── */}

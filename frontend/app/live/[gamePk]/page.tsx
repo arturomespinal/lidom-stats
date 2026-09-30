@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { notFound } from "next/navigation";
 import Navbar from "@/components/Navbar";
 import GameDetail from "@/components/game/GameDetail";
@@ -22,19 +21,12 @@ export default async function GamePage(props: Props) {
 
   const season = searchParams.season ?? DEFAULT_SEASON;
 
+  // Sin <main> aquí: el detalle abre con la cabecera navy a sangre, como las
+  // fichas, y arma su propia columna debajo.
   return (
     <>
       <Navbar season={season} />
-      <main className="mx-auto max-w-5xl px-4 py-8">
-        <Link
-          href={`/live?season=${season}`}
-          className="mb-4 inline-flex items-center gap-1 text-xs text-dim transition-colors hover:text-fg"
-        >
-          <span aria-hidden>←</span> En Vivo
-        </Link>
-
-        <GameDetail gamePk={gamePk} />
-      </main>
+      <GameDetail gamePk={gamePk} season={season} />
     </>
   );
 }

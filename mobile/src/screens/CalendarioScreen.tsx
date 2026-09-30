@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { fetchCalendar } from '../api';
@@ -105,8 +106,9 @@ export default function CalendarioScreen({ route, navigation }: Props) {
                     const hay = c.games > 0;
                     const es = c.date === activa;
                     return (
-                      <Pressable
+                      <Tocable
                         key={j}
+                        contenedor={styles.caja}
                         disabled={!hay}
                         onPress={() => elegir(c)}
                         style={({ pressed }) => [
@@ -124,7 +126,7 @@ export default function CalendarioScreen({ route, navigation }: Props) {
                       >
                         <Text style={[styles.numero, !hay && styles.vacio, es && styles.textoActivo]}>{c.day}</Text>
                         {hay && <Text style={[styles.juegos, es && styles.subActivo]}>{c.games}</Text>}
-                      </Pressable>
+                      </Tocable>
                     );
                   })}
                 </View>
@@ -172,6 +174,7 @@ const styles = StyleSheet.create({
   cabeza: { flex: 1, textAlign: 'center', fontSize: 11, color: COLORS.textSecondary, paddingVertical: 4 },
   // 44 pt de alto: cada día es un blanco de toque.
   celda: { flex: 1, minHeight: 44 },
+  caja: { flex: 1 },
   dia: { alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
   diaActivo: { backgroundColor: COLORS.ink },
   diaHoy: { borderWidth: 1.5, borderColor: COLORS.ink },

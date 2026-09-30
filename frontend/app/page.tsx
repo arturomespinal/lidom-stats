@@ -71,7 +71,7 @@ export default async function HoyPage(props: Props) {
             {/* Saltar a cualquier fecha: la franja solo camina de siete en siete. */}
             <Link
               href={`/calendario?temporada=${jornada.season_id ?? ""}&activa=${jornada.date}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-card px-3 text-sm font-semibold text-fg hover:bg-raised"
+              className="tocable inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-card px-3 text-sm font-semibold text-fg hover:bg-raised"
             >
               <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="5" width="18" height="16" rx="2" />
@@ -84,7 +84,7 @@ export default async function HoyPage(props: Props) {
           {jornada.any_live && (
             <Link
               href="/live"
-              className="mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-card px-4 text-sm font-semibold text-fg hover:bg-raised"
+              className="tocable mt-3 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-card px-4 text-sm font-semibold text-fg hover:bg-raised"
             >
               <span className="h-2 w-2 rounded-full bg-live" aria-hidden="true" />
               Marcadores en vivo ›

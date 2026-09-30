@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchGameDetail, fetchWinProb } from "@/lib/api";
@@ -12,6 +12,7 @@ import InningGrid from "@/components/game/InningGrid";
 import BoxScore from "@/components/game/BoxScore";
 import Lineups from "@/components/game/Lineups";
 import WinProbBand from "@/components/game/WinProbBand";
+import Heroe from "@/components/ficha/Heroe";
 
 /**
  * Detalle de un juego en la web.
@@ -37,7 +38,7 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-export default function GameDetail({ gamePk }: { gamePk: number }) {
+export default function GameDetail({ gamePk, season }: { gamePk: number; season: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -107,144 +108,227 @@ export default function GameDetail({ gamePk }: { gamePk: number }) {
     };
   }, [gamePk]);
 
+  const volver = (
+    <Link
+      href={`/live?season=${season}`}
+      className="inline-flex min-h-[44px] items-center gap-1 text-xs text-ink-dim transition-colors hover:text-ink-fg"
+    >
+      <span aria-hidden>←</span> En Vivo
+    </Link>
+  );
+
   if (loading) {
+    // Esqueleto con la forma de la página: la franja navy ya está donde va a
+    // estar, y el contenido no salta al llegar.
     return (
-      <div className="space-y-3">
-        <div className="h-24 animate-pulse rounded-lg border border-line bg-card" />
-        <div className="h-64 animate-pulse rounded-lg border border-line bg-card" />
-      </div>
+      <>
+        <Heroe>
+          {volver}
+          <div className="h-[132px]" aria-label="Cargando el juego" />
+        </Heroe>
+        <div className="mx-auto max-w-5xl space-y-3 px-4 pb-10">
+          <div className="h-40 animate-pulse rounded-xl border border-line bg-card" />
+          <div className="h-64 animate-pulse rounded-lg border border-line bg-card" />
+        </div>
+      </>
     );
   }
 
   if (!detail) {
     return (
-      <div className="rounded-lg border border-line bg-card px-6 py-10 text-center">
-        <p className="mb-1 text-sm text-fg2">No se pudo cargar el juego</p>
-        <p className="text-xs text-dim">
-          El juego #{gamePk} no está en seguimiento, o el backend no responde.
-        </p>
-        <Link
-          href="/live"
-          className="mt-4 inline-block text-xs text-dim underline hover:text-fg"
-        >
-          Volver a En Vivo
-        </Link>
-      </div>
+      <main className="mx-auto max-w-5xl px-4 py-8">
+        <div className="rounded-lg border border-line bg-card px-6 py-10 text-center">
+          <p className="mb-1 text-sm text-fg2">No se pudo cargar el juego</p>
+          <p className="text-xs text-dim">
+            El juego #{gamePk} no está en seguimiento, o el backend no responde.
+          </p>
+          <Link href="/live" className="mt-4 inline-block text-xs text-dim underline hover:text-fg">
+            Volver a En Vivo
+          </Link>
+        </div>
+      </main>
     );
   }
 
-  const awayWin = detail.away.runs > detail.home.runs;
-  const homeWin = detail.home.runs > detail.away.runs;
+  const terminado = detail.status === "final";
+  // La línea de contexto junto al estado. En vivo, la media entrada del último
+  // punto del recorrido ("Baja del 7mo"), compuesta en el backend.
+  const ultimo = wp?.points[wp.points.length - 1];
+  const contexto = failed
+    ? "Sin señal · último dato recibido"
+    : terminado && !updating
+      ? "Resultado definitivo"
+      : detail.status === "live" && ultimo
+        ? ultimo.label
+        : null;
 
   return (
-    <article className="overflow-hidden rounded-lg border border-line bg-card">
-      <header className="border-b border-line px-4 py-3">
-        <div className="mb-3 flex items-center gap-2">
+    <>
+      {/* La cabecera: la franja navy de las fichas, sin el plano de color. Un
+          juego es de dos clubes; cada uno se identifica con su teja. */}
+      <Heroe>
+        {volver}
+        <div className="mb-4 mt-1 flex items-center gap-2">
           <StatusBadge status={detail.status} />
-          {failed && <span className="text-[10px] text-warn">sin señal</span>}
-          {!updating && detail.status === "final" && (
-            <span className="text-[10px] text-dim">resultado definitivo</span>
+          {contexto && (
+            <span className={`truncate text-xs ${failed ? "text-ink-fg" : "text-ink-dim"}`}>
+              {contexto}
+            </span>
           )}
         </div>
-
-        <div className="flex items-center gap-3">
-          <TeamSide
-            code={detail.away.team_code}
-            name={detail.away.team_name}
-            runs={detail.away.runs}
-            winning={awayWin}
-          />
-          <span className="text-line">—</span>
-          <TeamSide
-            code={detail.home.team_code}
-            name={detail.home.team_name}
-            runs={detail.home.runs}
-            winning={homeWin}
-            reverse
-          />
+        <div className="max-w-xl space-y-2">
+          <FilaHeroe lado={detail.away} rival={detail.home} terminado={terminado} />
+          <FilaHeroe lado={detail.home} rival={detail.away} terminado={terminado} />
         </div>
+      </Heroe>
 
+      {/* pb-24 en el teléfono: las pestañas van fijas al pie y no deben tapar
+          la última fila. */}
+      <main className="mx-auto max-w-5xl space-y-4 px-4 pb-24 sm:pb-10">
         {/* La franja. Necesita al menos dos puntos para ser una curva; en la
             previa no hay estado que simular y no se pinta nada. */}
         {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
-          <WinProbBand
-            points={wp.points}
-            current={wp.current}
-            homeCode={detail.home.team_code}
-            awayCode={detail.away.team_code}
-            headline={wp.headline}
-          />
+          <section className="max-w-2xl rounded-xl border border-line bg-card px-4 pb-3">
+            <WinProbBand
+              points={wp.points}
+              current={wp.current}
+              homeCode={detail.home.team_code}
+              awayCode={detail.away.team_code}
+              headline={wp.headline}
+            />
+          </section>
         )}
-      </header>
 
-      {/* Pestañas con subrayado, como la barra superior y el kit de
-          referencia. Cada una mide 44 px de alto: es la zona que el pulgar
-          necesita en un teléfono. */}
-      <nav
-        className="flex overflow-x-auto border-b border-line bg-card px-2"
-        aria-label="Secciones del juego"
-      >
+        <article className="overflow-hidden rounded-lg border border-line bg-card">
+          <PestanasJuego activa={tab} onCambio={setTab} />
+          {/* key={tab}: cada pestaña entra con su fundido (.aparecer). */}
+          <div key={tab} className="aparecer">
+            {tab === "relato" && <PlayByPlay detail={detail} />}
+            {tab === "entradas" && <InningGrid detail={detail} />}
+            {tab === "boxscore" && <BoxScore home={detail.home} away={detail.away} />}
+            {tab === "alineacion" && <Lineups home={detail.home} away={detail.away} />}
+          </div>
+        </article>
+      </main>
+    </>
+  );
+}
+
+/**
+ * Las pestañas del juego.
+ *
+ * ── En el teléfono van al pie ───────────────────────────────────────────────
+ * Fijas abajo, repartiendo el ancho: zona del pulgar (reglas de diseño
+ * móvil, punto 1), igual que en la app. Desde `sm` vuelven arriba del
+ * contenido, dentro de la tarjeta: con ratón no hay pulgar que cuidar.
+ *
+ * ── La raya se desliza ──────────────────────────────────────────────────────
+ * Una sola raya que viaja a la pestaña elegida. Se mide el botón activo
+ * (offsetLeft/offsetWidth) al cambiar de pestaña y al cambiar el ancho de la
+ * ventana; la primera vez se coloca sin transición para que no entre volando.
+ * Con "reducir movimiento" salta (motion-reduce).
+ */
+function PestanasJuego({ activa, onCambio }: { activa: TabKey; onCambio: (k: TabKey) => void }) {
+  const refs = useRef<Partial<Record<TabKey, HTMLButtonElement | null>>>({});
+  const [raya, setRaya] = useState<{ left: number; width: number } | null>(null);
+  const [animar, setAnimar] = useState(false);
+
+  useLayoutEffect(() => {
+    const medir = () => {
+      const b = refs.current[activa];
+      if (b) setRaya({ left: b.offsetLeft, width: b.offsetWidth });
+    };
+    medir();
+    window.addEventListener("resize", medir);
+    return () => window.removeEventListener("resize", medir);
+  }, [activa]);
+
+  // Se enciende la transición DESPUÉS de la primera colocación.
+  useEffect(() => {
+    if (raya && !animar) {
+      const id = requestAnimationFrame(() => setAnimar(true));
+      return () => cancelAnimationFrame(id);
+    }
+  }, [raya, animar]);
+
+  return (
+    <nav
+      aria-label="Secciones del juego"
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-line bg-card pb-[env(safe-area-inset-bottom)] sm:static sm:border-b sm:border-t-0 sm:pb-0"
+    >
+      <div className="relative flex sm:px-2">
         {TABS.map((t) => {
-          const on = t.key === tab;
+          const on = t.key === activa;
           return (
             <button
               key={t.key}
+              ref={(el) => {
+                refs.current[t.key] = el;
+              }}
               type="button"
-              onClick={() => setTab(t.key)}
+              onClick={() => onCambio(t.key)}
               aria-pressed={on}
-              className={`min-h-[44px] whitespace-nowrap px-3 text-[13px] font-semibold transition-colors ${
-                on
-                  ? "text-fg shadow-[inset_0_-2px_0_rgb(var(--accent))]"
-                  : "text-dim hover:text-fg"
+              className={`min-h-[48px] flex-1 whitespace-nowrap px-3 text-[13px] font-semibold transition-colors sm:min-h-[44px] sm:flex-none ${
+                on ? "text-fg" : "text-dim hover:text-fg"
               }`}
             >
               {t.label}
             </button>
           );
         })}
-      </nav>
-
-      <div>
-        {tab === "relato" && <PlayByPlay detail={detail} />}
-        {tab === "entradas" && <InningGrid detail={detail} />}
-        {tab === "boxscore" && <BoxScore home={detail.home} away={detail.away} />}
-        {tab === "alineacion" && <Lineups home={detail.home} away={detail.away} />}
+        {raya && (
+          <span
+            aria-hidden="true"
+            className={`pointer-events-none absolute top-0 h-0.5 bg-accent sm:bottom-0 sm:top-auto ${
+              animar ? "transition-[left,width] duration-200 ease-out motion-reduce:transition-none" : ""
+            }`}
+            style={{ left: raya.left, width: raya.width }}
+          />
+        )}
       </div>
-    </article>
+    </nav>
   );
 }
 
-function TeamSide({
-  code,
-  name,
-  runs,
-  winning,
-  reverse,
+/**
+ * Una fila del marcador en la cabecera: teja, nombre, hits y errores,
+ * carreras. Quien va abajo se apaga a `ink-dim` (8.3:1 sobre el navy: se
+ * sigue leyendo), y el ganador de un juego terminado lleva la marca ◂ escrita:
+ * el tono solo no basta.
+ */
+function FilaHeroe({
+  lado,
+  rival,
+  terminado,
 }: {
-  code: string | null;
-  name: string | null;
-  runs: number;
-  winning: boolean;
-  reverse?: boolean;
+  lado: LiveGameDetail["home"];
+  rival: LiveGameDetail["home"];
+  terminado: boolean;
 }) {
+  const atras = lado.runs < rival.runs;
+  const gano = terminado && lado.runs > rival.runs;
+  const extra = [`H ${lado.hits}`, lado.errors != null ? `E ${lado.errors}` : null]
+    .filter(Boolean)
+    .join(" · ");
   return (
-    <div
-      className={`flex min-w-0 flex-1 items-center gap-2.5 ${
-        reverse ? "flex-row-reverse" : ""
-      }`}
-    >
-      <TeamBadge code={code ?? "—"} size="md" />
-      <div className={`min-w-0 flex-1 ${reverse ? "text-right" : ""}`}>
-        <p className="truncate text-xs text-dim">{name ?? "—"}</p>
-        {/* El marcador en Bebas Neue, como en el kit de referencia. */}
-        <p
-          className={`num font-cond text-[40px] leading-none ${
-            winning ? "text-fg" : "text-fg2"
-          }`}
-        >
-          {runs}
+    <div className="flex min-h-[56px] items-center gap-3">
+      <TeamBadge code={lado.team_code ?? "—"} size="md" variant="solid" />
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-base font-bold sm:text-lg ${atras ? "text-ink-dim" : "text-ink-fg"}`}>
+          {lado.team_name ?? lado.team_code ?? "—"}
         </p>
+        <p className="num text-xs text-ink-dim">{extra}</p>
       </div>
+      <p
+        className={`num min-w-[40px] text-right font-cond text-[56px] leading-none sm:text-[64px] ${
+          atras ? "text-ink-dim" : "text-ink-fg"
+        }`}
+      >
+        {lado.runs}
+      </p>
+      <span className="w-3 text-sm text-ink-fg" aria-label={gano ? "ganó" : undefined}>
+        {gano ? "◂" : ""}
+      </span>
     </div>
   );
 }

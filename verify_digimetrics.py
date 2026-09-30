@@ -22,6 +22,7 @@ Y dos que solo corren si hay datos reales:
    balance de ganados y perdidos, y el cruce con la MLB API fijado exacto.
 """
 import json
+import os
 import re
 import sys
 import tempfile
@@ -231,6 +232,41 @@ def fuente(req: httpx.Request):
     return httpx.Response(404)
 
 
+ingestores: list[HistoriaIngestor] = []
+
+
+def Ingestor(**kw) -> HistoriaIngestor:
+    """Un HistoriaIngestor que se cierra al final de su bloque (cerrar_todo)."""
+    i = HistoriaIngestor(**kw)
+    ingestores.append(i)
+    return i
+
+
+def cerrar_todo() -> None:
+    while ingestores:
+        ingestores.pop().close()
+
+
+def abiertos(carpeta) -> list[str]:
+    """Archivos de `carpeta` que este proceso tiene abiertos. En Windows no se
+    pueden borrar (WinError 32) y el TemporaryDirectory revienta al salir; en
+    Linux sí se pueden, así que sin esta comprobación el fallo no se ve aquí.
+    Solo donde existe /proc (Linux); en otros sistemas devuelve []."""
+    fd = Path("/proc/self/fd")
+    if not fd.exists():
+        return []
+    raiz = str(Path(carpeta).resolve())
+    vistos = []
+    for f in fd.iterdir():
+        try:
+            destino = os.readlink(f)
+        except OSError:
+            continue
+        if destino.startswith(raiz):
+            vistos.append(destino)
+    return vistos
+
+
 def contar(engine):
     with Session(engine) as s:
         return {
@@ -253,7 +289,7 @@ with tempfile.TemporaryDirectory() as tmp:
             base_url="http://x", transport=httpx.MockTransport(lambda r: (pedidos.append(r), fuente(r))[1])))
 
     with cliente() as c1:
-        ing = HistoriaIngestor(db_url=base, client=c1)
+        ing = Ingestor(db_url=base, client=c1)
         r = ing.ingest([1961, 1990])
     check("1961 se salta: no se jugó", r["no_jugadas"], [1961])
     check("1990: 27+27+27 líneas de bateo (01 y 03 en la regular, 01 en el round robin)", r["bateo"], 81)
@@ -278,7 +314,7 @@ with tempfile.TemporaryDirectory() as tmp:
 
     antes = len(pedidos)
     with cliente() as c2:
-        r2 = HistoriaIngestor(db_url=base, client=c2).ingest([1990])
+        r2 = Ingestor(db_url=base, client=c2).ingest([1990])
     check("segunda corrida: todo de la caché, cero pedidos al servidor", (len(pedidos) - antes, r2["pedidos_cache"]), (0, 20))
     check("e idempotente: la base queda igual", contar(ing.engine), primera)
 
@@ -286,12 +322,12 @@ with tempfile.TemporaryDirectory() as tmp:
     # vuelve a bajar y sus filas desaparecen: la temporada se reemplaza entera.
     jugados = {"01"}
     with cliente(refrescar=True) as c3:
-        r3 = HistoriaIngestor(db_url=base, client=c3).ingest([1990])
+        r3 = Ingestor(db_url=base, client=c3).ingest([1990])
     despues = contar(ing.engine)
     check("tras la corrección de la fuente no quedan restos del 03",
           (despues["bateo"], despues["pitcheo"], [e[0] for e in despues["equipos"]]), (54, 42, ["01"]))
     check("2020-21 en adelante no se pide (fotos en base64)",
-          lanza(lambda: HistoriaIngestor(db_url=base, client=cliente()).ingest_temporada(2020), ValueError), True)
+          lanza(lambda: Ingestor(db_url=base, client=cliente()).ingest_temporada(2020), ValueError), True)
 
     # Una página que pasa del tope a mitad de temporada (lo que detuvo la
     # primera corrida real en 2020-21): esa temporada se salta ENTERA, sin
@@ -308,11 +344,14 @@ with tempfile.TemporaryDirectory() as tmp:
 
     with DigimetricsClient(cache_dir=f"{tmp}/cache2", intervalo=0, max_bytes=200_000, http=httpx.Client(
             base_url="http://x", transport=httpx.MockTransport(fuente_con_pesada))) as c4:
-        r4 = HistoriaIngestor(db_url=base, client=c4).ingest([1991, 1990])
+        r4 = Ingestor(db_url=base, client=c4).ingest([1991, 1990])
     with Session(ing.engine) as s:
         de_1991 = s.scalar(select(func.count()).select_from(HistBateo).where(HistBateo.temporada == 1991))
     check("temporada con una página pesada: se salta entera y la ingesta sigue",
           (r4["omitidas_por_peso"], r4["temporadas"], de_1991), ([1991], 1, 0))
+    cerrar_todo()
+    check("al terminar no queda ningún archivo abierto en la carpeta temporal (WinError 32 en Windows)",
+          abiertos(tmp), [])
 
 # Las discrepancias conocidas de la fuente no detienen la ingesta; las nuevas sí.
 nombres_cruzada = {d.split(":", 1)[0] for d in parse_bateo_equipo(cruzada).discrepancias}
@@ -338,11 +377,13 @@ with tempfile.TemporaryDirectory() as tmp:
     for conocidas, esperado in (({}, True), ({(1990, "SR", "01", "bateo"): nombres_cruzada}, False)):
         with DigimetricsClient(cache_dir=None, intervalo=0, http=httpx.Client(
                 base_url="http://x", transport=httpx.MockTransport(fuente_cruzada))) as c5:
-            r5 = HistoriaIngestor(db_url=f"sqlite:///{tmp}/d.db", client=c5,
+            r5 = Ingestor(db_url=f"sqlite:///{tmp}/d.db", client=c5,
                                   discrepancias_conocidas=conocidas).ingest([1990])
         check("columnas cruzadas " + ("sin lista: discrepancias que detienen" if esperado
                                       else "en la lista: solo avisos"),
               (bool(r5["discrepancias"]), any("error conocido" in a for a in r5["avisos"])), (esperado, not esperado))
+    cerrar_todo()
+    check("tampoco aquí queda nada abierto", abiertos(tmp), [])
 
 print("\n━━━ 5. El cruce con el esquema de juego ━━━")
 from src.models.database import (  # noqa: E402
@@ -385,6 +426,8 @@ with tempfile.TemporaryDirectory() as tmp:
     r = cruzar(engine)
     check("una carrera limpia de más en la fuente se ve", r["temporadas"]["2015-16"]["AGU"]["pitcheo"], {"CL": (2, 1)})
     check("el informe la muestra", "AGU  CL 2/1" in informe(r), True)
+    engine.dispose()
+    check("ni en la base del cruce", abiertos(tmp), [])
 
 print("\n━━━ 6. La caché real (si existe) ━━━")
 cache = Path("data/raw/digimetrics")
@@ -440,7 +483,9 @@ else:
 
     from sqlalchemy import create_engine  # noqa: E402
 
-    cruce = cruzar(create_engine(f"sqlite:///{base_real}"))
+    motor = create_engine(f"sqlite:///{base_real}")
+    cruce = cruzar(motor)
+    motor.dispose()
     if not cruce["equipos"]:
         print("  (la base no tiene el esquema de juego de 2012-13 en adelante: no hay cruce)")
     else:

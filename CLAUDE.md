@@ -191,7 +191,7 @@ la 2015-16. No cambiar esa clave.
 | `src/models/hist_models.py` | La capa histórica `hist_*` y `etiqueta_historica()` |
 | `src/pipeline/historia_ingestor.py` | `HistoriaIngestor.ingest(temporadas)` — DIGIMETRICS → `hist_*` |
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
-| `verify_digimetrics.py` | 64 comprobaciones del scraper sin red (73 con la caché y la capa histórica); parsea también la caché real si existe |
+| `verify_digimetrics.py` | 67 comprobaciones del scraper sin red (76 con la caché y la capa histórica); parsea también la caché real si existe |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
@@ -1662,6 +1662,13 @@ id_miembro)`, solo conteos (regla 3; los innings como outs, igual que
 `pitching_lines`). `hist_jugadores`, `hist_etapas` y
 `hist_equipos_temporada`. La ingesta **reemplaza la temporada entera** en una
 transacción: idempotente y sin restos si la fuente corrige algo.
+
+En las pruebas, cerrar el ingestor (`HistoriaIngestor.close()`, o usarlo con
+`with`) antes de borrar una base temporal: Windows no borra un SQLite con
+conexiones abiertas en el pool (WinError 32) y Linux sí, así que el fallo solo
+aparece en la PC. `verify_digimetrics.py` comprueba en Linux, vía
+`/proc/self/fd`, que no quede ningún archivo abierto en sus carpetas
+temporales.
 
 Es una capa aparte, sin conexión con `players`: el `idMiembro` de la fuente y
 el id de la MLB no se enlazan todavía. Para 2012-13 en adelante la app sigue

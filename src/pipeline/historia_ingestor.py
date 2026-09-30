@@ -97,6 +97,17 @@ class HistoriaIngestor:
         self.equipos = equipos
         self.discrepancias_conocidas = discrepancias_conocidas
 
+    def close(self) -> None:
+        """Suelta las conexiones del pool. En Windows un archivo SQLite con
+        conexiones abiertas no se puede borrar (WinError 32)."""
+        self.engine.dispose()
+
+    def __enter__(self) -> "HistoriaIngestor":
+        return self
+
+    def __exit__(self, *exc) -> None:
+        self.close()
+
     # ─── Pedidos ────────────────────────────────────────────────────────────
 
     def _etapas(self, temporada: int) -> list[tuple[str, str]]:

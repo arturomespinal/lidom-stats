@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { Ionicons } from '@expo/vector-icons';
 
 import { fetchDay } from '../api';
 import { COLORS, FONTS } from '../constants';
@@ -38,8 +39,8 @@ type Props = NativeStackScreenProps<LiveStackParamList, 'Portada'>;
  * pedir la jornada a ese ritmo mientras tiene el foco. Se programa después de
  * cada respuesta, no con setInterval, para que las peticiones no se apilen.
  */
-export default function HoyScreen({ navigation }: Props) {
-  const [fecha, setFecha] = useState<string | undefined>(undefined);
+export default function HoyScreen({ navigation, route }: Props) {
+  const [fecha, setFecha] = useState<string | undefined>(route.params?.fecha);
   const [jornada, setJornada] = useState<Jornada | null>(null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [refrescando, setRefrescando] = useState(false);
@@ -67,6 +68,15 @@ export default function HoyScreen({ navigation }: Props) {
   useEffect(() => {
     cargar();
   }, [cargar]);
+
+  // El calendario vuelve aquí con la fecha elegida (popTo con parámetros).
+  const fechaElegida = route.params?.fecha;
+  useEffect(() => {
+    if (fechaElegida) {
+      setFecha(fechaElegida);
+      scroll.current?.scrollTo({ y: 0, animated: false });
+    }
+  }, [fechaElegida]);
 
   // Sondeo mientras haya juegos en curso y la pantalla tenga el foco.
   const poll = jornada?.poll_seconds ?? null;
@@ -137,9 +147,23 @@ export default function HoyScreen({ navigation }: Props) {
 
       <View style={recargando && styles.atenuado}>
         <View style={styles.encabezado}>
-          <Text style={styles.titulo} accessibilityRole="header">
-            {titulo}
-          </Text>
+          <View style={styles.tituloFila}>
+            <Text style={styles.titulo} accessibilityRole="header">
+              {titulo}
+            </Text>
+            {/* Saltar a cualquier fecha: la franja solo camina de siete en siete. */}
+            <Pressable
+              onPress={() =>
+                navigation.push('Calendario', { season: jornada.season_id ?? undefined, activa: jornada.date })
+              }
+              style={({ pressed }) => [styles.calendario, pressed && styles.presionado]}
+              accessibilityRole="button"
+              accessibilityLabel="Abrir el calendario de jornadas"
+            >
+              <Ionicons name="calendar-outline" size={18} color={COLORS.textPrimary} />
+              <Text style={styles.calendarioTexto}>Calendario</Text>
+            </Pressable>
+          </View>
           <Text style={styles.nota}>{nota}</Text>
         </View>
 
@@ -233,6 +257,19 @@ const styles = StyleSheet.create({
   // Bebas sin fontWeight (ver FONTS).
   titulo: { fontFamily: FONTS.display, fontSize: 34, lineHeight: 36, color: COLORS.textPrimary },
   nota: { fontSize: 12, lineHeight: 17, color: COLORS.textSecondary },
+  tituloFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
+  calendario: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 44,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  calendarioTexto: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
   lista: { paddingHorizontal: 16, gap: 8 },
   enVivo: {
     flexDirection: 'row',

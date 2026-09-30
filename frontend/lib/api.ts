@@ -1,5 +1,6 @@
 import {
   BattingRow,
+  Calendario,
   Gamelog,
   Jornada,
   JuegoHistorico,
@@ -141,6 +142,11 @@ export async function fetchGame(gameId: string): Promise<JuegoHistorico | null> 
 /** El juego a juego de un jugador en una temporada, del más reciente al más viejo. */
 export async function fetchGamelog(playerId: string, season: string): Promise<Gamelog | null> {
   return apiFetch<Gamelog>(`/players/${encodeURIComponent(playerId)}/gamelog?season=${season}&limit=100`);
+}
+
+/** Las jornadas de una temporada como calendario. Sin temporada, la última. */
+export async function fetchCalendar(season?: string): Promise<Calendario | null> {
+  return apiFetch<Calendario>(season ? `/calendar?season=${encodeURIComponent(season)}` : "/calendar");
 }
 
 /* ── Fichas ──────────────────────────────────────────────────────────────── */

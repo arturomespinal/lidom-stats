@@ -41,7 +41,12 @@ export type FichasParamList = {
 
 export type LiveStackParamList = FichasParamList & {
   /** La portada: la jornada del día (GET /day). Raíz de la primera pestaña. */
-  Portada: undefined;
+  Portada: { fecha?: string } | undefined;
+  /**
+   * Las jornadas de una temporada, para saltar a una fecha. `activa` es la
+   * fecha que muestra la portada: va marcada en el calendario.
+   */
+  Calendario: { season?: string; activa?: string };
   /** Los marcadores en vivo, con diamante y cuenta. Se abre desde Hoy. */
   LiveList: undefined;
   /**

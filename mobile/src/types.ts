@@ -753,3 +753,34 @@ export interface Gamelog {
   batting: FilaJuegoBateo[];
   pitching: FilaJuegoPitcheo[];
 }
+
+/* ── El calendario de jornadas (GET /calendar) ─────────────────────────── */
+
+export interface DiaCalendario {
+  date: string;
+  day: number;
+  /** 0 = día del mes sin juegos: se pinta, no se elige. */
+  games: number;
+  is_today: boolean;
+}
+
+export interface MesCalendario {
+  /** "2025-10". */
+  key: string;
+  /** "Octubre 2025". */
+  label: string;
+  games: number;
+  /** Semanas de lunes a domingo; null = celda fuera del mes. */
+  weeks: (DiaCalendario | null)[][];
+}
+
+export interface Calendario {
+  season_id: string;
+  /** Todas las temporadas de la base, de la más nueva a la más vieja. */
+  seasons: string[];
+  first_date: string | null;
+  last_date: string | null;
+  game_days: number;
+  games: number;
+  months: MesCalendario[];
+}

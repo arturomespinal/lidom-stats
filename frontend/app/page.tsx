@@ -64,9 +64,22 @@ export default async function HoyPage(props: Props) {
       {jornada.poll_seconds && <Refresco segundos={jornada.poll_seconds} />}
       <main className="mx-auto max-w-5xl space-y-10 px-4 pb-10 pt-6">
         <header className="space-y-1">
-          <h1 className="font-cond text-[40px] leading-none tracking-[0.01em] text-fg">
-            {jornada.is_today ? "Hoy" : jornada.label}
-          </h1>
+          <div className="flex items-center justify-between gap-3">
+            <h1 className="font-cond text-[40px] leading-none tracking-[0.01em] text-fg">
+              {jornada.is_today ? "Hoy" : jornada.label}
+            </h1>
+            {/* Saltar a cualquier fecha: la franja solo camina de siete en siete. */}
+            <Link
+              href={`/calendario?temporada=${jornada.season_id ?? ""}&activa=${jornada.date}`}
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-line bg-card px-3 text-sm font-semibold text-fg hover:bg-raised"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="5" width="18" height="16" rx="2" />
+                <path d="M3 10h18M8 3v4M16 3v4" />
+              </svg>
+              Calendario
+            </Link>
+          </div>
           <p className="text-sm text-dim">{nota}</p>
           {jornada.any_live && (
             <Link

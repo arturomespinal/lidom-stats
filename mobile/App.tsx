@@ -11,6 +11,7 @@ import HoyScreen from './src/screens/HoyScreen';
 import LiveScreen from './src/screens/LiveScreen';
 import GameDetailScreen from './src/screens/GameDetailScreen';
 import JuegoScreen from './src/screens/JuegoScreen';
+import CalendarioScreen from './src/screens/CalendarioScreen';
 import type { LiveStackParamList, PilaParamList } from './src/navigation';
 import StandingsScreen from './src/screens/StandingsScreen';
 import BattingScreen from './src/screens/BattingScreen';
@@ -85,6 +86,7 @@ function HoyTab() {
         options={{ headerTitle: () => <Logotipo /> }}
       />
       <LiveStack.Screen name="LiveList" component={LiveScreen} options={{ title: 'En vivo' }} />
+      <LiveStack.Screen name="Calendario" component={CalendarioScreen} options={{ title: 'Calendario' }} />
       <LiveStack.Screen
         name="GameDetail"
         component={GameDetailScreen}

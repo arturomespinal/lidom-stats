@@ -51,6 +51,7 @@ from src.boxscore import equipo_detalle
 from src.jornada import entradas as entradas_nb
 from src.jornada import (
     armar_juego,
+    calendario,
     linea_bateo,
     linea_pitcheo,
     destacado,
@@ -1166,6 +1167,51 @@ def _titular_y_franja(juego: dict, bateo: list[dict], pitcheo: list[dict]) -> tu
     # La misma forma que /live/games/{pk}/winprob, para que los clientes
     # reusen su franja tal cual.
     return titular_destacado(juego, recorrido, frase), win_prob
+
+
+@router.get("/calendar", tags=["Jornada"])
+def get_calendar(
+    season: str | None = Query(
+        None, description='"2025" o "2025-26". Por defecto, la última temporada con juegos.',
+    ),
+):
+    """
+    Las jornadas de una temporada como calendario: meses con sus semanas ya
+    armadas, de lunes a domingo, y cuántos juegos hubo cada día. Es la puerta
+    para saltar a cualquier fecha desde la portada.
+
+    `seasons` lista todas las temporadas de la base, de la más nueva a la más
+    vieja, para el selector.
+    """
+    temporadas = [
+        f["season_id"] for f in query_db(
+            "SELECT DISTINCT season_id FROM games ORDER BY season_id DESC"
+        )
+    ]
+    if not temporadas:
+        raise HTTPException(404, "No hay juegos en la base")
+    season_id = normalize_season_id(season) if season else temporadas[0]
+    if season_id not in temporadas:
+        raise HTTPException(404, f"No hay juegos de {season_id}")
+
+    filas = query_db(
+        f"""
+        SELECT game_date, COUNT(*) AS n FROM games
+         WHERE season_id = :s AND status IN {_ESTADOS_CON_JUEGO}
+         GROUP BY game_date
+        """,
+        {"s": season_id},
+    )
+    conteo = {date.fromisoformat(str(f["game_date"])[:10]): f["n"] for f in filas}
+    return {
+        "season_id": season_id,
+        "seasons": temporadas,
+        "first_date": min(conteo).isoformat() if conteo else None,
+        "last_date": max(conteo).isoformat() if conteo else None,
+        "game_days": len(conteo),
+        "games": sum(conteo.values()),
+        "months": calendario(conteo, hoy_rd()),
+    }
 
 
 @router.get("/day", tags=["Jornada"])

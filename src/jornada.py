@@ -367,3 +367,49 @@ def armar_juego(fila: dict, nombres: dict[str, dict], hoy: Optional[date] = None
     if juego["status"] not in ("final", "live"):
         juego["away"]["runs"] = juego["home"]["runs"] = None
     return juego
+
+
+# ── El calendario de una temporada ──────────────────────────────────────────
+
+MESES_LARGOS = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
+]
+
+
+def calendario(conteo: dict[date, int], hoy: Optional[date] = None) -> list[dict]:
+    """
+    Los meses de una temporada como rejillas de semanas, de lunes a domingo,
+    listas para pintar: el cliente no calcula en qué columna cae el día 1.
+
+    `conteo` son los días CON juegos de la temporada. Cada celda es `None`
+    (fuera del mes) o `{date, day, games, is_today}`. Un día del mes sin
+    juegos va con `games: 0`: se pinta, pero no se puede elegir.
+    """
+    if not conteo:
+        return []
+    primero, ultimo = min(conteo), max(conteo)
+    meses: list[dict] = []
+    y, m = primero.year, primero.month
+    while (y, m) <= (ultimo.year, ultimo.month):
+        dia1 = date(y, m, 1)
+        siguiente = date(y + (m == 12), m % 12 + 1, 1)
+        celdas: list[Optional[dict]] = [None] * dia1.weekday()  # lunes = 0
+        d = dia1
+        while d < siguiente:
+            celdas.append({
+                "date": d.isoformat(),
+                "day": d.day,
+                "games": conteo.get(d, 0),
+                "is_today": d == hoy,
+            })
+            d += timedelta(days=1)
+        celdas += [None] * (-len(celdas) % 7)
+        meses.append({
+            "key": f"{y}-{m:02d}",
+            "label": f"{MESES_LARGOS[m - 1]} {y}",
+            "games": sum(c["games"] for c in celdas if c),
+            "weeks": [celdas[i:i + 7] for i in range(0, len(celdas), 7)],
+        })
+        y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return meses

@@ -163,7 +163,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
-| `verify_game_routes.py` | 307 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -204,6 +204,7 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
 | `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
 | `GET /day?date=` | La jornada: juegos, destacado con titular, figuras y la próxima fecha. Portada Hoy |
+| `GET /calendar?season=` | Las jornadas de una temporada como meses con semanas ya armadas (lunes a domingo) |
 
 `season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
 
@@ -1189,6 +1190,16 @@ Reglas que no conviene deshacer:
   con `router.refresh()` mientras la pestaña se ve (`components/hoy/Refresco.tsx`).
 - La fecha vive en la URL de la web (`/?fecha=`). Un día sin juegos en la
   franja no es enlace: el servidor lo resolvería a otra fecha.
+- **Para saltar lejos está el calendario** (`GET /calendar`; web
+  `/calendario?temporada=&activa=`, móvil `screens/CalendarioScreen.tsx`,
+  ruta `Calendario` de la pila de Hoy). La franja camina de siete en siete, y
+  el juego inaugural quedaba a ~70 toques de la última jornada. Los meses
+  llegan con las semanas armadas de lunes a domingo, con `null` fuera del
+  mes: el cliente no calcula en qué columna cae el día 1. En el móvil, elegir
+  un día hace `popTo('Portada', { fecha })`, así no se apila otra portada.
+  La pantalla raíz de la pestaña se llama `Portada` y no `Hoy`: con el mismo
+  nombre que la pestaña, React Navigation avisa de pantallas anidadas
+  homónimas.
 
 ## Un juego terminado, desde la base
 

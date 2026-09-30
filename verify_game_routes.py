@@ -717,6 +717,26 @@ gj = call(f"/games/{ult['game_id']}/detail")["game"]
 lado = gj["home"] if ult["home"] else gj["away"]
 check("…y ese juego es el que dice la celda", (lado["code"], lado["runs"]), ("AGU", ult["runs_for"]))
 
+print("\n━━━ el calendario de jornadas ━━━")
+cal = call("/calendar")
+check("por defecto, la última temporada", (cal["season_id"], len(cal["seasons"])), ("2025-26", 14))
+check("de la inaugural a la última jornada",
+      (cal["first_date"], cal["last_date"], cal["game_days"], cal["games"]),
+      ("2025-10-15", "2025-12-23", 55, 149))
+check("tres meses", [m["label"] for m in cal["months"]], ["Octubre 2025", "Noviembre 2025", "Diciembre 2025"])
+oct_ = cal["months"][0]
+check("el 1 de octubre de 2025 cae miércoles: dos celdas vacías antes",
+      [c and c["day"] for c in oct_["weeks"][0]], [None, None, 1, 2, 3, 4, 5])
+check("semanas completas de siete", all(len(w) == 7 for m in cal["months"] for w in m["weeks"]), True)
+dias = {c["date"]: c["games"] for m in cal["months"] for w in m["weeks"] for c in w if c}
+check("el calendario cuenta lo mismo que la franja de /day",
+      [dias[x["date"]] for x in call("/day?date=2025-10-15")["strip"] if x["date"] in dias],
+      [x["games"] for x in call("/day?date=2025-10-15")["strip"] if x["date"] in dias])
+check("un día sin juegos va con cero, no se omite", dias["2025-10-14"], 0)
+check("la suma por mes es la de la temporada", sum(m["games"] for m in cal["months"]), 149)
+check("acepta la temporada en formato de la MLB", call("/calendar?season=2012")["first_date"], "2012-10-14")
+call("/calendar?season=1999", expect=404)
+
 # Con la caché en vivo: el juego inaugural a medias, sembrado desde fixtures/
 # por el mismo camino que el poller. Sin capturas se salta — no son parte del
 # repositorio (ver CLAUDE.md).

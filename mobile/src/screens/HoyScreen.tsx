@@ -18,7 +18,7 @@ import {
   TarjetaJuego,
 } from '../components/Jornada';
 
-type Props = NativeStackScreenProps<LiveStackParamList, 'Hoy'>;
+type Props = NativeStackScreenProps<LiveStackParamList, 'Portada'>;
 
 /**
  * La portada: lo que pasó (o pasa) hoy en LIDOM.

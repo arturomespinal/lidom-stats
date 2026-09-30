@@ -89,7 +89,12 @@ export default function CurvaCarrera({
   const ticks = marcasRedondas(lo, hi, 4);
   const ultimo = puntos[puntos.length - 1];
   const ligaUltima = liga[liga.length - 1];
-  const etiquetasX = [0, Math.floor((temporadas.length - 1) / 2), temporadas.length - 1];
+  // Primera, del medio y última, sin repetir: con dos temporadas "la del
+  // medio" es la primera, y dos etiquetas con la misma llave hacían que React
+  // avisara ("two children with the same key") en cada render.
+  const etiquetasX = Array.from(
+    new Set([0, Math.floor((temporadas.length - 1) / 2), temporadas.length - 1]),
+  );
 
   return (
     <View style={styles.tarjeta}>

@@ -77,7 +77,10 @@ function HoyTab() {
   return (
     <LiveStack.Navigator screenOptions={OPCIONES_PILA}>
       <LiveStack.Screen
-        name="Hoy"
+        // "Portada" y no "Hoy": la pestaña ya se llama Hoy, y una pantalla con
+        // el mismo nombre dentro de ella hace que la navegación avise ("screens
+        // with the same name nested inside one another").
+        name="Portada"
         component={HoyScreen}
         options={{ headerTitle: () => <Logotipo /> }}
       />

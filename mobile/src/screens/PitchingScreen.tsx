@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -17,6 +17,8 @@ import { useFichas } from '../navigation';
 import { entradas } from '../formato';
 import { PitchingRow } from '../types';
 import EmptyState from '../components/EmptyState';
+import SelectorTemporada from '../components/SelectorTemporada';
+import { useTemporada } from '../temporada';
 import TeamBadge from '../components/TeamBadge';
 
 type SortKey = 'era' | 'whip' | 'strikeouts_per_nine' | 'strikeouts' | 'innings_pitched' | 'wins' | 'saves' | 'walks_per_nine';
@@ -120,36 +122,48 @@ export default function PitchingScreen() {
   const [data, setData] = useState<PitchingRow[]>([]);
   const [sinConexion, setSinConexion] = useState(false);
   const [sortKey, setSortKey] = useState<SortKey>('era');
+  const { temporada, temporadas, elegir } = useTemporada();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Cada petición lleva número y solo la última escribe: cambiar de temporada
+  // y de orden seguido dispara respuestas que llegan en cualquier orden.
+  const pedido = useRef(0);
 
-  const load = useCallback(async (key: SortKey, isRefresh = false) => {
+  const load = useCallback(async (isRefresh = false) => {
+    const n = ++pedido.current;
     if (isRefresh) setRefreshing(true);
     else setLoading(true);
-    const rows = await fetchPitching(undefined, key);
+    const rows = await fetchPitching(temporada, sortKey);
+    if (n !== pedido.current) return;
     // null = la API no respondió; [] = respondió sin filas. Ver api.ts.
     setSinConexion(rows === null);
     if (rows) setData(rows);
     setLoading(false);
     setRefreshing(false);
-  }, []);
+  }, [temporada, sortKey]);
 
-  useFocusEffect(useCallback(() => { load(sortKey); }, [load, sortKey]));
+  // Una sola vía de carga: el efecto se repite cuando cambia `load`, o sea
+  // cuando cambian la temporada o el orden. Antes el toque en un orden
+  // llamaba a load y además disparaba este efecto: dos peticiones iguales.
+  useFocusEffect(useCallback(() => { load(); }, [load]));
 
-  const handleSort = (k: SortKey) => { setSortKey(k); load(k); };
+  const handleSort = (k: SortKey) => setSortKey(k);
 
   const sortOpt = SORT_OPTIONS.find(o => o.key === sortKey) ?? SORT_OPTIONS[0];
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bgPage }}>
+      <SelectorTemporada temporadas={temporadas} activa={temporada} onChange={elegir} />
       <SortChips active={sortKey} onChange={handleSort} />
 
-      {loading ? (
+      {/* El spinner solo la primera vez. Al cambiar de temporada o de orden,
+          la lista anterior se queda atenuada hasta que llega la nueva. */}
+      {loading && data.length === 0 ? (
         <View style={styles.center}>
           <ActivityIndicator size="large" color={COLORS.accent} />
         </View>
       ) : sinConexion && data.length === 0 ? (
-        <EmptyState sinConexion onReintentar={() => load(sortKey)} />
+        <EmptyState sinConexion onReintentar={() => load()} />
       ) : data.length === 0 ? (
         <EmptyState message="No hay datos de pitcheo." />
       ) : (
@@ -170,8 +184,9 @@ export default function PitchingScreen() {
           )}
           ItemSeparatorComponent={() => <View style={styles.sep} />}
           refreshControl={
-            <RefreshControl refreshing={refreshing} onRefresh={() => load(sortKey, true)} tintColor={COLORS.accent} />
+            <RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={COLORS.accent} />
           }
+          style={loading && !refreshing && styles.atenuado}
         />
       )}
     </View>
@@ -179,8 +194,9 @@ export default function PitchingScreen() {
 }
 
 const styles = StyleSheet.create({
+  atenuado: { opacity: 0.5 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  chipsScroll: { backgroundColor: COLORS.bgHeader, maxHeight: 52 },
+  chipsScroll: { backgroundColor: COLORS.bgHeader, maxHeight: 52, flexGrow: 0, flexShrink: 0 },
   chipsContent: { paddingHorizontal: 12, paddingVertical: 10, gap: 8, flexDirection: 'row' },
   chip: {
     paddingHorizontal: 14,

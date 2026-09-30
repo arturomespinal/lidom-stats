@@ -54,16 +54,27 @@ export default function Pestanas<K extends string>({
   const x = useRef(new Animated.Value(0)).current;
   const w = useRef(new Animated.Value(0)).current;
   const colocada = useRef(false);
+  const barra = useRef<ScrollView>(null);
+  const anchoBarra = useRef(0);
+  const desplazado = useRef(0);
 
   const m = medidas[active];
 
   useEffect(() => {
     if (!m) return;
     if (!colocada.current || reducir) {
+      if (!llenar && m.x + m.w > anchoBarra.current) {
+        barra.current?.scrollTo({ x: Math.max(0, m.x - 16), animated: false });
+      }
       x.setValue(m.x);
       w.setValue(m.w);
       colocada.current = true;
       return;
+    }
+    // Con muchas pestañas (catorce temporadas) la elegida puede quedar fuera
+    // del borde, sobre todo cuando la eligió OTRA pantalla. Se trae a la vista.
+    if (!llenar && (m.x < desplazado.current || m.x + m.w > desplazado.current + anchoBarra.current)) {
+      barra.current?.scrollTo({ x: Math.max(0, m.x - 16), animated: !reducir });
     }
     const cfg = { duration: 180, easing: Easing.out(Easing.cubic), useNativeDriver: false };
     const a = Animated.parallel([
@@ -72,7 +83,7 @@ export default function Pestanas<K extends string>({
     ]);
     a.start();
     return () => a.stop();
-  }, [m?.x, m?.w, reducir, x, w]);
+  }, [m?.x, m?.w, reducir, x, w, llenar]);
 
   const medir = (k: K) => (e: LayoutChangeEvent) => {
     const { x: px, width } = e.nativeEvent.layout;
@@ -85,6 +96,14 @@ export default function Pestanas<K extends string>({
 
   return (
     <ScrollView
+      ref={barra}
+      onLayout={e => {
+        anchoBarra.current = e.nativeEvent.layout.width;
+      }}
+      onScroll={e => {
+        desplazado.current = e.nativeEvent.contentOffset.x;
+      }}
+      scrollEventThrottle={64}
       horizontal
       scrollEnabled={!llenar}
       showsHorizontalScrollIndicator={false}
@@ -122,6 +141,9 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
     maxHeight: 44,
     flexGrow: 0,
+    // Nunca se encoge: en una columna con una lista debajo, la barra se
+    // aplastaba en la web.
+    flexShrink: 0,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },

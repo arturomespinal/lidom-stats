@@ -45,6 +45,12 @@ async function get<T>(path: string, signal?: AbortSignal): Promise<T | null> {
  * la ingesta". Antes las dos caían en la segunda y mandaban a buscar el
  * problema en el lugar equivocado.
  */
+/** Las temporadas con tablas planas, de la más reciente a la más vieja ("2025", "2024"…). */
+export async function fetchSeasons(): Promise<string[] | null> {
+  const data = await get<{ seasons: string[] }>('/seasons');
+  return data ? data.seasons : null;
+}
+
 export async function fetchStandings(season = DEFAULT_SEASON): Promise<StandingRow[] | null> {
   const data = await get<{ data: StandingRow[] }>(`/standings?season=${season}`);
   return data ? data.data : null;

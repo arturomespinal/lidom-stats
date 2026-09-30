@@ -1305,6 +1305,34 @@ el detalle de juego. Móvil (`GameDetailScreen.tsx`) y web
 - La web: `app/live/[gamePk]/page.tsx` ya no envuelve en `<main>`; la cabecera
   va a sangre y el enlace "← En Vivo" vive dentro de ella.
 
+## Selector de temporada en Posiciones, Bateo y Pitcheo (30-sep-2026)
+
+Con las 14 temporadas en las tablas planas, las tres pantallas llevan arriba
+las temporadas en pestañas de subrayado, la más reciente primero, con la lista
+de `/seasons`. Sin elegir nada manda la más reciente que tenga la API:
+`DEFAULT_SEASON` queda solo de respaldo si `/seasons` no responde, así que
+cuando se cargue la 2026-27 aparece sola.
+
+- **Una temporada para las tres.** Quien mira las posiciones de 2015 y pasa a
+  Bateo espera los bateadores de 2015. En el móvil es un valor de módulo con
+  `useSyncExternalStore` (`mobile/src/temporada.ts`), sin contexto ni
+  librería; la lista de `/seasons` se pide una vez por sesión. En la web la
+  temporada vive en la URL y la barra superior ya la llevaba de una página a
+  otra. Las fichas NO la leen: tienen su propia temporada.
+- Tocar un equipo en las posiciones abre su ficha **en esa temporada**.
+- Al cambiar de temporada o de orden, la lista anterior se queda atenuada
+  hasta que llega la nueva (spinner solo la primera vez), y cada petición lleva
+  número para que solo la última escriba. En Bateo y Pitcheo, el toque en un
+  orden además ya no dispara dos peticiones iguales.
+- Con catorce pestañas la elegida puede quedar fuera del borde (2012-13 es la
+  última), sobre todo cuando la eligió otra pantalla: `Pestanas` la trae a la
+  vista, y en la web `SelectorTemporada` hace lo mismo al abrir la página.
+- En la web, el filtro de equipo se conserva al cambiar de año; el mínimo de
+  PA/IP no, porque el de una temporada no sirve para otra de distinto largo.
+- La etiqueta es "2015-16" en todas partes (`etiquetaTemporada`, en
+  `mobile/src/temporada.ts` y `frontend/lib/formato.ts`), también en el chip
+  de la barra superior de la web.
+
 ## Micro-animaciones (30-sep-2026)
 
 Tres, y ninguna decora: cada una confirma algo. Viven en
@@ -1387,11 +1415,10 @@ conteos internos.
 ## Próximos pasos
 
 1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
-2. Selector de temporada en Posiciones, Bateo y Pitcheo: las tablas planas ya tienen las 14 temporadas (`/seasons` las lista), pero el móvil siempre pide la actual y la web solo la recibe por la URL (`?season=2015`).
-3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-4. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
-5. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
-6. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
+3. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
+4. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
+5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal
 

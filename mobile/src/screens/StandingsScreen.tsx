@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useCallback, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
@@ -15,6 +15,8 @@ import { useFichas } from '../navigation';
 import { StandingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
+import SelectorTemporada from '../components/SelectorTemporada';
+import { useTemporada } from '../temporada';
 
 const POS = COLORS.positive;
 const NEG = COLORS.negative;
@@ -149,25 +151,31 @@ function TeamRow({
 
 export default function StandingsScreen() {
   const nav = useFichas();
+  const { temporada, temporadas, elegir } = useTemporada();
   const [data, setData] = useState<StandingRow[]>([]);
   const [sinConexion, setSinConexion] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [cargando, setCargando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  // Cada petición lleva número y solo la última escribe: tocar tres
+  // temporadas seguidas dispara tres respuestas que llegan en cualquier orden.
+  const pedido = useRef(0);
 
   const load = useCallback(async (isRefresh = false) => {
+    const n = ++pedido.current;
     if (isRefresh) setRefreshing(true);
-    else setLoading(true);
+    else setCargando(true);
 
     // NO se reordena aquí. La API ya ordena por PCT y calcula playoff_spot
     // sobre ESE orden; reordenar en el cliente desincronizaría la bandera de
     // la posición mostrada y el corte caería en el equipo equivocado.
-    const filas = await fetchStandings();
+    const filas = await fetchStandings(temporada);
+    if (n !== pedido.current) return;
     // null = la API no respondió; [] = respondió sin filas. Ver api.ts.
     setSinConexion(filas === null);
     if (filas) setData(filas);
-    setLoading(false);
+    setCargando(false);
     setRefreshing(false);
-  }, []);
+  }, [temporada]);
 
   useFocusEffect(useCallback(() => { load(); }, [load]));
 
@@ -178,42 +186,60 @@ export default function StandingsScreen() {
     [data],
   );
 
-  if (loading) {
-    return (
+  // El selector se queda arriba en todos los estados: una temporada sin datos
+  // no debe dejar a nadie sin forma de volver a otra.
+  const selector = <SelectorTemporada temporadas={temporadas} activa={temporada} onChange={elegir} />;
+
+  let cuerpo: React.ReactNode;
+  if (cargando && data.length === 0) {
+    cuerpo = (
       <View style={styles.center}>
         <ActivityIndicator size="large" color={COLORS.accent} />
       </View>
     );
+  } else if (sinConexion && data.length === 0) {
+    cuerpo = <EmptyState sinConexion onReintentar={() => load()} />;
+  } else if (data.length === 0) {
+    cuerpo = <EmptyState />;
+  } else {
+    cuerpo = (
+      <FlatList
+        data={data}
+        keyExtractor={item => item.team_id}
+        ListHeaderComponent={Header}
+        renderItem={({ item, index }) => (
+          <>
+            <TeamRow
+              item={item}
+              rank={index + 1}
+              // El equipo abre en la MISMA temporada: desde las posiciones de
+              // 2015 se espera el Licey de 2015.
+              onPress={() => nav.push('Equipo', { code: item.team_id, season: temporada })}
+            />
+            {index === cutIndex && <Cutline />}
+          </>
+        )}
+        ListFooterComponent={<Legend />}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={() => load(true)}
+            tintColor={COLORS.accent}
+          />
+        }
+        // Al cambiar de temporada la tabla anterior se queda, atenuada, hasta
+        // que llega la nueva: seis filas que parpadean a un spinner a cada
+        // toque serían peor que un instante de tabla vieja.
+        style={[{ backgroundColor: COLORS.bgPage }, cargando && !refreshing && styles.atenuado]}
+      />
+    );
   }
 
-  if (sinConexion && data.length === 0) return <EmptyState sinConexion onReintentar={() => load()} />;
-  if (data.length === 0) return <EmptyState />;
-
   return (
-    <FlatList
-      data={data}
-      keyExtractor={item => item.team_id}
-      ListHeaderComponent={Header}
-      renderItem={({ item, index }) => (
-        <>
-          <TeamRow
-            item={item}
-            rank={index + 1}
-            onPress={() => nav.push('Equipo', { code: item.team_id })}
-          />
-          {index === cutIndex && <Cutline />}
-        </>
-      )}
-      ListFooterComponent={<Legend />}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={() => load(true)}
-          tintColor={COLORS.accent}
-        />
-      }
-      style={{ backgroundColor: COLORS.bgPage }}
-    />
+    <View style={{ flex: 1, backgroundColor: COLORS.bgPage }}>
+      {selector}
+      {cuerpo}
+    </View>
   );
 }
 
@@ -230,6 +256,7 @@ function Legend() {
 }
 
 const styles = StyleSheet.create({
+  atenuado: { opacity: 0.5 },
   center: {
     flex: 1,
     justifyContent: 'center',

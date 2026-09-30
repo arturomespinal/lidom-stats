@@ -107,3 +107,9 @@ export function marcasRedondas(lo: number, hi: number, max = 4): number[] {
   }
   return [lo, hi];
 }
+
+/** "2015" → "2015-16": la MLB nombra la campaña invernal por el año en que empieza. */
+export function etiquetaTemporada(s: string): string {
+  const y = Number(s);
+  return Number.isInteger(y) ? `${y}-${String((y + 1) % 100).padStart(2, "0")}` : s;
+}

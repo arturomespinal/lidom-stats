@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 import PlayerSearch from "@/components/PlayerSearch";
+import { etiquetaTemporada } from "@/lib/formato";
 
 // "Hoy" es la portada, como la primera pestaña del móvil. Los marcadores en
 // vivo (/live) se abren desde ahí cuando hay juegos en curso.
@@ -72,8 +73,8 @@ export default function Navbar({ season }: Props) {
             de índice. */}
         <div className="ml-auto flex shrink-0 items-center gap-2 pl-2">
           <PlayerSearch />
-          <span className="hidden rounded bg-header px-2 py-1 text-xs text-dim sm:inline">
-            {season}
+          <span className="num hidden rounded bg-header px-2 py-1 text-xs text-dim sm:inline">
+            {etiquetaTemporada(season)}
           </span>
         </div>
       </div>

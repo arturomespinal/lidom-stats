@@ -1645,7 +1645,10 @@ Las dos formas en que un scraper falla en silencio, cubiertas:
 
 `python main.py ingest-historia` sale con código 1 si alguna fila tiene tasas
 que no cuadran, y `verify_digimetrics.py` parsea toda la caché real cuando
-existe y exige cero, fuera de las conocidas.
+existe y exige cero, fuera de las conocidas. Solo las páginas hasta
+`ULTIMA_TEMPORADA`: la caché de Arturo guarda también parte de 2020-21 (la
+primera corrida la bajó antes de toparse con una página pesada), con 20 filas
+descuadradas en Águilas y Licey que nunca llegan a la base.
 
 **Las conocidas son errores de la propia fuente**, revisados a mano y listados
 en `DISCREPANCIAS_CONOCIDAS` (`historia_ingestor.py`), página por página y

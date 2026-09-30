@@ -207,7 +207,7 @@ from src.models.hist_models import (  # noqa: E402
     HistBateo, HistEquipoTemporada, HistEtapa, HistJugador, HistPitcheo, etiqueta_historica,
 )
 from src.pipeline.historia_ingestor import (  # noqa: E402
-    DISCREPANCIAS_CONOCIDAS, HistoriaIngestor, separar_conocidas,
+    DISCREPANCIAS_CONOCIDAS, ULTIMA_TEMPORADA, HistoriaIngestor, separar_conocidas,
 )
 
 check("etiquetas: verano hasta 1954, invierno desde 1955",
@@ -437,18 +437,27 @@ if not paginas:
 else:
     import gzip
 
-    malas, conocidas, filas = [], [], 0
+    malas, conocidas, filas, fuera = [], [], 0, 0
+    revisadas = 0
     for archivo in paginas:
+        q = dict(re.findall(r"(id[A-Za-z]+)-([A-Za-z0-9]*)", archivo.name))
+        # Solo las temporadas que se ingestan. La caché puede tener páginas
+        # de después (la primera corrida real bajó parte de 2020-21 antes de
+        # toparse con una página pesada); esas nunca llegan a la base.
+        if int(q["idTemporada"]) > ULTIMA_TEMPORADA:
+            fuera += 1
+            continue
+        revisadas += 1
         html = gzip.decompress(archivo.read_bytes()).decode("utf-8")
         es_pitcheo = "Lanzamiento" in archivo.parent.name
         tabla = (parse_pitcheo_equipo if es_pitcheo else parse_bateo_equipo)(html)
         filas += len(tabla.filas)
-        q = dict(re.findall(r"(id[A-Za-z]+)-([A-Za-z0-9]*)", archivo.name))
         clave = (int(q["idTemporada"]), q["idEtapa"], q["idEquipo"], "pitcheo" if es_pitcheo else "bateo")
         nuevas, ya = separar_conocidas(clave, tabla.discrepancias)
         malas += [f"{archivo.name}: {d}" for d in nuevas]
         conocidas += [(clave, d.split(":", 1)[0]) for d in ya]
-    print(f"  {len(paginas)} páginas, {filas} filas")
+    print(f"  {revisadas} páginas, {filas} filas"
+          + (f" ({fuera} de después de {ULTIMA_TEMPORADA} ignoradas: no se ingestan)" if fuera else ""))
     for m in malas[:20]:
         print(f"    {m}")
     check("ninguna fila de la caché con tasas que no cuadren, fuera de las conocidas", len(malas), 0)

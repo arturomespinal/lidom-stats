@@ -48,7 +48,7 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las siete suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las ocho suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -58,6 +58,10 @@ python verify_live_poller.py         # poller y cadena de parches
 python verify_boxscore_ingestor.py   # ingestor contra boxscore sintético
 python verify_api_models.py          # modelos Pydantic contra JSON real
 python verify_winprob.py             # modelo de probabilidad contra los datos reales
+python verify_capas.py               # tablas planas contra el esquema de juego, temporada por temporada
+
+# Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
+# for /L %y in (2012,1,2025) do python main.py ingest %y
 ```
 
 **No hay pruebas de pytest.** El `pytest` que estuvo documentado aquí no corría
@@ -164,6 +168,7 @@ la 2015-16. No cambiar esa clave.
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 34 comprobaciones del ingestor contra un boxscore sintético |
 | `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
+| `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
@@ -245,9 +250,21 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 
 ## Validación cruzada
 
-Las dos capas nacen de la misma API por caminos independientes, así que deben coincidir. Para 2025-26 coinciden al dígito: 9.998 AB, 2.472 H, 195 HR, 1.209 ER, 2.351 K, 149 W, 149 L, 72 SV, y los seis equipos de `v_standings` reproducen exacto la tabla `standings`.
+Las dos capas nacen de la misma API por caminos independientes, así que deben coincidir. `verify_capas.py` lo comprueba en cada temporada que esté en las dos: posiciones equipo por equipo, totales de bateo y pitcheo de la liga, y jugador por jugador (cruzado por `players.mlb_id`, sumando los equipos de quien cambió de club). Antes de eso comprueba que cada juego final cuadre consigo mismo: las carreras de bateo de cada equipo y las permitidas por el pitcheo rival suman el marcador, en los 2.005 juegos.
 
-Única diferencia conocida: **Enmanuel Mejía**, 5 juegos en la vista contra 4 en la tabla plana. No es un bug — sus IP coinciden (10 outs = 3.33). La tabla plana lee `gamesPlayed` de `/stats`, que para lanzadores no cuenta igual que las apariciones reales en boxscores. La vista es la correcta.
+Con las 14 temporadas cargadas (30-sep-2026): **8 idénticas al dígito** (2012-13 a 2015-16, 2018-19, 2019-20, 2024-25, 2025-26). Para 2025-26: 9.998 VB, 2.472 H, 195 HR, 1.209 CL, 2.351 K, 72 SV. Las otras seis difieren por causas conocidas, y la suite las fija EXACTAS —cuánto cambia cada total y qué jugadores—, así que cualquier diferencia nueva la hace fallar:
+
+- **Forfeits (2016-17, 2022-23).** El juego no tiene boxscore (ver "Los forfeits no entran en las posiciones"). La suite exige que la diferencia quede confinada a los dos equipos de ese juego, y a un juego como mucho en posiciones.
+- **Discrepancias de la propia MLB API (2017-18, 2020-21, 2021-22, 2023-24).** `/stats` no coincide con la suma de sus propios boxscores. Como los boxscores sí cuadran con el marcador juego por juego, la diferencia está en `/stats`, no en nuestra agregación:
+  - 2017-18 y 2023-24: una jugada reanotada después del juego (un hit, un VB, un out, un robo).
+  - 2020-21: tres carreras de menos en `/stats`. Esa campaña usó el corredor automático en extrainnings; lo más probable es que `/stats` no le acredite la carrera.
+  - 2021-22: un bloque de Escogido y Águilas (5 bateadores, 7 lanzadores, una derrota) que está en `/stats` y en ningún boxscore. Las posiciones sí cuadran, así que no es un juego perdido.
+
+**Para las cifras de la app manda el esquema de juego**: es el que se puede auditar juego por juego.
+
+Otra diferencia que no se compara a propósito: juegos jugados. **Enmanuel Mejía** tiene 5 juegos en la vista contra 4 en la tabla plana, con las mismas IP (10 outs = 3.33). La tabla plana lee `gamesPlayed` de `/stats`, que para lanzadores no cuenta igual que las apariciones reales en boxscores. La vista es la correcta.
+
+Los mínimos de calificación de las tablas planas se ajustan solos al largo de cada temporada: 2020-21 (30 juegos por equipo) pide 93 PA y 18 IP; 2012-13 (hasta 51), 158 PA y 30.6 IP.
 
 Nota de alcance: esto prueba que la agregación es correcta, **no** que los datos de la MLB lo sean. Contrastar contra el portal de LIDOM requeriría el scraper secundario.
 
@@ -1370,7 +1387,7 @@ conteos internos.
 ## Próximos pasos
 
 1. Afinar `on_final`: hoy reingesta la temporada apoyándose en el checkpoint; sería más limpio ingestar solo ese `gamePk`.
-2. Completar las tablas planas del backfill: `python main.py ingest <año>` para 2012–2023. El esquema de juego ya tiene las 14 temporadas; las planas solo 2024 y 2025.
+2. Selector de temporada en Posiciones, Bateo y Pitcheo: las tablas planas ya tienen las 14 temporadas (`/seasons` las lista), pero el móvil siempre pide la actual y la web solo la recibe por la URL (`?season=2015`).
 3. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
 4. Cerrar la deuda de seguridad de la API antes de desplegar (autenticación, límite de tasa, CORS por configuración, `/health`).
 5. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.

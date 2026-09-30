@@ -9,6 +9,8 @@ from sqlalchemy import text
 
 # Registrar flat_models en Base.metadata antes de init_db()
 from src.models import flat_models  # noqa: F401
+# Y las de la capa histórica (hist_*, incluida hist_enlaces), por lo mismo.
+from src.models import hist_models  # noqa: F401
 from src.constants import LIDOM_TEAMS, TEAM_CODE_TO_MLB_ID
 from src.models.database import get_engine, init_db
 from src.playoffs import PLAYOFF_SPOTS, annotate_playoff_race, games_behind
@@ -69,6 +71,11 @@ app.add_middleware(
 from api.game_routes import router as game_router  # noqa: E402
 
 app.include_router(game_router)
+
+# La historia de la liga (DIGIMETRICS + MLB API): api/historia_routes.py.
+from api.historia_routes import router as historia_router  # noqa: E402
+
+app.include_router(historia_router)
 
 app.include_router(live_router)
 

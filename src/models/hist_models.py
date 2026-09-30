@@ -156,3 +156,28 @@ class HistPitcheo(Base):
         Index("ix_hist_pitcheo_miembro", "id_miembro"),
         Index("ix_hist_pitcheo_temporada_equipo", "temporada", "team_code"),
     )
+
+
+class HistEnlace(Base):
+    """
+    Un miembro de DIGIMETRICS ↔ un jugador de la MLB API (players.player_id).
+
+    Lo arma src/historia.py (`enlazar`) con las temporadas que tienen las dos
+    fuentes (2012-13 a 2019-20): mismo equipo, misma temporada, y el nombre o
+    los números de esa temporada. Varios idMiembro pueden apuntar al mismo
+    jugador (la fuente a veces le abre una ficha nueva), nunca al revés.
+
+    Se reconstruye entera en cada corrida: es un derivado de las otras tablas.
+    """
+
+    __tablename__ = "hist_enlaces"
+
+    id_miembro: Mapped[int] = mapped_column(Integer, primary_key=True)
+    player_id: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
+    # "nombre": nombre igual (sin tildes ni mayúsculas) en el mismo equipo y
+    # temporada. "numeros": apellido parecido y los mismos números esa
+    # temporada (Dee Gordon ↔ Dee Strange-Gordon, Nicholas Blake Solak ↔ Nick
+    # Solak).
+    metodo: Mapped[str] = mapped_column(String(10), nullable=False)
+    # En cuántos equipo-temporada coincidieron.
+    coincidencias: Mapped[int] = mapped_column(Integer, nullable=False)

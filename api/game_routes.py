@@ -21,6 +21,7 @@ from datetime import date
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
+from api.historia_routes import historia_de_jugador, historicos_que_coinciden
 from src.carrera import (
     carrera_bateo,
     carrera_pitcheo,
@@ -341,9 +342,19 @@ def search_players(
         """,
         {"q": f"%{q}%", "limit": limit},
     )
-    if not rows:
+    # Y los que solo existen en DIGIMETRICS (antes de 2012-13, sin enlace a la
+    # MLB API). Van aparte, en `historicos`: no tienen player_id y su ficha es
+    # /historia/miembros/{id_miembro}. Un cliente viejo los ignora sin romperse.
+    with engine.connect() as conn:
+        historicos = historicos_que_coinciden(conn, q, limit)
+    if not rows and not historicos:
         raise HTTPException(404, f"Ningún jugador coincide con '{q}'")
-    return {"query": q, "count": len(rows), "data": [anotar_lateralidad(r) for r in rows]}
+    return {
+        "query": q,
+        "count": len(rows),
+        "data": [anotar_lateralidad(r) for r in rows],
+        "historicos": historicos,
+    }
 
 
 @router.get("/players/{player_id}", tags=["Jugadores"])
@@ -388,6 +399,8 @@ def get_player_profile(player_id: str):
     bio["age"] = edad(bio.get("birth_date"))
 
     lanzador = es_lanzador(batting, pitching)
+    with engine.connect() as conn:
+        historia = historia_de_jugador(conn, player_id, batting, pitching)
     return {
         # Con `bats_label` y `throws_label` ya compuestos: ver src/lateralidad.py.
         "player": bio,
@@ -400,6 +413,10 @@ def get_player_profile(player_id: str):
         "context": contexto_del_jugador(
             player_id, bio, batting, pitching, "pitching" if lanzador else "batting"
         ),
+        # Sus temporadas antes de 2012-13 (DIGIMETRICS) y la carrera completa
+        # con las dos fuentes. None si no tiene años anteriores. Ver
+        # api/historia_routes.py.
+        "history": historia,
     }
 
 

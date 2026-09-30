@@ -52,6 +52,7 @@ python main.py ingest-historia                # 1951-2019, ~2.300 pedidos a 1 po
 python main.py ingest-historia 1951 2011      # un rango
 python main.py ingest-historia --sin-red      # reprocesar solo desde la caché
 python main.py cruzar-historia                # DIGIMETRICS contra la MLB API, 2012-13 a 2019-20
+python main.py enlazar-historia               # jugadores DIGIMETRICS ↔ MLB API (ingest-historia ya lo hace)
 
 # Levantar la API
 uvicorn api.main:app --reload          # http://localhost:8000
@@ -60,7 +61,7 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las diez suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las once suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -73,6 +74,7 @@ python verify_winprob.py             # modelo de probabilidad contra los datos r
 python verify_capas.py               # tablas planas contra el esquema de juego, temporada por temporada
 python verify_seguridad.py           # la API en modo producción: límite, CORS, diagnóstico con clave
 python verify_digimetrics.py         # scraper de DIGIMETRICS contra páginas reales guardadas
+python verify_historia.py            # enlace entre fuentes, carrera completa y líderes de todos los tiempos
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -192,11 +194,14 @@ la 2015-16. No cambiar esa clave.
 | `src/pipeline/historia_ingestor.py` | `HistoriaIngestor.ingest(temporadas)` — DIGIMETRICS → `hist_*` |
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
 | `verify_digimetrics.py` | 67 comprobaciones del scraper sin red (76 con la caché y la capa histórica); parsea también la caché real si existe |
+| `src/historia.py` | Enlace DIGIMETRICS ↔ MLB API, carrera completa de las dos fuentes y líderes de todos los tiempos |
+| `api/historia_routes.py` | `/historia/lideres`, `/historia/miembros/{id}`, el bloque `history` de la ficha y los `historicos` del buscador |
+| `verify_historia.py` | El enlace, la carrera sin contar dos veces 2012-2019, los líderes; contra una base sintética y contra la real |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
-Las diez suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+Las once suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
 
 ## Endpoints
@@ -1712,10 +1717,63 @@ histórica: las 66 temporadas, las doce etapas descuadradas, una huella por
 temporada (la suma de diferencias absolutas, exacta) y los diagnósticos de
 arriba.
 
+## La historia en la API (30-sep-2026)
+
+Con la capa histórica cargada, la app puede mostrar la carrera completa de un
+jugador y los líderes de todos los tiempos. Todo sale de `src/historia.py`.
+
+### La regla: cada temporada sale de UNA sola fuente
+
+Antes de 2012-13, DIGIMETRICS (la única que hay). Desde 2012-13, la MLB API.
+Las temporadas 2012-2019 de DIGIMETRICS solo sirven para enlazar y para el
+cruce; sumarlas contaría esos años dos veces. Y solo serie regular, que es
+como se cuentan los récords (`ANIO_CORTE = 2012`).
+
+### El enlace entre fuentes
+
+`hist_enlaces`: idMiembro de DIGIMETRICS → `players.player_id`. Lo arma
+`enlazar()` con los años que tienen las dos fuentes (2012-13 a 2019-20):
+
+1. **Por nombre**: el nombre normalizado (sin tildes, puntos ni "Jr.") es
+   igual en el mismo equipo y temporada. Si hay dos candidatos (dos Luis De
+   La Cruz), no decide.
+2. **Por números**, para los que quedan: en el mismo equipo y temporada, un
+   apellido parecido con los mismos números (±5 VB, ±3 H, ±6 outs). Hace falta
+   volumen (10 entre VB y outs) o un nombre bastante parecido, y un candidato
+   único. Así se enlazan Dee Gordon ↔ Dee Strange-Gordon, Nicholas Blake Solak
+   ↔ Nick Solak, "Yasmani Grandall" ↔ Yasmani Grandal.
+
+Con la base real: **1.588 de 1.614 (98,4%)**; 1.490 por nombre y 98 por
+números. Se rehace al final de cada `ingest-historia` y con
+`python main.py enlazar-historia`.
+
+### Lo que expone la API
+
+| Endpoint | Qué da |
+|----------|--------|
+| `GET /historia/lideres?group=bateo&stat=hr` | Líderes de todos los tiempos, serie regular, las dos fuentes sumadas por persona. Trae la lista de `categories` |
+| `GET /historia/miembros/{id_miembro}` | La ficha de un jugador que solo está en DIGIMETRICS: temporadas con etapas, carrera regular y postemporada aparte |
+| `GET /players/{id}` → `history` | Sus temporadas antes de 2012-13 y la carrera completa. `null` si no tiene años anteriores |
+| `GET /players/search` → `historicos` | Los que solo están en DIGIMETRICS. Lista aparte: no tienen `player_id`. Ya no da 404 si solo hay históricos |
+
+- **Mínimos de carrera para las tasas:** 1.500 apariciones al plato y 400
+  entradas, unas 7 temporadas completas en LIDOM.
+- **Líderes reales como prueba:** Polonia 927 hits, Mota .333, Diómedes Olivo
+  86 victorias, Marichal 1.87 de efectividad, Juan Francisco 85 jonrones y
+  Asencio 167 salvados. Los dos últimos son carreras que cruzan las dos fuentes.
+- **Búsqueda de históricos en Python, no con LIKE:** SQLite solo pasa a
+  minúsculas las letras sin tilde (`LOWER('PEÑA')` da `peÑa`), y los años
+  viejos están en mayúsculas. Se compara con el nombre normalizado, así "pena"
+  encuentra a "TONY PEÑA".
+- **Los líderes se guardan 10 minutos en memoria (`CacheCarreras`):**
+  recorrer todas las líneas de las dos fuentes tarda ~0,3 s.
+- **Nombres para mostrar:** los que la fuente escribe en mayúsculas pasan a
+  tipo título ("Tony Peña"); los demás se respetan.
+
 ## Próximos pasos
 
 1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Exponer la historia (1951-2019 ya cargada y cruzada): endpoints y pantallas (líderes de todos los tiempos, la carrera completa de un jugador), y enlazar `idMiembro` con los jugadores de la MLB API.
+2. Pantallas de la historia en la web y el móvil: récords de todos los tiempos, la ficha de un histórico y los años anteriores a 2012-13 en la ficha de cada jugador (los endpoints ya están).
 3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal

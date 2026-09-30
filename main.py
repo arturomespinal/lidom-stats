@@ -28,6 +28,8 @@ Modos:
       --refrescar                 Vuelve a bajar aunque esté en la caché
   cruzar-historia                 Compara la capa histórica con la MLB API
                                   en las temporadas que tienen las dos
+  enlazar-historia                Enlaza los jugadores de DIGIMETRICS con los
+                                  de la MLB API (ingest-historia ya lo hace)
 
 La temporada va en el formato crudo de la MLB API y se nombra por el año en
 que EMPIEZA la campaña: "2025" es la 2025-26. Por defecto, "2025".
@@ -130,6 +132,12 @@ def main():
             )
         for aviso in r["avisos"]:
             logger.warning(aviso)
+        # Con la capa al día, se rehacen los enlaces con la MLB API: la
+        # carrera completa y los líderes de todos los tiempos dependen de ellos.
+        from src.historia import enlazar
+        from src.models.database import get_engine
+        e = enlazar(get_engine())
+        logger.info(f"Enlaces con la MLB API: {e['enlazados']} de {e['enlazables']} ({e['por_metodo']})")
         if r["discrepancias"]:
             # Una tasa publicada que no cuadra con sus conteos: o una columna
             # se leyó mal o la fuente tiene un error. No se esconde.
@@ -137,6 +145,16 @@ def main():
                 logger.error(d)
             logger.error(f"{len(r['discrepancias'])} filas con tasas que no cuadran")
             sys.exit(1)
+
+    # ── Enlaces DIGIMETRICS ↔ MLB API ────────────────────────────────────────
+    elif mode == "enlazar-historia":
+        from src.historia import enlazar
+        from src.models.database import get_engine
+        e = enlazar(get_engine())
+        logger.success(
+            f"✅ Enlazados {e['enlazados']} de {e['enlazables']} jugadores de 2012-13 a 2019-20 "
+            f"({e['por_metodo']}); sin enlace: {e['sin_enlace']}"
+        )
 
     # ── Capa histórica contra la MLB API ─────────────────────────────────────
     elif mode == "cruzar-historia":

@@ -1080,8 +1080,8 @@ Lo que cambia respecto a la web:
   desplazan —React Native no tiene `sticky` horizontal: son dos columnas con
   filas de la misma altura fija—. Tocar la celda fija abre el equipo **en esa
   temporada**, no en la actual.
-- **Equipo:** la temporada se elige con pestañas pegadas arriba (la web solo
-  la recibe por la URL). Al cambiarla, lo anterior se queda atenuado hasta que
+- **Equipo:** la temporada se elige con el selector pegado arriba (ver
+  "Selector de temporada"). Al cambiarla, lo anterior se queda atenuado hasta que
   llega lo nuevo, y cada petición lleva número: solo la última escribe el
   estado. Los destacados van en carrusel; la plantilla muestra 12 filas y el
   resto a un toque, para no enterrar el año a año bajo 1.700 pt de lista.
@@ -1143,8 +1143,9 @@ los mismos nombres: `Heroe`, `Monograma`, `Seccion`, `PuestoLiga`,
   sobre el plano** — blanco sobre el amarillo de Águilas da 2:1. En el
   teléfono el plano mide 176 px y la columna de texto no pasa del 52%; en la
   web, desde `sm`, el plano ocupa todo el alto y el texto el 58%. El nombre se
-  achica para caber (`adjustsFontSizeToFit` en el móvil, `NombreHeroe` en la
-  web): partir "RODRÍGUEZ" a media palabra es peor.
+  achica para caber (`tamanoNombre` en el móvil, `NombreHeroe` en la web):
+  partir "RODRÍGUEZ" a media palabra es peor. Ver "Nada de
+  adjustsFontSizeToFit".
 - **El monograma** (iniciales en teja navy con la esquina cortada) va sobre el
   plano. Nada de fotos ni escudos: ver la guía legal.
 - **Una sola serie con color en cada gráfica.** El jugador o el equipo en
@@ -1159,8 +1160,9 @@ los mismos nombres: `Heroe`, `Monograma`, `Seccion`, `PuestoLiga`,
   gráficas miden su contenedor (`useAncho`) en vez de escalar un `viewBox`,
   para que las letras no bajen a 7 px en un teléfono.
 - **Bebas no trae el glifo "º"**: el ordinal va en Archivo al lado del número.
-- La temporada de la ficha de equipo en la web va en pestañas pegadas bajo la
-  barra (`TemporadaTabs`), que son enlaces: la temporada sigue en la URL.
+- La temporada de la ficha de equipo se elige con el mismo selector que
+  Posiciones (ver "Selector de temporada"), con el récord de cada campaña en
+  la lista.
 
 ## La portada Hoy (29-sep-2026)
 
@@ -1305,33 +1307,70 @@ el detalle de juego. Móvil (`GameDetailScreen.tsx`) y web
 - La web: `app/live/[gamePk]/page.tsx` ya no envuelve en `<main>`; la cabecera
   va a sangre y el enlace "← En Vivo" vive dentro de ella.
 
-## Selector de temporada en Posiciones, Bateo y Pitcheo (30-sep-2026)
+## Selector de temporada (30-sep-2026)
 
-Con las 14 temporadas en las tablas planas, las tres pantallas llevan arriba
-las temporadas en pestañas de subrayado, la más reciente primero, con la lista
-de `/seasons`. Sin elegir nada manda la más reciente que tenga la API:
-`DEFAULT_SEASON` queda solo de respaldo si `/seasons` no responde, así que
-cuando se cargue la 2026-27 aparece sola.
+Posiciones, Bateo, Pitcheo y la ficha de equipo eligen la temporada con **un
+botón que dice cuál se está viendo** ("TEMPORADA 2025-26 ⌄") y abre la lista
+entera. Primero fueron pestañas de subrayado; en el iPhone catorce pestañas no
+cabían, la elegida quedaba cortada por el borde y había que deslizar para
+descubrir las demás (captura de Arturo, 30-sep).
 
-- **Una temporada para las tres.** Quien mira las posiciones de 2015 y pasa a
-  Bateo espera los bateadores de 2015. En el móvil es un valor de módulo con
-  `useSyncExternalStore` (`mobile/src/temporada.ts`), sin contexto ni
-  librería; la lista de `/seasons` se pide una vez por sesión. En la web la
-  temporada vive en la URL y la barra superior ya la llevaba de una página a
-  otra. Las fichas NO la leen: tienen su propia temporada.
+- **Móvil: una hoja que sube desde abajo** (`components/HojaInferior.tsx` +
+  `components/SelectorTemporada.tsx`), el patrón que piden las reglas de
+  diseño antes que un modal. Se cierra tocando fuera, arrastrándola hacia
+  abajo (más de 100 pt o un tirón) o con atrás en Android. Filas de 60 pt, la
+  elegida rellena de navy con ✓, la más reciente marcada "Actual", y al abrir
+  se desplaza hasta la elegida. Sin librerías: `@gorhom/bottom-sheet` pide
+  reanimated y gesture-handler, dos módulos nativos por una hoja. Todo con
+  `useNativeDriver`; con "reducir movimiento" aparece sin deslizarse.
+- **Web: una lista desplegable** (`SelectorOpciones` en
+  `frontend/components/SelectorTemporada.tsx`), en una barra pegada bajo la
+  superior. Las opciones son enlaces: la temporada sigue en la URL. Teclado
+  completo (flecha abajo abre, flechas/Inicio/Fin se mueven, Escape cierra y
+  devuelve el foco), clic fuera cierra, y al abrir se desplaza la LISTA hasta
+  la elegida, no la página. Se despliega con `.desplegar` (140 ms).
+- En la ficha de equipo cada opción lleva el récord de esa campaña
+  ("23-27 · .460"): se elige sabiendo qué se va a ver.
+- **Una temporada para Posiciones, Bateo y Pitcheo.** Quien mira las
+  posiciones de 2015 y pasa a Bateo espera los bateadores de 2015. En el móvil
+  es un valor de módulo con `useSyncExternalStore` (`mobile/src/temporada.ts`),
+  sin contexto ni librería; la lista de `/seasons` se pide una vez por sesión.
+  En la web la temporada vive en la URL y la barra superior ya la llevaba de
+  una página a otra. Las fichas NO la leen: tienen su propia temporada.
+- Sin elegir nada manda la más reciente que tenga la API: `DEFAULT_SEASON`
+  queda de respaldo si `/seasons` no responde. **La 2026-27 aparece cuando se
+  corra `python main.py ingest 2026`**: las tablas planas no se llenan solas.
 - Tocar un equipo en las posiciones abre su ficha **en esa temporada**.
 - Al cambiar de temporada o de orden, la lista anterior se queda atenuada
   hasta que llega la nueva (spinner solo la primera vez), y cada petición lleva
   número para que solo la última escriba. En Bateo y Pitcheo, el toque en un
-  orden además ya no dispara dos peticiones iguales.
-- Con catorce pestañas la elegida puede quedar fuera del borde (2012-13 es la
-  última), sobre todo cuando la eligió otra pantalla: `Pestanas` la trae a la
-  vista, y en la web `SelectorTemporada` hace lo mismo al abrir la página.
+  orden ya no dispara dos peticiones iguales.
 - En la web, el filtro de equipo se conserva al cambiar de año; el mínimo de
   PA/IP no, porque el de una temporada no sirve para otra de distinto largo.
 - La etiqueta es "2015-16" en todas partes (`etiquetaTemporada`, en
   `mobile/src/temporada.ts` y `frontend/lib/formato.ts`), también en el chip
   de la barra superior de la web.
+
+## Nada de adjustsFontSizeToFit (30-sep-2026)
+
+En el iPhone de Arturo las cifras de la cabecera del jugador salían a ~6 pt
+(".903" casi invisible) con `adjustsFontSizeToFit`. El ajuste de iOS se calcula
+con el ancho de la primera pasada de layout —que en una fila con `flex: 1`
+puede ser casi cero— y no vuelve a crecer. En la web la propiedad ni existe,
+así que además las dos plataformas se veían distinto.
+
+`mobile/src/components/Ajuste.tsx` lo calcula: Bebas Neue es una sola fuente
+con anchos fijos, y la tabla `ANCHO_EM` sale del propio archivo de la fuente
+(avance de cada glifo en em; las cifras miden 0.4). El tamaño que cabe en `w`
+puntos es `w / Σ anchos`, con tope en el de diseño.
+
+- `CifraAjustada`: una cifra que mide su caja con onLayout (cabecera héroe y
+  franja de carrera del jugador).
+- `tamanoNombre`: el nombre de la cabecera, decidido por la palabra más larga
+  contra la columna del 52 % — el mismo cálculo que `NombreHeroe` en la web.
+
+**No volver a usar `adjustsFontSizeToFit`** en textos en Bebas. Si hace falta
+en otra fuente, medir antes en un iPhone.
 
 ## Micro-animaciones (30-sep-2026)
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
+import { CifraAjustada } from './Ajuste';
 
 const CORTE = 32;
 
@@ -76,9 +77,14 @@ export function CifraHeroe({
 }) {
   return (
     <View style={styles.cifra} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
-      <Text style={[styles.cifraValor, grande && styles.cifraGrande]} numberOfLines={1} adjustsFontSizeToFit>
-        {valor}
-      </Text>
+      {/* Sin adjustsFontSizeToFit: en iOS dejaba las cifras a 6 pt. El
+          tamaño se calcula con los anchos de Bebas (Ajuste.tsx). */}
+      <CifraAjustada
+        valor={valor}
+        tamano={grande ? 84 : 40}
+        interlineado={grande ? 0.95 : 1.05}
+        style={styles.cifraValor}
+      />
       <Text style={styles.cifraEtiqueta} numberOfLines={1}>
         {etiqueta}
       </Text>
@@ -142,14 +148,11 @@ const styles = StyleSheet.create({
   },
   cifras: { flexDirection: 'row', gap: 8 },
   cifra: { flex: 1, gap: 2 },
+  // Tamaño y familia los pone CifraAjustada.
   cifraValor: {
-    fontFamily: FONTS.display,
-    fontSize: 40,
-    lineHeight: 42,
     color: COLORS.inkFg,
     fontVariant: ['tabular-nums'],
   },
-  cifraGrande: { fontSize: 84, lineHeight: 80 },
   cifraEtiqueta: {
     fontSize: 11,
     letterSpacing: 0.8,

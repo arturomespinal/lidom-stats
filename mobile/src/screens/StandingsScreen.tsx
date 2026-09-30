@@ -16,7 +16,7 @@ import { StandingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
 import SelectorTemporada from '../components/SelectorTemporada';
-import { useTemporada } from '../temporada';
+import { etiquetaTemporada, useTemporada } from '../temporada';
 
 const POS = COLORS.positive;
 const NEG = COLORS.negative;
@@ -188,7 +188,13 @@ export default function StandingsScreen() {
 
   // El selector se queda arriba en todos los estados: una temporada sin datos
   // no debe dejar a nadie sin forma de volver a otra.
-  const selector = <SelectorTemporada temporadas={temporadas} activa={temporada} onChange={elegir} />;
+  const selector = (
+    <SelectorTemporada
+      opciones={temporadas.map(t => ({ key: t, label: etiquetaTemporada(t) }))}
+      activa={temporada}
+      onChange={elegir}
+    />
+  );
 
   let cuerpo: React.ReactNode;
   if (cargando && data.length === 0) {

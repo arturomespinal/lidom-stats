@@ -17,7 +17,7 @@ import { useFichas } from '../navigation';
 import { BattingRow } from '../types';
 import EmptyState from '../components/EmptyState';
 import SelectorTemporada from '../components/SelectorTemporada';
-import { useTemporada } from '../temporada';
+import { etiquetaTemporada, useTemporada } from '../temporada';
 import TeamBadge from '../components/TeamBadge';
 
 type SortKey = 'ops' | 'batting_avg' | 'on_base_pct' | 'slugging_pct' | 'home_runs' | 'rbi' | 'hits' | 'stolen_bases';
@@ -153,7 +153,11 @@ export default function BattingScreen() {
 
   return (
     <View style={{ flex: 1, backgroundColor: COLORS.bgPage }}>
-      <SelectorTemporada temporadas={temporadas} activa={temporada} onChange={elegir} />
+      <SelectorTemporada
+        opciones={temporadas.map(t => ({ key: t, label: etiquetaTemporada(t) }))}
+        activa={temporada}
+        onChange={elegir}
+      />
       <SortChips active={sortKey} onChange={handleSort} />
 
       {/* El spinner solo la primera vez. Al cambiar de temporada o de orden,

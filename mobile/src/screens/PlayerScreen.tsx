@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { setStatusBarStyle } from 'expo-status-bar';
@@ -22,6 +22,7 @@ import { Aparecer } from '../components/Movimiento';
 import Seccion from '../components/Seccion';
 import TablaTemporadas, { Col } from '../components/TablaTemporadas';
 import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
+import { CifraAjustada, tamanoNombre } from '../components/Ajuste';
 import Monograma from '../components/Monograma';
 import PuestoLiga from '../components/PuestoLiga';
 import CurvaCarrera from '../components/CurvaCarrera';
@@ -74,9 +75,7 @@ const COLS_PITCHEO: Col<FilaPitcheo>[] = [
 function Cifra({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
     <View style={styles.cifra} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
-      <Text style={styles.cifraValor} numberOfLines={1} adjustsFontSizeToFit>
-        {valor}
-      </Text>
+      <CifraAjustada valor={valor} tamano={28} style={styles.cifraValor} />
       <Text style={styles.cifraEtiqueta}>{etiqueta}</Text>
     </View>
   );
@@ -146,6 +145,8 @@ export default function PlayerScreen({ route, navigation }: Props) {
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
   const [rol, setRol] = useState<Rol | null>(null);
   const [juegos, setJuegos] = useState<Gamelog | null>(null);
+  // El ancho de la pantalla decide el tamaño del nombre de la cabecera.
+  const { width: anchoPantalla } = useWindowDimensions();
 
   const cargar = useCallback(async () => {
     setEstado('cargando');
@@ -202,6 +203,8 @@ export default function PlayerScreen({ route, navigation }: Props) {
   // la más nueva a la más vieja; un lanzador puro no tiene filas de bateo.
   const equipo = perfil.batting[0]?.team_code ?? perfil.pitching[0]?.team_code ?? null;
   const color = equipo ? TEAM_STYLES[equipo]?.primary : undefined;
+  // Columna del 52 % dentro de los 16 pt de margen de la cabecera.
+  const tamNombre = tamanoNombre(bio.full_name, (anchoPantalla - 32) * 0.52, 52);
 
   // Mismos umbrales que la web: un lanzador con tres turnos al bate no
   // necesita una tabla de bateo llena de ceros.
@@ -257,12 +260,12 @@ export default function PlayerScreen({ route, navigation }: Props) {
                 .filter(Boolean)
                 .join(' · ')}
             </Text>
+            {/* El tamaño lo decide la palabra más larga contra la columna del
+                52 %; adjustsFontSizeToFit no es fiable en iOS (Ajuste.tsx). */}
             <Text
-              style={styles.nombre}
+              style={[styles.nombre, { fontSize: tamNombre, lineHeight: Math.round(tamNombre * 0.92) }]}
               accessibilityRole="header"
               numberOfLines={3}
-              adjustsFontSizeToFit
-              minimumFontScale={0.7}
             >
               {bio.full_name}
             </Text>
@@ -448,8 +451,6 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontFamily: FONTS.display,
-    fontSize: 52,
-    lineHeight: 48,
     paddingTop: 4,
     color: COLORS.inkFg,
   },
@@ -473,8 +474,6 @@ const styles = StyleSheet.create({
   cifras: { flexDirection: 'row', marginTop: 8 },
   cifra: { flex: 1 },
   cifraValor: {
-    fontFamily: FONTS.display,
-    fontSize: 28,
     color: COLORS.inkFg,
     fontVariant: ['tabular-nums'],
   },

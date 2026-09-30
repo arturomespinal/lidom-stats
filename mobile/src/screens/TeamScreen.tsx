@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { Aparecer, Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -13,8 +13,10 @@ import type { FichasParamList } from '../navigation';
 import type { TeamLeader, TeamProfile, TeamRosterBatter, TeamRosterPitcher } from '../types';
 import { EsqueletoFicha } from '../components/Esqueleto';
 import Pestanas from '../components/Pestanas';
+import SelectorTemporada from '../components/SelectorTemporada';
 import Seccion from '../components/Seccion';
 import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
+import { tamanoNombre } from '../components/Ajuste';
 import UltimosDiez from '../components/UltimosDiez';
 import CarreraBanderin from '../components/CarreraBanderin';
 import BarrasDiferencial from '../components/BarrasDiferencial';
@@ -131,6 +133,8 @@ export default function TeamScreen({ route, navigation }: Props) {
   // Tocar tres temporadas seguidas dispara tres respuestas que llegan en
   // cualquier orden, y sin esto la pantalla podría quedarse con la segunda.
   const pedido = useRef(0);
+  // El ancho de la pantalla decide el tamaño del nombre de la cabecera.
+  const { width: anchoPantalla } = useWindowDimensions();
 
   const cargar = useCallback(async () => {
     const n = ++pedido.current;
@@ -179,6 +183,8 @@ export default function TeamScreen({ route, navigation }: Props) {
   }
 
   const color = TEAM_STYLES[code]?.primary;
+  // Columna del 52 % dentro de los 16 pt de margen de la cabecera.
+  const tamNombre = tamanoNombre(equipo.team_name, (anchoPantalla - 32) * 0.52, 52);
   const recargando = estado === 'cargando';
 
   // G y P son conteos: sumarlos en el cliente es seguro. Las TASAS nunca se
@@ -219,12 +225,12 @@ export default function TeamScreen({ route, navigation }: Props) {
           <Text style={styles.micro} numberOfLines={1}>
             {[equipo.city, equipo.founded_year && `desde ${equipo.founded_year}`].filter(Boolean).join(' · ')}
           </Text>
+          {/* El tamaño lo decide la palabra más larga contra la columna del
+              52 %; adjustsFontSizeToFit no es fiable en iOS (Ajuste.tsx). */}
           <Text
-            style={styles.nombre}
+            style={[styles.nombre, { fontSize: tamNombre, lineHeight: Math.round(tamNombre * 0.92) }]}
             accessibilityRole="header"
             numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.7}
           >
             {equipo.team_name}
           </Text>
@@ -254,10 +260,15 @@ export default function TeamScreen({ route, navigation }: Props) {
         </FilaCifras>
       </Heroe>
 
-      {/* 1 ── Selector de temporada, pegado arriba ── */}
-      <Pestanas
-        tabs={equipo.history.map(f => ({ key: f.season_id, label: f.season_id }))}
-        active={equipo.season_id}
+      {/* 1 ── Selector de temporada, pegado arriba. Cada opción lleva el
+          récord de esa campaña: se elige sabiendo qué se va a ver. ── */}
+      <SelectorTemporada
+        opciones={equipo.history.map(f => ({
+          key: f.season_id,
+          label: f.season_id,
+          nota: `${f.wins}-${f.losses}${f.win_pct != null ? ` · ${pct3(f.win_pct)}` : ''}`,
+        }))}
+        activa={equipo.season_id}
         onChange={elegirTemporada}
       />
 
@@ -468,8 +479,6 @@ const styles = StyleSheet.create({
   },
   nombre: {
     fontFamily: FONTS.display,
-    fontSize: 52,
-    lineHeight: 48,
     paddingTop: 4,
     color: COLORS.inkFg,
   },

@@ -2,8 +2,9 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
 import Navbar from "@/components/Navbar";
+import { pct3 } from "@/lib/formato";
 import TeamHeader from "@/components/team/TeamHeader";
-import TemporadaTabs from "@/components/team/TemporadaTabs";
+import { SelectorOpciones } from "@/components/SelectorTemporada";
 import Seccion from "@/components/ficha/Seccion";
 import UltimosDiez from "@/components/ficha/UltimosDiez";
 import CarreraBanderin from "@/components/ficha/CarreraBanderin";
@@ -41,9 +42,14 @@ export default async function TeamPage(props: Props) {
     <>
       <Navbar season={season} />
       <TeamHeader equipo={equipo} />
-      <TemporadaTabs
-        code={codigo}
-        temporadas={equipo.history.map((f) => f.season_id)}
+      {/* Cada opción lleva el récord de esa campaña: se elige sabiendo qué
+          se va a ver. */}
+      <SelectorOpciones
+        opciones={equipo.history.map((f) => ({
+          label: f.season_id,
+          href: `/teams/${codigo}?season=${f.season_id}`,
+          nota: `${f.wins}-${f.losses}${f.win_pct != null ? ` · ${pct3(f.win_pct)}` : ""}`,
+        }))}
         activa={equipo.season_id}
       />
       <main className="mx-auto max-w-5xl space-y-10 px-4 pb-10 pt-6">

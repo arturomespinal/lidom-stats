@@ -57,6 +57,30 @@ PRIMERA_TEMPORADA = 1951
 # Ver DIGIMETRICS_MAX_BYTES.
 ULTIMA_TEMPORADA = 2019
 
+# Filas donde la PROPIA FUENTE no cuadra: las tasas que publica no salen de
+# los conteos que muestra. Revisadas a mano; se guardan los conteos tal cual y
+# no detienen la ingesta. Cualquier discrepancia que no esté aquí, sí.
+#
+# Escogido, regular 2019-20: a cinco bateadores el AVG y el SLG publicados
+# les salen con un turno MÁS del que muestra la tabla (Paredes .225 = 20/89,
+# con 88 VB; Terdoslavich .600 = 3/5, con 4). El cruce con la MLB API lo
+# confirma: a Escogido le faltan exactamente 5 VB (1706 contra 1711).
+DISCREPANCIAS_CONOCIDAS: dict[tuple[int, str, str, str], set[str]] = {
+    (2019, "SR", "03", "bateo"): {
+        "Jimmy Paredes", "Carlos Asuaje", "Alberto Triunfel", "Taylor Ward", "Joey Terdoslavich",
+    },
+}
+
+
+def separar_conocidas(
+    clave: tuple[int, str, str, str], discrepancias: list[str], conocidas=DISCREPANCIAS_CONOCIDAS
+) -> tuple[list[str], list[str]]:
+    """Parte las discrepancias de una página en (nuevas, conocidas). Cada
+    discrepancia empieza por el nombre del jugador: "Jimmy Paredes: AVG ..."."""
+    nombres = conocidas.get(clave, set())
+    nuevas = [d for d in discrepancias if d.split(":", 1)[0] not in nombres]
+    return nuevas, [d for d in discrepancias if d.split(":", 1)[0] in nombres]
+
 
 class HistoriaIngestor:
     def __init__(
@@ -64,12 +88,14 @@ class HistoriaIngestor:
         db_url: str = DEFAULT_DB_URL,
         client: Optional[DigimetricsClient] = None,
         equipos: dict[str, str] = DIGIMETRICS_EQUIPOS,
+        discrepancias_conocidas: dict = DISCREPANCIAS_CONOCIDAS,
     ):
         # init_db crea las tablas hist_* si faltan (y recrea las vistas, que
         # no cuesta nada). Es idempotente.
         self.engine = init_db(db_url)
         self.client = client or DigimetricsClient()
         self.equipos = equipos
+        self.discrepancias_conocidas = discrepancias_conocidas
 
     # ─── Pedidos ────────────────────────────────────────────────────────────
 
@@ -133,7 +159,11 @@ class HistoriaIngestor:
 
         for tipo, etapa, id_equipo, tabla in paginas:
             donde = f"{temporada} {etapa} {id_equipo} {tipo}"
-            resumen["discrepancias"] += [f"{donde}: {d}" for d in tabla.discrepancias]
+            nuevas, conocidas = separar_conocidas(
+                (temporada, etapa, id_equipo, tipo), tabla.discrepancias, self.discrepancias_conocidas
+            )
+            resumen["discrepancias"] += [f"{donde}: {d}" for d in nuevas]
+            resumen["avisos"] += [f"{donde}: error conocido de la fuente — {d}" for d in conocidas]
             resumen["avisos"] += [f"{donde}: {a}" for a in tabla.avisos]
 
         self._guardar(temporada, etapas, paginas, resumen)

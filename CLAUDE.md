@@ -191,7 +191,7 @@ la 2015-16. No cambiar esa clave.
 | `src/models/hist_models.py` | La capa histórica `hist_*` y `etiqueta_historica()` |
 | `src/pipeline/historia_ingestor.py` | `HistoriaIngestor.ingest(temporadas)` — DIGIMETRICS → `hist_*` |
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
-| `verify_digimetrics.py` | 59 comprobaciones del scraper sin red (66 con la capa histórica cargada); parsea también la caché real si existe |
+| `verify_digimetrics.py` | 64 comprobaciones del scraper sin red (73 con la caché y la capa histórica); parsea también la caché real si existe |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
@@ -1645,7 +1645,15 @@ Las dos formas en que un scraper falla en silencio, cubiertas:
 
 `python main.py ingest-historia` sale con código 1 si alguna fila tiene tasas
 que no cuadran, y `verify_digimetrics.py` parsea toda la caché real cuando
-existe y exige cero.
+existe y exige cero, fuera de las conocidas.
+
+**Las conocidas son errores de la propia fuente**, revisados a mano y listados
+en `DISCREPANCIAS_CONOCIDAS` (`historia_ingestor.py`), página por página y
+jugador por jugador. Pasan a aviso y se guardan los conteos tal cual. Hoy hay
+una: Escogido, regular 2019-20. A cinco bateadores el AVG y el SLG publicados
+les salen con un turno más de los que muestra la tabla (Paredes .225 = 20/89,
+con 88 VB). El cruce lo confirma: a Escogido le faltan exactamente 5 VB contra
+la MLB API. En las 2.300 páginas de 1951-2019 no hay ninguna otra.
 
 ### Las tablas
 

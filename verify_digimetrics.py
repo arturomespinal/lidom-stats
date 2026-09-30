@@ -205,7 +205,9 @@ from sqlalchemy.orm import Session  # noqa: E402
 from src.models.hist_models import (  # noqa: E402
     HistBateo, HistEquipoTemporada, HistEtapa, HistJugador, HistPitcheo, etiqueta_historica,
 )
-from src.pipeline.historia_ingestor import HistoriaIngestor  # noqa: E402
+from src.pipeline.historia_ingestor import (  # noqa: E402
+    DISCREPANCIAS_CONOCIDAS, HistoriaIngestor, separar_conocidas,
+)
 
 check("etiquetas: verano hasta 1954, invierno desde 1955",
       [etiqueta_historica(a) for a in (1951, 1954, 1955, 1990, 1999)], ["1951", "1954", "1955-56", "1990-91", "1999-00"])
@@ -312,6 +314,36 @@ with tempfile.TemporaryDirectory() as tmp:
     check("temporada con una página pesada: se salta entera y la ingesta sigue",
           (r4["omitidas_por_peso"], r4["temporadas"], de_1991), ([1991], 1, 0))
 
+# Las discrepancias conocidas de la fuente no detienen la ingesta; las nuevas sí.
+nombres_cruzada = {d.split(":", 1)[0] for d in parse_bateo_equipo(cruzada).discrepancias}
+check("separar: las de la lista pasan a conocidas, el resto sigue siendo nuevo",
+      separar_conocidas((1990, "SR", "01", "bateo"),
+                        ["DOMINGO RAMOS: AVG x", "OTRO: AVG y"], {(1990, "SR", "01", "bateo"): {"DOMINGO RAMOS"}}),
+      (["OTRO: AVG y"], ["DOMINGO RAMOS: AVG x"]))
+check("la lista vale solo para SU página (otra etapa no hereda la excepción)",
+      separar_conocidas((1990, "RR", "01", "bateo"), ["DOMINGO RAMOS: AVG x"],
+                        {(1990, "SR", "01", "bateo"): {"DOMINGO RAMOS"}}), (["DOMINGO RAMOS: AVG x"], []))
+check("la lista real: Escogido 2019-20, cinco bateadores",
+      {k: len(v) for k, v in DISCREPANCIAS_CONOCIDAS.items()}, {(2019, "SR", "03", "bateo"): 5})
+
+
+def fuente_cruzada(req):
+    if req.url.path == "/Equipo/EquipoBateo" and dict(req.url.params).get("idEquipo") == "01":
+        q = dict(req.url.params)
+        return httpx.Response(200, content=(cruzada if q["idEtapa"] == "SR" else BATEO_VACIO).encode())
+    return fuente(req)
+
+
+with tempfile.TemporaryDirectory() as tmp:
+    for conocidas, esperado in (({}, True), ({(1990, "SR", "01", "bateo"): nombres_cruzada}, False)):
+        with DigimetricsClient(cache_dir=None, intervalo=0, http=httpx.Client(
+                base_url="http://x", transport=httpx.MockTransport(fuente_cruzada))) as c5:
+            r5 = HistoriaIngestor(db_url=f"sqlite:///{tmp}/d.db", client=c5,
+                                  discrepancias_conocidas=conocidas).ingest([1990])
+        check("columnas cruzadas " + ("sin lista: discrepancias que detienen" if esperado
+                                      else "en la lista: solo avisos"),
+              (bool(r5["discrepancias"]), any("error conocido" in a for a in r5["avisos"])), (esperado, not esperado))
+
 print("\n━━━ 5. El cruce con el esquema de juego ━━━")
 from src.models.database import (  # noqa: E402
     BattingLine, Game, PitchingLine, Player, Season, Team, init_db,
@@ -362,16 +394,24 @@ if not paginas:
 else:
     import gzip
 
-    malas, filas = [], 0
+    malas, conocidas, filas = [], [], 0
     for archivo in paginas:
         html = gzip.decompress(archivo.read_bytes()).decode("utf-8")
-        tabla = (parse_pitcheo_equipo if "Lanzamiento" in archivo.parent.name else parse_bateo_equipo)(html)
+        es_pitcheo = "Lanzamiento" in archivo.parent.name
+        tabla = (parse_pitcheo_equipo if es_pitcheo else parse_bateo_equipo)(html)
         filas += len(tabla.filas)
-        malas += [f"{archivo.name}: {d}" for d in tabla.discrepancias]
+        q = dict(re.findall(r"(id[A-Za-z]+)-([A-Za-z0-9]*)", archivo.name))
+        clave = (int(q["idTemporada"]), q["idEtapa"], q["idEquipo"], "pitcheo" if es_pitcheo else "bateo")
+        nuevas, ya = separar_conocidas(clave, tabla.discrepancias)
+        malas += [f"{archivo.name}: {d}" for d in nuevas]
+        conocidas += [(clave, d.split(":", 1)[0]) for d in ya]
     print(f"  {len(paginas)} páginas, {filas} filas")
     for m in malas[:20]:
         print(f"    {m}")
-    check("ninguna fila de la caché con tasas que no cuadren", len(malas), 0)
+    check("ninguna fila de la caché con tasas que no cuadren, fuera de las conocidas", len(malas), 0)
+    check("y las conocidas siguen ahí (si la fuente las corrige, se quitan de la lista)",
+          {k: {n for kk, n in conocidas if kk == k} for k in DISCREPANCIAS_CONOCIDAS},
+          DISCREPANCIAS_CONOCIDAS)
 
 print("\n━━━ 7. La capa histórica cargada (si está en data/lidom_stats.db) ━━━")
 import sqlite3  # noqa: E402

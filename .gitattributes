@@ -17,3 +17,7 @@
 *.ico binary
 *.woff binary
 *.woff2 binary
+
+# Páginas reales de DIGIMETRICS para verify_digimetrics.py: se guardan tal
+# como las sirvió el portal (con sus CRLF), byte a byte. Git no las toca.
+verify_datos/** -text

@@ -7,6 +7,11 @@ tenacity==8.3.0      # Reintentos con backoff exponencial contra la MLB API
 # Datos & ETL
 pydantic==2.7.1
 
+# Scraper de DIGIMETRICS (estadisticas.lidom.com). Se usa con "html.parser",
+# el de la biblioteca estándar: nada que compilar en Windows, y las páginas
+# son chicas. Ver src/scrapers/digimetrics.py.
+beautifulsoup4==4.14.3
+
 # Base de datos
 SQLAlchemy==2.0.30
 

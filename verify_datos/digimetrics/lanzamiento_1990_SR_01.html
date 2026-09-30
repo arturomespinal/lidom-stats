@@ -1,0 +1,1803 @@
+
+
+
+<link href="/Content/TablaPosicion/TablaPosicion.css" rel="stylesheet" type="text/css" />
+
+<div id="TablaLanzamiento">
+
+    <table class="TablaLanzamiento">
+        <tr>
+            <td style="text-align: left; font-weight: bold; font-size: 15px; color: #404040;
+                width: 53.5%;">
+                ESTADISTICAS DE LANZAMIENTO
+            </td>
+
+            <td style="float: right;">
+                <div style="display:flex">
+                    <select id="slcTemporadaEquipoLanzamiento" name="Temporadas" style="width: 55px;"><option value="2026">2026</option>
+<option value="2025">2025</option>
+<option value="2024">2024</option>
+<option value="2023">2023</option>
+<option value="2022">2022</option>
+<option value="2021">2021</option>
+<option value="2020">2020</option>
+<option value="2019">2019</option>
+<option value="2018">2018</option>
+<option value="2017">2017</option>
+<option value="2016">2016</option>
+<option value="2015">2015</option>
+<option value="2014">2014</option>
+<option value="2013">2013</option>
+<option value="2012">2012</option>
+<option value="2011">2011</option>
+<option value="2010">2010</option>
+<option value="2009">2009</option>
+<option value="2008">2008</option>
+<option value="2007">2007</option>
+<option value="2006">2006</option>
+<option value="2005">2005</option>
+<option value="2004">2004</option>
+<option value="2003">2003</option>
+<option value="2002">2002</option>
+<option value="2001">2001</option>
+<option value="2000">2000</option>
+<option value="1999">1999</option>
+<option value="1998">1998</option>
+<option value="1997">1997</option>
+<option value="1996">1996</option>
+<option value="1995">1995</option>
+<option value="1994">1994</option>
+<option value="1993">1993</option>
+<option value="1992">1992</option>
+<option value="1991">1991</option>
+<option selected="selected" value="1990">1990</option>
+<option value="1989">1989</option>
+<option value="1988">1988</option>
+<option value="1987">1987</option>
+<option value="1986">1986</option>
+<option value="1985">1985</option>
+<option value="1984">1984</option>
+<option value="1983">1983</option>
+<option value="1982">1982</option>
+<option value="1981">1981</option>
+<option value="1980">1980</option>
+<option value="1979">1979</option>
+<option value="1978">1978</option>
+<option value="1977">1977</option>
+<option value="1976">1976</option>
+<option value="1975">1975</option>
+<option value="1974">1974</option>
+<option value="1973">1973</option>
+<option value="1972">1972</option>
+<option value="1971">1971</option>
+<option value="1970">1970</option>
+<option value="1969">1969</option>
+<option value="1968">1968</option>
+<option value="1967">1967</option>
+<option value="1966">1966</option>
+<option value="1964">1964</option>
+<option value="1963">1963</option>
+<option value="1960">1960</option>
+<option value="1959">1959</option>
+<option value="1958">1958</option>
+<option value="1957">1957</option>
+<option value="1956">1956</option>
+<option value="1955">1955</option>
+<option value="1954">1954</option>
+<option value="1953">1953</option>
+<option value="1952">1952</option>
+<option value="1951">1951</option>
+</select>
+                    &nbsp;
+                    <select id="slcEtapaEquipoLanzamiento" name="Etapas" style="width: 100px;"><option selected="selected" value="SR">Serie Regular</option>
+<option value="RR">Serie Semifinal</option>
+<option value="SF">Serie Final</option>
+</select>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <hr>
+    <table class="estadisticas" id="tbLanzamiento">
+        <thead>
+            <tr>
+                <th style="width: 30px;">
+                </th>
+                <th style="text-align: left; width: 130px;">
+                    Jugador
+                </th>
+                <th style="text-align: left; width: 130px;">
+                    Equipo
+                </th>
+                <th title="Win" class="text-center">
+                    W
+                </th>
+                <th title="Loss" class="text-center">
+                    L
+                </th>
+                <th title="Earned run average" class="text-center">
+                    ERA
+                </th>
+                <th title="Games" class="text-center">
+                    G
+                </th>
+                <th title="Starts" class="text-center">
+                    GS
+                </th>
+                <th title="" class="text-center">
+                    GF
+                </th>
+                <th title="" class="text-center">
+                    GC
+                </th>
+                <th title="" class="text-center">
+                    SHO
+                </th>
+                <th title="Save" class="text-center">
+                    SV
+                </th>
+                <th title="Innings pitched" class="text-center">
+                    IP
+                </th>
+                <th title="Hits allowed" class="text-center">
+                    H
+                </th>
+                <th title="Runs allowed" class="text-center">
+                    R
+                </th>
+                <th title="Earned run" class="text-center">
+                    ER
+                </th>
+                <th title="Home Runs allowed" class="text-center">
+                    HR
+                </th>
+                <th title="Base on balls" class="text-center">
+                    BB
+                </th>
+                <th title="International base on balls" class="text-center">
+                    IBB
+                </th>
+                <th title="Strikeout" class="text-center">
+                    SO
+                </th>
+                <th title="Hit by pitch" class="text-center">
+                    HBP
+                </th>
+                <th title="Wild pitches" class="text-center">
+                    WP
+                </th>
+                <th title="Balk" class="text-center">
+                    BK
+                </th>
+
+                <th title="Walks and hits per inning pitched" class="text-center">
+                    WHIP
+                </th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=5855">
+                        CECILIO GUANTE
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1.17
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    7.2
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    11
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.17
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=5876">
+                        GIBSON ALBA
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    3.16
+                </td>
+                <td class="text-center">
+                    11
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    25.2
+                </td>
+                <td class="text-center">
+                    20
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    10
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    18
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.17
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6120">
+                        RAMON ARTURO PE&#209;A
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    2.01
+                </td>
+                <td class="text-center">
+                    24
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    20
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    31.1
+                </td>
+                <td class="text-center">
+                    25
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    18
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    0.99
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6536">
+                        RAMON MARTINEZ
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    20.26
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1.1
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    4.50
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6612">
+                        HECTOR WAGNER
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    3.24
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    16.2
+                </td>
+                <td class="text-center">
+                    20
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.56
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6621">
+                        MANUEL FURCAL
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    3.03
+                </td>
+                <td class="text-center">
+                    16
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    35.2
+                </td>
+                <td class="text-center">
+                    26
+                </td>
+                <td class="text-center">
+                    15
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    28
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.07
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6707">
+                        VICTOR GARCIA
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    2.45
+                </td>
+                <td class="text-center">
+                    14
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    22.0
+                </td>
+                <td class="text-center">
+                    17
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    16
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.32
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6711">
+                        MARINO STEFANY
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    3.48
+                </td>
+                <td class="text-center">
+                    10
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    10.1
+                </td>
+                <td class="text-center">
+                    13
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    2.03
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6712">
+                        FAUSTO TATIS
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1.23
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    7.1
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.09
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6713">
+                        JULIAN VASQUEZ
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0.00
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    8.2
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.15
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6714">
+                        KEVIN WICKANDER
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3.71
+                </td>
+                <td class="text-center">
+                    13
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    17.0
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    10
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    15
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.29
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6744">
+                        JOHNNY GUZMAN
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    6.92
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    26.0
+                </td>
+                <td class="text-center">
+                    33
+                </td>
+                <td class="text-center">
+                    23
+                </td>
+                <td class="text-center">
+                    20
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    14
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    14
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+
+                <td class="text-center">
+                    1.81
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6832">
+                        PEDRO PE&#209;A
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    6.23
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    13.0
+                </td>
+                <td class="text-center">
+                    11
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.38
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6833">
+                        MIKE WALKER
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    6.75
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2.2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.87
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6834">
+                        TOM KRAMER
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    2.53
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    32.0
+                </td>
+                <td class="text-center">
+                    32
+                </td>
+                <td class="text-center">
+                    10
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    21
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.25
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6835">
+                        APOLINAR GARCIA
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    3.68
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    36.2
+                </td>
+                <td class="text-center">
+                    37
+                </td>
+                <td class="text-center">
+                    16
+                </td>
+                <td class="text-center">
+                    15
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    24
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.23
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6837">
+                        MAURO GOZZO
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    4.50
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    14.0
+                </td>
+                <td class="text-center">
+                    20
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    10
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.71
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6838">
+                        MATT TURNER
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0.00
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    2.0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.00
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6840">
+                        MARCOS GARCIA
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    4
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1.35
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    40.0
+                </td>
+                <td class="text-center">
+                    28
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    12
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    26
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.00
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6841">
+                        GREG ROSCOE
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    2.10
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    6
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    34.1
+                </td>
+                <td class="text-center">
+                    39
+                </td>
+                <td class="text-center">
+                    16
+                </td>
+                <td class="text-center">
+                    8
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    7
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    16
+                </td>
+                <td class="text-center">
+                    5
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.34
+                </td>
+            </tr>
+            <tr>
+                <td>
+                    <img src="../../Content/Images/Foto.png " alt="Person Image" width="30" height="30" style="margin:0px 0;" />
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Miembro/Detalle?idMiembro=6867">
+                        JEFF MUTIS
+                    </a>
+                </td>
+                <td style="text-align: left;">
+                    <a href="/Equipo/Detalle?idEquipo=01" t target="_parent">Aguilas Cibae&#241;as</a>
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    3
+                </td>
+                <td class="text-center">
+                    3.86
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    9
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    44.1
+                </td>
+                <td class="text-center">
+                    45
+                </td>
+                <td class="text-center">
+                    24
+                </td>
+                <td class="text-center">
+                    19
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    17
+                </td>
+                <td class="text-center">
+                    1
+                </td>
+                <td class="text-center">
+                    26
+                </td>
+                <td class="text-center">
+                    2
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+                <td class="text-center">
+                    0
+                </td>
+
+                <td class="text-center">
+                    1.40
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>
+
+<script src="/Scripts/jquery-2.2.4.min.js"></script>
+<script src="/Scripts/jquery.dataTables.min.js"></script>
+<script src="/Scripts/datatableOptions.js"></script>
+<script src="/Scripts/Equipo/EquipoLanzamiento.js"></script>

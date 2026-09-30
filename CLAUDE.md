@@ -14,6 +14,10 @@ Pipeline de datos + API + dashboard visual para estadísticas de LIDOM (béisbol
 - **No usar Baseball-Reference.** Los scrapers BR se eliminaron del repositorio;
   están en el historial de git si algún día hacen falta.
 
+**Segunda fuente: DIGIMETRICS** — `estadisticas.lidom.com`, el portal oficial de
+la liga. Aporta la HISTORIA desde 1951, que la MLB API no tiene. Ver "La capa
+histórica (DIGIMETRICS)".
+
 ### Etiquetado de temporada — OJO
 
 La MLB API nombra la temporada invernal por el año en que **empieza**, no por el que termina:
@@ -42,6 +46,13 @@ python main.py ingest-games 2025 --smoke      # solo 3 juegos, para validar el p
 python main.py ingest-games 2025 --refresh    # re-procesa juegos ya ingestados
 python main.py ingest-game 826343             # un solo juego (lo que hace el motor en vivo al final)
 
+# Capa histórica desde DIGIMETRICS (estadisticas.lidom.com). Necesita red.
+python main.py ingest-historia --smoke        # solo 1990-91 (~35 pedidos, menos de un minuto)
+python main.py ingest-historia                # 1951-2023, ~2.500 pedidos a 1 por segundo: ~1 hora
+python main.py ingest-historia 1951 2011      # un rango
+python main.py ingest-historia --sin-red      # reprocesar solo desde la caché
+python main.py cruzar-historia                # DIGIMETRICS contra la MLB API, 2012-13 a 2023-24
+
 # Levantar la API
 uvicorn api.main:app --reload          # http://localhost:8000
 # Docs interactivas: http://localhost:8000/docs
@@ -49,7 +60,7 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las nueve suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las diez suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado o la base local. Son scripts, no pytest — salen con código 0
 # si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -61,6 +72,7 @@ python verify_api_models.py          # modelos Pydantic contra JSON real
 python verify_winprob.py             # modelo de probabilidad contra los datos reales
 python verify_capas.py               # tablas planas contra el esquema de juego, temporada por temporada
 python verify_seguridad.py           # la API en modo producción: límite, CORS, diagnóstico con clave
+python verify_digimetrics.py         # scraper de DIGIMETRICS contra páginas reales guardadas
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -174,10 +186,17 @@ la 2015-16. No cambiar esa clave.
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
 | `verify_seguridad.py` | 49 comprobaciones de la API levantada en modo producción |
 | `.env.example` | Las variables de entorno de producción, con lo que hace cada una |
+| `src/clients/digimetrics.py` | Cliente de estadisticas.lidom.com: POST, 1 pedido/s, caché en disco, tope de tamaño |
+| `src/scrapers/digimetrics.py` | Parser de las tablas de DIGIMETRICS: columnas por encabezado y tasas recalculadas |
+| `src/models/hist_models.py` | La capa histórica `hist_*` y `etiqueta_historica()` |
+| `src/pipeline/historia_ingestor.py` | `HistoriaIngestor.ingest(temporadas)` — DIGIMETRICS → `hist_*` |
+| `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
+| `verify_digimetrics.py` | 58 comprobaciones del scraper, sin red; parsea también la caché real si existe |
+| `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
 
-Las nueve suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+Las diez suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
 
 ## Endpoints
@@ -271,7 +290,7 @@ Otra diferencia que no se compara a propósito: juegos jugados. **Enmanuel Mejí
 
 Los mínimos de calificación de las tablas planas se ajustan solos al largo de cada temporada: 2020-21 (30 juegos por equipo) pide 93 PA y 18 IP; 2012-13 (hasta 51), 158 PA y 30.6 IP.
 
-Nota de alcance: esto prueba que la agregación es correcta, **no** que los datos de la MLB lo sean. Contrastar contra el portal de LIDOM requeriría el scraper secundario.
+Nota de alcance: esto prueba que la agregación es correcta, **no** que los datos de la MLB lo sean. Para contrastar contra el portal de LIDOM está `python main.py cruzar-historia` (ver "La capa histórica (DIGIMETRICS)").
 
 ## Frontend
 
@@ -1543,10 +1562,109 @@ cabeceras. Daría sensación de seguridad sin darla. Si un día hace falta
 distinguir clientes (terceros, un plan de pago), el camino es un token firmado
 de corta vida emitido por un servidor nuestro.
 
+## La capa histórica (DIGIMETRICS) (30-sep-2026)
+
+`estadisticas.lidom.com` ("DIGIMETRICS") es el portal de estadísticas oficial
+de la liga; lidom.com lo enlaza desde su menú. Es la segunda fuente del
+proyecto y aporta lo que la MLB API no tiene: **líneas de temporada por
+jugador desde 1951**, por equipo y por etapa. La MLB API empieza en 2012-13.
+
+### Qué tiene la fuente y qué no
+
+Revisado a mano el 30-sep, endpoint por endpoint:
+
+- Bateo y pitcheo por jugador de cada equipo, cada temporada y cada etapa,
+  desde 1951: SÍ. Es lo que se ingesta.
+- Posiciones, totales de equipo y líderes: solo desde que la fuente tiene
+  juegos (2013). Antes, vacíos. El récord histórico de un equipo se
+  reconstruye con las decisiones de sus lanzadores.
+- Fildeo: solo desde ~2013. No se ingesta; para esos años está la MLB API.
+- Juegos (play by play, rosters diarios y semanales): desde 2013. Tampoco.
+- Fichas de jugador (`/Miembro/Detalle`): con `idMiembro` funcionan (los
+  enlaces de las tablas lo usan); con `idPersona` (los de la portada) dan 500.
+  Casi no traen biografía de los años viejos. No se ingestan todavía.
+- `lidom-one.vercel.app/estadisticas` (el iframe de lidom.com/estadisticas) es
+  un prototipo con datos de la MLB API. No es otra fuente.
+
+### Cómo se habla con ella
+
+ASP.NET MVC con jQuery: cada tabla es un **POST sin cuerpo** con los
+parámetros en la URL, que devuelve un fragmento de HTML (las etapas, JSON).
+No hay JavaScript que ejecutar: nada de Selenium. Solo HTTP; el HTTPS
+redirige a HTTP. No tiene `robots.txt` (404) ni pide sesión.
+
+| Acción | Parámetros | Devuelve |
+|--------|-----------|----------|
+| `/Equipo/SelectEtapasTemporada` | `idTemporada` | JSON `[{Id, Descripcion}]`; vacío si no se jugó |
+| `/Equipo/EquipoBateo` | `idTemporada`, `idEtapa`, `idEquipo`, `manoLanza=` | tabla `#tbBateo` |
+| `/Equipo/EquipoLanzamiento` | `idTemporada`, `idEtapa`, `idEquipo` | tabla `#tbLanzamiento` |
+
+- `idTemporada` es el año en que EMPIEZA la campaña, como en la MLB API
+  (1990 = 1990-91). Hasta 1954 la liga jugó en verano: `etiqueta_historica()`
+  da "1951" para esas y "1955-56" desde entonces. No hay 1961, 1962 ni 1965.
+- `idEtapa`: `SR` regular, `RR` round robin (la fuente lo llama "Serie
+  Semifinal"), `SF` final.
+- `idEquipo` va de `01` a `09` y **no son franquicias sino nombres**: los Toros
+  hasta 2012-13 están bajo el `07` (Azucareros del Este) y los Gigantes bajo
+  el `09` (Gigantes del Nordeste). `DIGIMETRICS_EQUIPOS` los lleva a nuestro
+  `team_code`, y las tablas guardan también el `id_equipo` y el nombre de cada
+  temporada.
+
+### Cortesía, porque el servidor es uno solo y es de la liga
+
+- Un pedido por segundo (`DIGIMETRICS_INTERVALO_SEGUNDOS`).
+- Caché en disco de cada respuesta buena, en `data/raw/digimetrics/`
+  (ignorada por git). Repetir la ingesta o reprocesar tras tocar el parser no
+  vuelve a pedir nada. `--refrescar` para re-bajar; `--sin-red` para no salir.
+- **Desde 2024-25 cada fila trae la foto del jugador en base64**: una página de
+  un equipo pesa 20-45 MB y tarda 40 s. No se piden (el ingestor para en
+  2023), y el cliente corta cualquier respuesta de más de 5 MB. Las fotos no
+  se guardan nunca.
+- A los equipos que no jugaron una temporada (el bateo de la regular viene
+  vacío) no se les pide nada más.
+
+### Cómo se protege el parser
+
+Las dos formas en que un scraper falla en silencio, cubiertas:
+
+- **Columnas por encabezado, nunca por posición.** Si falta una que
+  esperamos, `FormatoInesperado` y se para.
+- **Cada fila se comprueba contra las tasas que publica la propia página**:
+  AVG y SLG con H, AB, 2B, 3B y HR; ERA y WHIP con CL, outs, H y BB. Si una
+  columna estuviera cruzada, las tasas no darían. La ERA de la fuente divide
+  entre los innings redondeados a tres decimales (3 CL en 1.1 IP publica
+  20.26, no 20.25); el chequeo acepta las dos cuentas.
+- Un blanco es `None`, no 0 (el LOB antes de 2013 no se registraba).
+
+`python main.py ingest-historia` sale con código 1 si alguna fila tiene tasas
+que no cuadran, y `verify_digimetrics.py` parsea toda la caché real cuando
+existe y exige cero.
+
+### Las tablas
+
+`hist_bateo` y `hist_pitcheo` con clave `(temporada, etapa, id_equipo,
+id_miembro)`, solo conteos (regla 3; los innings como outs, igual que
+`pitching_lines`). `hist_jugadores`, `hist_etapas` y
+`hist_equipos_temporada`. La ingesta **reemplaza la temporada entera** en una
+transacción: idempotente y sin restos si la fuente corrige algo.
+
+Es una capa aparte, sin conexión con `players`: el `idMiembro` de la fuente y
+el id de la MLB no se enlazan todavía. Para 2012-13 en adelante la app sigue
+usando el esquema de juego.
+
+### El cruce con la MLB API
+
+De 2012-13 a 2023-24 hay dos anotaciones independientes de los mismos
+juegos. `python main.py cruzar-historia` compara los totales de la regular
+equipo por equipo (VB, H, 2B, 3B, HR, C, CI, BB, K, BR; G, P, SV, outs, CL, H,
+BB, K). Es la comparación contra otra fuente que "Validación cruzada" dejaba
+pendiente. Sus resultados reales, cuando se corra, deben fijarse EXACTOS en una
+suite, igual que `verify_capas.py`.
+
 ## Próximos pasos
 
 1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Scraper secundario de lidom.com para rosters y noticias. Requeriría reinstalar `beautifulsoup4` — se quitó de `requirements.txt` cuando se eliminaron los scrapers legacy, porque ningún módulo la importaba.
+2. Correr `python main.py ingest-historia` y `cruzar-historia`, y fijar las diferencias del cruce en una suite. Después, exponer la historia: endpoints y pantallas (líderes de todos los tiempos, la carrera completa de un jugador), y enlazar `idMiembro` con los jugadores de la MLB API.
 3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal

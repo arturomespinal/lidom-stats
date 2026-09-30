@@ -133,3 +133,51 @@ HTTP_MAX_RETRIES = 3
 
 # Default DB
 DEFAULT_DB_URL = "sqlite:///data/lidom_stats.db"
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# DIGIMETRICS — el portal de estadísticas oficial de LIDOM
+# ─────────────────────────────────────────────────────────────────────────────
+# estadisticas.lidom.com es la segunda fuente del proyecto. Lo que aporta y la
+# MLB API no tiene: la HISTORIA. La MLB API empieza en 2012-13; DIGIMETRICS trae
+# líneas de temporada por jugador desde 1951, por equipo y por etapa.
+#
+# Solo HTTP: el HTTPS responde con un 302 de vuelta a HTTP. No tiene robots.txt
+# (404) ni pide sesión. Es un ASP.NET MVC en un solo servidor y lento, así que
+# se le pide con calma: un pedido por segundo y caché en disco (ver
+# src/clients/digimetrics.py).
+
+DIGIMETRICS_BASE_URL = "http://estadisticas.lidom.com"
+
+# Un pedido por segundo. El servidor tarda entre 0,3 y 0,7 s en cada página
+# histórica; más rápido que esto no ganamos nada y le cargamos la mano.
+DIGIMETRICS_INTERVALO_SEGUNDOS = 1.0
+
+# Desde 2024-25 cada fila de las tablas trae la foto del jugador incrustada en
+# base64: una página de un equipo pesa 20-45 MB y tarda 40 s. No se piden (y
+# las fotos no se usan: ver claude/guia-legal-ads.md). El cliente corta
+# cualquier respuesta que pase de este tamaño.
+DIGIMETRICS_MAX_BYTES = 5 * 1024 * 1024
+
+# Caché de las respuestas crudas. data/raw/ ya está en .gitignore.
+DIGIMETRICS_CACHE_DIR = "data/raw/digimetrics"
+
+# idEquipo de DIGIMETRICS → nuestro team_code.
+#
+# OJO: los ids no son franquicias, son NOMBRES. DIGIMETRICS guarda todas las
+# temporadas de los Toros hasta 2012-13 bajo el 07, "Azucareros del Este", y
+# las de los Gigantes bajo el 09, "Gigantes del Nordeste"; el 05 y el 04 solo
+# aparecen después. Así que dos ids apuntan al mismo team_code, y por eso las
+# tablas históricas llevan el id_equipo en la clave primaria además del
+# código. El nombre de cada temporada se guarda tal como lo da la fuente.
+DIGIMETRICS_EQUIPOS: dict[str, str] = {
+    "01": "AGU",  # Águilas Cibaeñas
+    "02": "LIC",  # Tigres del Licey
+    "03": "ESC",  # Leones del Escogido
+    "04": "GIG",  # Gigantes del Cibao
+    "05": "TOR",  # Toros del Este
+    "06": "EST",  # Estrellas Orientales
+    "07": "TOR",  # Azucareros del Este (la misma franquicia que los Toros)
+    "08": "CAI",  # Caimanes del Sur (franquicia desaparecida)
+    "09": "GIG",  # Gigantes del Nordeste (la misma franquicia que los Gigantes)
+}

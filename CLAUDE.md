@@ -1442,6 +1442,16 @@ puntos es `w / Σ anchos`, con tope en el de diseño.
 **No volver a usar `adjustsFontSizeToFit`** en textos en Bebas. Si hace falta
 en otra fuente, medir antes en un iPhone.
 
+**Bebas con `lineHeight` apretado necesita aire arriba en iOS.** El alto
+natural de Bebas es 1.2 em (ascendente 900, descendente 300); con un
+`lineHeight` menor, iOS recorta el dibujo a la caja del texto, y el remate de
+las cifras redondas se pierde: el récord "27-22" de la ficha de equipo (84 pt
+con 76 de alto) salía con el "2" y el "7" planos arriba (30-sep). La regla:
+`paddingTop` para que la caja tenga espacio donde dibujar, y el mismo
+`marginTop` en negativo para que la cifra no se mueva. Los nombres de la
+cabecera ya llevaban su `paddingTop`; el récord del equipo y las carreras del
+detalle de juego no. En el arnés web no se ve: el navegador no recorta.
+
 ## Micro-animaciones (30-sep-2026)
 
 Tres, y ninguna decora: cada una confirma algo. Viven en

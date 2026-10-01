@@ -486,10 +486,17 @@ const styles = StyleSheet.create({
   },
   meta: { fontSize: 13, color: COLORS.inkDim },
   record: { flexDirection: 'row', alignItems: 'flex-end', gap: 16 },
+  // lineHeight por debajo del alto natural de Bebas (1.2 em) aprieta la fila,
+  // pero en iOS el texto se recorta a su caja: el remate de arriba del "2" y
+  // del "7" salía cortado (iPhone de Arturo, 30-sep). paddingTop le da a la
+  // caja espacio por arriba para dibujar y marginTop lo devuelve: la cifra no
+  // se mueve. Mismo truco que el paddingTop de los demás textos en Bebas.
   recordValor: {
     fontFamily: FONTS.display,
     fontSize: 84,
     lineHeight: 76,
+    paddingTop: 12,
+    marginTop: -12,
     color: COLORS.inkFg,
     fontVariant: ['tabular-nums'],
   },

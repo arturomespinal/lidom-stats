@@ -355,6 +355,10 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.display,
     fontSize: 56,
     lineHeight: 56,
+    // Espacio para dibujar el remate de las cifras redondas en iOS sin mover
+    // la cifra (ver recordValor en TeamScreen).
+    paddingTop: 8,
+    marginTop: -8,
     fontVariant: ['tabular-nums'],
     minWidth: 40,
     textAlign: 'right',

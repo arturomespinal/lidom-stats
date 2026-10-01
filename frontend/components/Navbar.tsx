@@ -13,6 +13,8 @@ const TABS = [
   { label: "Posiciones", href: "/posiciones" },
   { label: "Bateo", href: "/batting" },
   { label: "Pitcheo", href: "/pitching" },
+  // Los récords de todos los tiempos (DIGIMETRICS desde 1951 + MLB API).
+  { label: "Historia", href: "/historia" },
 ];
 
 interface Props {
@@ -48,7 +50,10 @@ export default function Navbar({ season }: Props) {
             temporada fuera de la barra. */}
         <div className="flex h-full min-w-0 items-stretch gap-1 overflow-x-auto">
           {TABS.map((tab) => {
-            const isActive = pathname === tab.href;
+            // Historia tiene páginas debajo (la ficha de un histórico): la
+            // pestaña sigue marcada en ellas.
+            const isActive =
+              tab.href === "/" ? pathname === "/" : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
             return (
               <Link
                 key={tab.href}

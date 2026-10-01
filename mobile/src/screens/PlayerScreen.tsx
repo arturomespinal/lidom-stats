@@ -34,10 +34,11 @@ type Rol = 'bateo' | 'pitcheo';
 
 /* Las columnas son las de la web (SeasonTable.tsx), en el mismo orden: quien
    usa las dos plataformas encuentra cada número donde lo dejó. */
-type FilaBateo = PlayerBattingSeason | CareerBatting;
-type FilaPitcheo = PlayerPitchingSeason | CareerPitching;
+export type FilaBateo = PlayerBattingSeason | CareerBatting;
+export type FilaPitcheo = PlayerPitchingSeason | CareerPitching;
 
-const COLS_BATEO: Col<FilaBateo>[] = [
+// Exportadas: la ficha de un histórico (HistoricoScreen) usa las mismas.
+export const COLS_BATEO: Col<FilaBateo>[] = [
   { k: 'J', t: 'Juegos', val: f => String(f.games) },
   { k: 'AP', t: 'Apariciones al plato', val: f => String(f.pa), ancho: 48 },
   { k: 'VB', t: 'Veces al bate', val: f => String(f.ab), ancho: 48 },
@@ -56,7 +57,7 @@ const COLS_BATEO: Col<FilaBateo>[] = [
   { k: 'OPS', t: 'OBP más slugging', val: f => pct3(f.ops), fuerte: true },
 ];
 
-const COLS_PITCHEO: Col<FilaPitcheo>[] = [
+export const COLS_PITCHEO: Col<FilaPitcheo>[] = [
   { k: 'J', t: 'Juegos', val: f => String(f.games) },
   { k: 'JI', t: 'Juegos iniciados', val: f => String(f.games_started) },
   { k: 'G', t: 'Ganados', val: f => String(f.wins) },
@@ -90,12 +91,22 @@ function Cifra({ valor, etiqueta }: { valor: string; etiqueta: string }) {
  * quiera el año a año. Las tasas las recompone el servidor (src/carrera.py):
  * este componente no calcula nada.
  */
-function FranjaCarrera({ rol, perfil }: { rol: Rol; perfil: PlayerProfile }) {
-  if (rol === 'bateo' && perfil.career_batting) {
-    const c = perfil.career_batting;
+export function FranjaCarrera({
+  rol,
+  bateo,
+  pitcheo,
+  titulo = 'Carrera en LIDOM',
+}: {
+  rol: Rol;
+  bateo: CareerBatting | null;
+  pitcheo: CareerPitching | null;
+  titulo?: string;
+}) {
+  if (rol === 'bateo' && bateo) {
+    const c = bateo;
     return (
       <View style={styles.franja}>
-        <Text style={styles.franjaTitulo}>Carrera en LIDOM · bateo</Text>
+        <Text style={styles.franjaTitulo}>{titulo} · bateo</Text>
         <View style={styles.cifras}>
           <Cifra valor={pct3(c.avg)} etiqueta="AVG" />
           <Cifra valor={pct3(c.obp)} etiqueta="OBP" />
@@ -109,11 +120,11 @@ function FranjaCarrera({ rol, perfil }: { rol: Rol; perfil: PlayerProfile }) {
       </View>
     );
   }
-  if (rol === 'pitcheo' && perfil.career_pitching) {
-    const c = perfil.career_pitching;
+  if (rol === 'pitcheo' && pitcheo) {
+    const c = pitcheo;
     return (
       <View style={styles.franja}>
-        <Text style={styles.franjaTitulo}>Carrera en LIDOM · pitcheo</Text>
+        <Text style={styles.franjaTitulo}>{titulo} · pitcheo</Text>
         <View style={styles.cifras}>
           <Cifra valor={num(c.era, 2)} etiqueta="EFE" />
           <Cifra valor={num(c.whip, 2)} etiqueta="WHIP" />
@@ -208,8 +219,18 @@ export default function PlayerScreen({ route, navigation }: Props) {
 
   // Mismos umbrales que la web: un lanzador con tres turnos al bate no
   // necesita una tabla de bateo llena de ceros.
-  const bateo = perfil.batting.length > 0 && (perfil.career_batting?.pa ?? 0) >= 10;
-  const pitcheo = perfil.pitching.length > 0 && (perfil.career_pitching?.outs ?? 0) >= 9;
+  // Sus años anteriores a 2012-13 (DIGIMETRICS), si jugó entonces. Con ellos
+  // la franja y el pie de la tabla son la carrera COMPLETA, que el servidor
+  // ya compuso con las dos fuentes.
+  const historia = perfil.history;
+  const carreraBateo = historia?.career_batting ?? perfil.career_batting;
+  const carreraPitcheo = historia?.career_pitching ?? perfil.career_pitching;
+  const equipos = historia?.teams ?? perfil.teams;
+
+  const bateo =
+    perfil.batting.length + (historia?.batting.length ?? 0) > 0 && (carreraBateo?.pa ?? 0) >= 10;
+  const pitcheo =
+    perfil.pitching.length + (historia?.pitching.length ?? 0) > 0 && (carreraPitcheo?.outs ?? 0) >= 9;
   const principal: Rol | null = perfil.is_pitcher
     ? pitcheo ? 'pitcheo' : bateo ? 'bateo' : null
     : bateo ? 'bateo' : pitcheo ? 'pitcheo' : null;
@@ -367,18 +388,18 @@ export default function PlayerScreen({ route, navigation }: Props) {
 
       {/* ── Dónde jugó ── Una barra partida por equipo, del largo de sus
           temporadas en cada uno. */}
-      {perfil.teams.length > 0 && (
+      {equipos.length > 0 && (
         <>
           <Seccion
             titulo="Trayectoria"
-            nota={`${perfil.teams.length} ${perfil.teams.length === 1 ? 'equipo' : 'equipos'}`}
+            nota={`${equipos.length} ${equipos.length === 1 ? 'equipo' : 'equipos'}`}
           />
-          <Trayectoria equipos={perfil.teams} onEquipo={code => abrirEquipo(code)} />
+          <Trayectoria equipos={equipos} onEquipo={code => abrirEquipo(code)} />
         </>
       )}
 
       {/* ── Qué tan bueno ha sido ── La carrera entera, en la franja navy. */}
-      {activo && <FranjaCarrera rol={activo} perfil={perfil} />}
+      {activo && <FranjaCarrera rol={activo} bateo={carreraBateo} pitcheo={carreraPitcheo} />}
 
       {/* ── El año a año ── Pestañas solo si hay dos roles que mostrar. */}
       {bateo && pitcheo ? (
@@ -406,17 +427,19 @@ export default function PlayerScreen({ route, navigation }: Props) {
         {activo === 'bateo' && (
           <TablaTemporadas<FilaBateo>
             temporadas={perfil.batting}
-            carrera={perfil.career_batting}
+            carrera={carreraBateo}
             cols={COLS_BATEO}
             onEquipo={abrirEquipo}
+            historicas={historia?.batting}
           />
         )}
         {activo === 'pitcheo' && (
           <TablaTemporadas<FilaPitcheo>
             temporadas={perfil.pitching}
-            carrera={perfil.career_pitching}
+            carrera={carreraPitcheo}
             cols={COLS_PITCHEO}
             onEquipo={abrirEquipo}
+            historicas={historia?.pitching}
           />
         )}
       </Aparecer>
@@ -429,7 +452,9 @@ export default function PlayerScreen({ route, navigation }: Props) {
       )}
 
       <Text style={styles.fuente}>
-        Datos: MLB Stats API · {perfil.batting.length + perfil.pitching.length}{' '}
+        Datos: MLB Stats API
+        {historia ? ' · antes de 2012-13, DIGIMETRICS (estadisticas.lidom.com), solo serie regular' : ''} ·{' '}
+        {perfil.batting.length + perfil.pitching.length + (historia ? historia.batting.length + historia.pitching.length : 0)}{' '}
         temporadas-equipo registradas
       </Text>
     </ScrollView>

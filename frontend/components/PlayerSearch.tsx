@@ -4,8 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import TeamBadge from "@/components/TeamBadge";
-import { searchPlayers } from "@/lib/api";
-import { PlayerSearchHit } from "@/lib/types";
+import { searchPlayers, type ResultadoBusqueda } from "@/lib/api";
+import { epocaHistorica } from "@/lib/formato";
 
 /**
  * Buscador de jugadores de la barra superior.
@@ -30,9 +30,9 @@ export default function PlayerSearch() {
   // estado. Con dos estados separados haría falta un setState síncrono dentro
   // del efecto para mantenerlos a la par —cascada de renders, y el linter de
   // React 19 lo marca—; así basta con comparar al pintar.
-  const [res, setRes] = useState<{ q: string; data: PlayerSearchHit[] }>({
+  const [res, setRes] = useState<{ q: string; data: ResultadoBusqueda }>({
     q: "",
-    data: [],
+    data: { jugadores: [], historicos: [] },
   });
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
@@ -73,13 +73,17 @@ export default function PlayerSearch() {
   // mostrando mientras llega lo nuevo: un panel en blanco entre pulsación y
   // pulsación se lee como si la búsqueda no funcionara.
   const termino = q.trim();
-  const visibles = termino.length < 2 ? [] : res.data;
+  const visibles = termino.length < 2 ? [] : res.data.jugadores;
+  // Los que solo están en DIGIMETRICS (antes de 2012-13): van aparte, debajo,
+  // y abren la ficha histórica.
+  const historicos = termino.length < 2 ? [] : res.data.historicos;
+  const total = visibles.length + historicos.length;
   const buscando = termino.length >= 2 && res.q !== termino;
 
-  function abrir(playerId: string) {
+  function abrir(ruta: string) {
     setAbierto(false);
     setQ("");
-    router.push(`/players/${playerId}`);
+    router.push(ruta);
   }
 
   return (
@@ -98,20 +102,25 @@ export default function PlayerSearch() {
           if (e.key === "Escape") setAbierto(false);
           // Enter con un solo resultado abre directo: es lo que espera quien
           // escribió el nombre completo.
-          if (e.key === "Enter" && visibles.length === 1)
-            abrir(visibles[0].player_id);
+          if (e.key === "Enter" && total === 1)
+            abrir(
+              visibles.length
+                ? `/players/${visibles[0].player_id}`
+                : `/historia/jugador/${historicos[0].id_miembro}`
+            );
         }}
         className="w-32 rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:w-48 focus:border-fg2 focus:outline-none sm:w-40 sm:focus:w-56"
       />
 
       {abierto && q.trim().length >= 2 && (
         <div className="absolute right-0 top-full z-20 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border border-line bg-card shadow-xl">
-          {visibles.length === 0 ? (
+          {total === 0 ? (
             <p className="px-3 py-3 text-xs text-dim">
               {buscando ? "Buscando…" : "Sin coincidencias"}
             </p>
           ) : (
-            visibles.map((h) => {
+            <>
+            {visibles.map((h) => {
               // Los equipos vienen como CSV de un GROUP_CONCAT; se pintan las
               // tres primeras tejas para distinguir homónimos de un vistazo.
               const equipos = [
@@ -125,7 +134,7 @@ export default function PlayerSearch() {
               return (
                 <button
                   key={h.player_id}
-                  onClick={() => abrir(h.player_id)}
+                  onClick={() => abrir(`/players/${h.player_id}`)}
                   className="flex w-full items-center gap-2 border-b border-line-soft px-3 py-2 text-left last:border-0 hover:bg-raised"
                 >
                   <span className="min-w-0 flex-1">
@@ -145,7 +154,36 @@ export default function PlayerSearch() {
                   </span>
                 </button>
               );
-            })
+            })}
+            {historicos.length > 0 && (
+              <>
+                {/* Los que solo existen en DIGIMETRICS: sin player_id ni fecha
+                    de nacimiento; lo que los distingue es su época. */}
+                <p className="border-b border-line-soft bg-header px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.08em] text-dim">
+                  Históricos · antes de 2012-13
+                </p>
+                {historicos.map((h) => (
+                  <button
+                    key={`h${h.id_miembro}`}
+                    onClick={() => abrir(`/historia/jugador/${h.id_miembro}`)}
+                    className="flex w-full items-center gap-2 border-b border-line-soft px-3 py-2 text-left last:border-0 hover:bg-raised"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block truncate text-sm text-fg">{h.name}</span>
+                      <span className="num block text-[10px] text-faint">
+                        {epocaHistorica(h.first_season, h.last_season)}
+                      </span>
+                    </span>
+                    <span className="flex shrink-0 gap-1">
+                      {h.teams.slice(0, 3).map((code) => (
+                        <TeamBadge key={code} code={code} size="sm" />
+                      ))}
+                    </span>
+                  </button>
+                ))}
+              </>
+            )}
+            </>
           )}
         </div>
       )}

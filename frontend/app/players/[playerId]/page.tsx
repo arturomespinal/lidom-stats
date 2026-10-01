@@ -50,10 +50,19 @@ export default async function PlayerPage(props: Props) {
   // dieciséis columnas, y un bateador que lanzó una entrada en un juego roto
   // tampoco una de pitcheo. El umbral evita que la ficha abra con una tabla
   // de una fila llena de ceros.
+  // Sus años anteriores a 2012-13 (DIGIMETRICS), si jugó entonces. Con ellos,
+  // los totales de abajo son los de la carrera COMPLETA, que el servidor ya
+  // compuso con las dos fuentes.
+  const historia = perfil.history;
+  const carreraBateo = historia?.career_batting ?? perfil.career_batting;
+  const carreraPitcheo = historia?.career_pitching ?? perfil.career_pitching;
+  const etiquetaCarrera = historia ? "Carrera completa" : "Carrera";
+
   const bateoRelevante =
-    perfil.batting.length > 0 && (perfil.career_batting?.pa ?? 0) >= 10;
+    perfil.batting.length + (historia?.batting.length ?? 0) > 0 && (carreraBateo?.pa ?? 0) >= 10;
   const pitcheoRelevante =
-    perfil.pitching.length > 0 && (perfil.career_pitching?.outs ?? 0) >= 9;
+    perfil.pitching.length + (historia?.pitching.length ?? 0) > 0 && (carreraPitcheo?.outs ?? 0) >= 9;
+  const equipos = historia?.teams ?? perfil.teams;
 
   // El equipo de más volumen en cada temporada: pinta las épocas de la curva.
   // Un jugador cambiado a mitad de campaña tiene dos filas; gana la de más
@@ -128,13 +137,13 @@ export default async function PlayerPage(props: Props) {
           </section>
         )}
 
-        {perfil.teams.length > 0 && (
+        {equipos.length > 0 && (
           <section>
             <Seccion
               titulo="Trayectoria"
-              nota={`${perfil.teams.length} ${perfil.teams.length === 1 ? "equipo" : "equipos"}`}
+              nota={`${equipos.length} ${equipos.length === 1 ? "equipo" : "equipos"}`}
             />
-            <Trayectoria equipos={perfil.teams} />
+            <Trayectoria equipos={equipos} />
           </section>
         )}
 
@@ -142,21 +151,27 @@ export default async function PlayerPage(props: Props) {
         {perfil.is_pitcher && pitcheoRelevante && (
           <PitchingSeasons
             temporadas={perfil.pitching}
-            carrera={perfil.career_pitching}
+            carrera={carreraPitcheo}
+            historicas={historia?.pitching}
+            etiquetaCarrera={etiquetaCarrera}
           />
         )}
 
         {bateoRelevante && (
           <BattingSeasons
             temporadas={perfil.batting}
-            carrera={perfil.career_batting}
+            carrera={carreraBateo}
+            historicas={historia?.batting}
+            etiquetaCarrera={etiquetaCarrera}
           />
         )}
 
         {!perfil.is_pitcher && pitcheoRelevante && (
           <PitchingSeasons
             temporadas={perfil.pitching}
-            carrera={perfil.career_pitching}
+            carrera={carreraPitcheo}
+            historicas={historia?.pitching}
+            etiquetaCarrera={etiquetaCarrera}
           />
         )}
 
@@ -168,7 +183,9 @@ export default async function PlayerPage(props: Props) {
         )}
 
         <p className="text-[11px] text-faint">
-          Datos: MLB Stats API · {perfil.batting.length + perfil.pitching.length}{" "}
+          Datos: MLB Stats API
+          {historia ? " · antes de 2012-13, DIGIMETRICS (estadisticas.lidom.com), solo serie regular" : ""} ·{" "}
+          {perfil.batting.length + perfil.pitching.length + (historia ? historia.batting.length + historia.pitching.length : 0)}{" "}
           temporadas-equipo registradas
         </p>
       </main>

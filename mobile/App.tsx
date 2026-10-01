@@ -19,6 +19,8 @@ import PitchingScreen from './src/screens/PitchingScreen';
 import SearchScreen from './src/screens/SearchScreen';
 import TeamScreen from './src/screens/TeamScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
+import HistoricoScreen from './src/screens/HistoricoScreen';
+import RecordsScreen from './src/screens/RecordsScreen';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
 
 // La pantalla de arranque se queda hasta que Bebas Neue esté cargada. Sin
@@ -122,6 +124,12 @@ function HoyTab() {
         component={PlayerScreen}
         options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
       />
+      <LiveStack.Screen
+        name="Historico"
+        component={HistoricoScreen}
+        options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
+      />
+      <LiveStack.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
     </LiveStack.Navigator>
   );
 }
@@ -151,6 +159,12 @@ function crearPila(Raiz: React.ComponentType) {
           component={PlayerScreen}
           options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
         />
+        <Pila.Screen
+          name="Historico"
+          component={HistoricoScreen}
+          options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
+        />
+        <Pila.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
       </Pila.Navigator>
     );
   };

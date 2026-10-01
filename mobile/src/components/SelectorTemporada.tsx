@@ -33,11 +33,20 @@ export default function SelectorTemporada({
   activa,
   onChange,
   titulo = 'Temporada',
+  icono = 'calendar-outline',
+  subtitulo,
+  marcarPrimera = true,
 }: {
   opciones: OpcionTemporada[];
   activa: string;
   onChange: (key: string) => void;
   titulo?: string;
+  /** El icono del botón; null para ninguno. El calendario es de temporadas. */
+  icono?: React.ComponentProps<typeof Ionicons>['name'] | null;
+  /** La línea bajo el título de la hoja. Por defecto, "N temporadas en la base". */
+  subtitulo?: string;
+  /** "ACTUAL" en la primera opción: solo tiene sentido con temporadas. */
+  marcarPrimera?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
   const lista = useRef<ScrollView>(null);
@@ -63,7 +72,7 @@ export default function SelectorTemporada({
         accessibilityRole="button"
         accessibilityLabel={`${titulo}: ${actual?.label ?? activa}. Cambiar`}
       >
-        <Ionicons name="calendar-outline" size={18} color={COLORS.textSecondary} />
+        {!!icono && <Ionicons name={icono} size={18} color={COLORS.textSecondary} />}
         <Text style={styles.botonEtiqueta}>{titulo.toUpperCase()}</Text>
         <Text style={styles.botonValor}>{actual?.label ?? activa}</Text>
         <Ionicons name="chevron-down" size={18} color={COLORS.textPrimary} />
@@ -73,7 +82,7 @@ export default function SelectorTemporada({
         visible={abierto}
         onClose={() => setAbierto(false)}
         titulo={titulo}
-        subtitulo={`${opciones.length} temporadas en la base`}
+        subtitulo={subtitulo ?? `${opciones.length} temporadas en la base`}
       >
         <ScrollView ref={lista} contentContainerStyle={styles.lista}>
           {opciones.map((o, i) => {
@@ -88,13 +97,13 @@ export default function SelectorTemporada({
                 style={({ pressed }) => [styles.fila, es && styles.filaActiva, pressed && !es && styles.presionado]}
                 accessibilityRole="button"
                 accessibilityState={{ selected: es }}
-                accessibilityLabel={`${o.label}${o.nota ? `, ${o.nota}` : ''}${i === 0 ? ', la más reciente' : ''}`}
+                accessibilityLabel={`${o.label}${o.nota ? `, ${o.nota}` : ''}${marcarPrimera && i === 0 ? ', la más reciente' : ''}`}
               >
                 <View style={{ flex: 1 }}>
                   <Text style={[styles.filaValor, es && styles.textoActivo]}>{o.label}</Text>
                   {!!o.nota && <Text style={[styles.filaNota, es && styles.notaActiva]}>{o.nota}</Text>}
                 </View>
-                {i === 0 && !es && <Text style={styles.reciente}>ACTUAL</Text>}
+                {marcarPrimera && i === 0 && !es && <Text style={styles.reciente}>ACTUAL</Text>}
                 {es && <Ionicons name="checkmark-circle" size={22} color={COLORS.inkFg} />}
               </Pressable>
             );

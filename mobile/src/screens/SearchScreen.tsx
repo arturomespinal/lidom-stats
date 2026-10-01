@@ -10,11 +10,13 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
-import { searchPlayers } from '../api';
-import { COLORS } from '../constants';
+import { fetchResumenHistorico, searchPlayers } from '../api';
+import { COLORS, FONTS } from '../constants';
+import { epocaHistorica, valorHistorico } from '../formato';
 import { useFichas } from '../navigation';
-import type { PlayerSearchHit } from '../types';
+import type { HistoricoHit, PlayerSearchHit, ResumenHistorico } from '../types';
 import TeamBadge from '../components/TeamBadge';
+import { Tocable } from '../components/Movimiento';
 
 /**
  * Lo que la lista muestra, y la consulta a la que corresponde.
@@ -28,7 +30,15 @@ import TeamBadge from '../components/TeamBadge';
 interface Resultado {
   consulta: string;
   hits: PlayerSearchHit[];
+  /** Los que solo están en DIGIMETRICS (antes de 2012-13). */
+  historicos: HistoricoHit[];
 }
+
+/** Una fila de la lista: un jugador de la MLB API, el rótulo de los históricos, o un histórico. */
+type Item =
+  | { tipo: 'mlb'; hit: PlayerSearchHit }
+  | { tipo: 'titulo' }
+  | { tipo: 'hist'; hit: HistoricoHit };
 
 /** "LIC,TOR" + "TOR,EST" → ["LIC", "TOR", "EST"], sin repetir. */
 function equipos(h: PlayerSearchHit): string[] {
@@ -59,8 +69,21 @@ function equipos(h: PlayerSearchHit): string[] {
 export default function SearchScreen() {
   const nav = useFichas();
   const [texto, setTexto] = useState('');
-  const [resultado, setResultado] = useState<Resultado>({ consulta: '', hits: [] });
+  const [resultado, setResultado] = useState<Resultado>({ consulta: '', hits: [], historicos: [] });
   const [fallo, setFallo] = useState(false);
+  // Los récords de la pantalla vacía. Se piden una vez: cambian solo cuando
+  // entra un juego, y la API ya los guarda en caché.
+  const [records, setRecords] = useState<ResumenHistorico | null>(null);
+
+  useEffect(() => {
+    let vivo = true;
+    fetchResumenHistorico().then(r => {
+      if (vivo) setRecords(r);
+    });
+    return () => {
+      vivo = false;
+    };
+  }, []);
 
   const consulta = texto.trim();
 
@@ -68,16 +91,16 @@ export default function SearchScreen() {
     if (consulta.length < 2) return;
     const control = new AbortController();
     const t = setTimeout(async () => {
-      const hits = await searchPlayers(consulta, control.signal);
+      const r = await searchPlayers(consulta, control.signal);
       if (control.signal.aborted) return;
       // Un fallo de red no vacía la lista: lo de hace un segundo sirve más
       // que un panel en blanco. Solo se avisa.
-      if (hits === null) {
+      if (r === null) {
         setFallo(true);
         return;
       }
       setFallo(false);
-      setResultado({ consulta, hits });
+      setResultado({ consulta, hits: r.jugadores, historicos: r.historicos });
     }, 250);
     return () => {
       clearTimeout(t);
@@ -87,7 +110,13 @@ export default function SearchScreen() {
 
   const corto = consulta.length < 2;
   const buscando = !corto && resultado.consulta !== consulta && !fallo;
-  const hits = corto ? [] : resultado.hits;
+  const items: Item[] = corto
+    ? []
+    : [
+        ...resultado.hits.map(hit => ({ tipo: 'mlb' as const, hit })),
+        ...(resultado.historicos.length ? [{ tipo: 'titulo' as const }] : []),
+        ...resultado.historicos.map(hit => ({ tipo: 'hist' as const, hit })),
+      ];
 
   return (
     <View style={styles.pagina}>
@@ -108,8 +137,8 @@ export default function SearchScreen() {
       </View>
 
       <FlatList
-        data={hits}
-        keyExtractor={h => h.player_id}
+        data={items}
+        keyExtractor={i => (i.tipo === 'mlb' ? i.hit.player_id : i.tipo === 'hist' ? `h${i.hit.id_miembro}` : 'titulo')}
         keyboardShouldPersistTaps="handled"
         onScrollBeginDrag={Keyboard.dismiss}
         ItemSeparatorComponent={() => <View style={styles.sep} />}
@@ -122,15 +151,55 @@ export default function SearchScreen() {
         }
         ListEmptyComponent={
           corto ? (
-            <Text style={styles.ayuda}>
-              Escribe al menos dos letras. Hay 2.253 jugadores, de la 2012-13 a la
-              2025-26.
-            </Text>
+            // Un View y no un fragmento: la lista le pone onLayout a este
+            // elemento, y un fragmento no lo admite.
+            <View>
+              {records && (
+                <PanelRecords
+                  records={records}
+                  onAbrir={(grupo, stat) => nav.push('Records', { grupo, stat })}
+                />
+              )}
+              <Text style={styles.ayuda}>
+                Escribe al menos dos letras. Están los jugadores de LIDOM desde 1951.
+              </Text>
+            </View>
           ) : !buscando && resultado.consulta === consulta ? (
             <Text style={styles.ayuda}>Nadie se llama así en la base.</Text>
           ) : null
         }
-        renderItem={({ item }) => {
+        renderItem={({ item: fila }) => {
+          if (fila.tipo === 'titulo') {
+            return <Text style={styles.titulo}>Históricos · antes de 2012-13</Text>;
+          }
+          if (fila.tipo === 'hist') {
+            const h = fila.hit;
+            return (
+              <Pressable
+                onPress={() => nav.push('Historico', { idMiembro: h.id_miembro, nombre: h.name })}
+                style={({ pressed }) => [styles.fila, pressed && styles.presionada]}
+                accessibilityRole="button"
+                accessibilityLabel={`${h.name}, ${epocaHistorica(h.first_season, h.last_season)}. ${h.teams.join(', ')}`}
+              >
+                <View style={{ flex: 1, minWidth: 0 }}>
+                  <Text style={styles.nombre} numberOfLines={1}>
+                    {h.name}
+                  </Text>
+                  {/* Sin fecha de nacimiento en la fuente: lo que los distingue es la época. */}
+                  <Text style={styles.meta} numberOfLines={1}>
+                    {epocaHistorica(h.first_season, h.last_season)}
+                  </Text>
+                </View>
+                <View style={styles.tejas}>
+                  {h.teams.slice(0, 3).map(c => (
+                    <TeamBadge key={c} code={c} size={24} />
+                  ))}
+                </View>
+                <Text style={styles.chevron}>›</Text>
+              </Pressable>
+            );
+          }
+          const item = fila.hit;
           const eqs = equipos(item);
           const anio = item.birth_date?.slice(0, 4);
           return (
@@ -204,4 +273,74 @@ const styles = StyleSheet.create({
   mas: { fontSize: 11, color: COLORS.textSecondary },
   chevron: { fontSize: 22, color: COLORS.textFaint, width: 16, textAlign: 'center' },
   sep: { height: 1, backgroundColor: COLORS.borderSoft },
+  titulo: {
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    color: COLORS.textSecondary,
+    backgroundColor: COLORS.bgHeader,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  panel: { paddingHorizontal: 16, paddingTop: 8 },
+  panelTitulo: { fontFamily: FONTS.display, fontSize: 28, lineHeight: 30, paddingTop: 2, color: COLORS.textPrimary },
+  panelSub: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2, marginBottom: 12 },
+  rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
+  tarjeta: {
+    minHeight: 88,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  tarjetaEtiqueta: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.textSecondary },
+  // Bebas sin fontWeight (ver FONTS).
+  tarjetaValor: { fontFamily: FONTS.display, fontSize: 32, lineHeight: 34, paddingTop: 4, color: COLORS.textPrimary },
+  tarjetaNombre: { fontSize: 12, color: COLORS.textSupport },
 });
+
+/**
+ * La pantalla vacía del buscador: los dueños de los récords de todos los
+ * tiempos. Es la puerta a la historia en el móvil: con cinco pestañas abajo
+ * no cabe una sexta, y el buscador vacío era espacio sin usar. Cada tarjeta
+ * abre la tabla completa de su categoría.
+ */
+function PanelRecords({
+  records,
+  onAbrir,
+}: {
+  records: ResumenHistorico;
+  onAbrir: (grupo: 'bateo' | 'pitcheo', stat: string) => void;
+}) {
+  const todas = (['bateo', 'pitcheo'] as const).flatMap(g => records[g].map(c => ({ ...c, grupo: g })));
+  return (
+    <View style={styles.panel}>
+      <Text style={styles.panelTitulo} accessibilityRole="header">
+        Récords de todos los tiempos
+      </Text>
+      <Text style={styles.panelSub}>LIDOM desde 1951 · serie regular</Text>
+      <View style={styles.rejilla}>
+        {todas.map(c => (
+          <Tocable
+            key={`${c.grupo}-${c.stat}`}
+            contenedor={{ width: '48.5%' }}
+            onPress={() => onAbrir(c.grupo, c.stat)}
+            style={({ pressed }) => [styles.tarjeta, pressed && styles.presionada]}
+            accessibilityRole="button"
+            accessibilityLabel={`${c.label}: ${c.leader ? `${c.leader.name}, ${valorHistorico(c.stat, c.leader.value)}` : 'sin datos'}`}
+          >
+            <Text style={styles.tarjetaEtiqueta} numberOfLines={1}>
+              {c.label}
+            </Text>
+            <Text style={styles.tarjetaValor}>{c.leader ? valorHistorico(c.stat, c.leader.value) : '—'}</Text>
+            <Text style={styles.tarjetaNombre} numberOfLines={1}>
+              {c.leader?.name ?? 'Sin datos'}
+            </Text>
+          </Tocable>
+        ))}
+      </View>
+    </View>
+  );
+}

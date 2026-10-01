@@ -60,6 +60,18 @@ export function rangoTemporadas(primera: string, ultima: string): string {
   return primera === ultima ? primera : `${primera.slice(0, 4)}–${ultima.slice(5)}`;
 }
 
+/**
+ * La época de una carrera histórica con años completos: "1984-85" a
+ * "2010-11" → "1984–2011". `rangoTemporadas` da "1984–11", que basta para
+ * 2012–26 pero se lee mal en carreras que cruzan siglos ("1986–06"). Las
+ * temporadas de verano (1951-1954) vienen sin guion y se quedan como están.
+ */
+export function epocaHistorica(primera: string, ultima: string): string {
+  const desde = primera.slice(0, 4);
+  const hasta = ultima.includes("-") ? String(Number(ultima.slice(0, 4)) + 1) : ultima.slice(0, 4);
+  return desde === hasta ? desde : `${desde}–${hasta}`;
+}
+
 /** Un valor de "contra la liga" según el formato que manda el servidor. */
 export function valorPuesto(v: number, formato: string): string {
   switch (formato) {
@@ -106,6 +118,20 @@ export function marcasRedondas(lo: number, hi: number, max = 4): number[] {
     if (marcas.length <= max) return marcas;
   }
   return [lo, hi];
+}
+
+/**
+ * El valor de un líder de todos los tiempos según su categoría: tasas de
+ * bateo con tres cifras (.333), EFE y WHIP con dos, y las entradas —que la API
+ * manda en OUTS para no arrastrar redondeos— en notación de béisbol. Misma
+ * función en el móvil.
+ */
+export function valorHistorico(stat: string, v: number | null | undefined): string {
+  if (v == null) return "—";
+  if (["avg", "obp", "slg", "ops"].includes(stat)) return pct3(v);
+  if (stat === "era" || stat === "whip") return v.toFixed(2);
+  if (stat === "outs") return entradas(v / 3);
+  return v.toLocaleString("es-DO");
 }
 
 /** "2015" → "2015-16": la MLB nombra la campaña invernal por el año en que empieza. */

@@ -77,6 +77,16 @@ def lideres_historicos(
     return resultado | {"categories": _categorias(group)}
 
 
+@router.get("/historia/resumen", tags=["Historia"])
+def resumen_historico():
+    """El líder de todos los tiempos de las categorías principales, en una
+    sola llamada: la portada de récords de la web y del móvil."""
+    with engine.connect() as conn:
+        if not hay_historia(conn):
+            raise HTTPException(404, SIN_HISTORIA)
+    return _cache.resumen(engine)
+
+
 def historia_de_jugador(conn: Connection, player_id: str, batting: list[dict], pitching: list[dict]) -> dict | None:
     """
     El bloque `history` de la ficha de un jugador de la MLB API: sus temporadas

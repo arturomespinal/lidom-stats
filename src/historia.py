@@ -337,9 +337,21 @@ CATEGORIAS_PITCHEO: dict[str, tuple[str, bool, bool]] = {
 }
 
 # Totales por persona. Una "persona" es un player_id de la MLB API (con sus
-# idMiembro enlazados) o, si no tiene enlace, un idMiembro suelto ("m123").
+# idMiembro enlazados) o, si no tiene enlace, un idMiembro suelto
+# ("hist:123"). El prefijo lleva dos puntos a propósito: un slug de la MLB API
+# nunca los tiene. Con "m123" se confundía a Moisés Sierra
+# ("moises-sierra-1988-09-24") con un histórico.
+PREFIJO_HIST = "hist:"
+
+
+def es_historico(persona: str) -> bool:
+    return persona.startswith(PREFIJO_HIST)
+
+
+def id_historico(persona: str) -> int:
+    return int(persona[len(PREFIJO_HIST):])
 _SQL_HIST_BATEO = """
-    SELECT COALESCE(e.player_id, 'm' || b.id_miembro) AS persona, b.id_miembro,
+    SELECT COALESCE(e.player_id, 'hist:' || b.id_miembro) AS persona, b.id_miembro,
            b.temporada, b.team_code,
            SUM(COALESCE(b.games,0)) AS games, SUM(COALESCE(b.at_bats,0)) AS ab,
            SUM(COALESCE(b.hits,0)) AS h, SUM(COALESCE(b.doubles,0)) AS doubles,
@@ -364,7 +376,7 @@ _SQL_MLB_BATEO = """
     GROUP BY 1, 2, 3
 """
 _SQL_HIST_PITCHEO = """
-    SELECT COALESCE(e.player_id, 'm' || p.id_miembro) AS persona, p.id_miembro,
+    SELECT COALESCE(e.player_id, 'hist:' || p.id_miembro) AS persona, p.id_miembro,
            p.temporada, p.team_code,
            SUM(COALESCE(p.games,0)) AS games, SUM(COALESCE(p.games_started,0)) AS games_started,
            SUM(COALESCE(p.wins,0)) AS wins, SUM(COALESCE(p.losses,0)) AS losses,
@@ -443,12 +455,12 @@ def carreras(conn: Connection, grupo: str) -> dict[str, dict[str, Any]]:
 
 
 def _nombres(conn: Connection, personas: list[str]) -> dict[str, str]:
-    mlb = [p for p in personas if not p.startswith("m")]
-    hist = [int(p[1:]) for p in personas if p.startswith("m")]
+    mlb = [p for p in personas if not es_historico(p)]
+    hist = [id_historico(p) for p in personas if es_historico(p)]
     nombres: dict[str, str] = {}
     for grupo, sql, clave in (
         (mlb, "SELECT player_id, full_name FROM players WHERE player_id IN ({})", lambda k: k),
-        (hist, "SELECT id_miembro, nombre FROM hist_jugadores WHERE id_miembro IN ({})", lambda k: f"m{k}"),
+        (hist, "SELECT id_miembro, nombre FROM hist_jugadores WHERE id_miembro IN ({})", lambda k: f"{PREFIJO_HIST}{k}"),
     ):
         if not grupo:
             continue
@@ -458,13 +470,21 @@ def _nombres(conn: Connection, personas: list[str]) -> dict[str, str]:
     return nombres
 
 
-def lideres(conn: Connection, grupo: str, stat: str, limite: int = 25) -> dict[str, Any]:
-    """Los `limite` primeros de todos los tiempos en `stat`."""
+def lideres(
+    conn: Connection, grupo: str, stat: str, limite: int = 25, todos: dict[str, dict] | None = None
+) -> dict[str, Any]:
+    """
+    Los `limite` primeros de todos los tiempos en `stat`.
+
+    `todos` son las carreras ya calculadas (`carreras(conn, grupo)`): quien
+    pide varias categorías del mismo grupo las calcula una sola vez.
+    """
     categorias = CATEGORIAS_BATEO if grupo == "bateo" else CATEGORIAS_PITCHEO
     if stat not in categorias:
         raise ValueError(f"{stat!r} no es una categoría de {grupo}")
     etiqueta, mayor_mejor, es_tasa = categorias[stat]
-    todos = carreras(conn, grupo)
+    if todos is None:
+        todos = carreras(conn, grupo)
     candidatos = [(p, t) for p, t in todos.items() if t.get(stat) is not None and (t["califica"] or not es_tasa)]
     candidatos = [(p, t) for p, t in candidatos if es_tasa or t[stat] > 0]
     # Empates: gana el de más volumen (más turnos o más outs), y luego el
@@ -482,8 +502,8 @@ def lideres(conn: Connection, grupo: str, stat: str, limite: int = 25) -> dict[s
         data.append({
             "rank": puesto,
             "name": nombres.get(p, p),
-            "player_id": None if p.startswith("m") else p,
-            "id_miembro": int(p[1:]) if p.startswith("m") else (min(t["_miembros"]) if t["_miembros"] else None),
+            "player_id": None if es_historico(p) else p,
+            "id_miembro": id_historico(p) if es_historico(p) else (min(t["_miembros"]) if t["_miembros"] else None),
             "value": t[stat],
             "seasons": len(temporadas),
             "first_season": temporadas[0],
@@ -503,24 +523,50 @@ def lideres(conn: Connection, grupo: str, stat: str, limite: int = 25) -> dict[s
     }
 
 
+# Las categorías de la portada de récords: una fila de tarjetas con el líder
+# de cada una. Las más buscadas, no todas.
+RESUMEN = {
+    "bateo": ("h", "hr", "rbi", "avg", "sb"),
+    "pitcheo": ("wins", "saves", "so", "era"),
+}
+
+
 class CacheCarreras:
     """
-    `carreras()` recorre todas las líneas de las dos fuentes: ~0,5 s. Los
-    líderes cambian solo cuando entra un juego nuevo, así que se guardan unos
-    minutos en memoria. Por proceso, como la caché en vivo.
+    `carreras()` recorre todas las líneas de las dos fuentes: ~0,3 s por
+    grupo. Cambian solo cuando entra un juego nuevo, así que se guardan unos
+    minutos en memoria, por GRUPO: las trece categorías de bateo salen de las
+    mismas carreras. Por proceso, como la caché en vivo.
     """
 
     def __init__(self, segundos: float = 600):
         self.segundos = segundos
-        self._guardado: dict[tuple, tuple[float, Any]] = {}
+        self._guardado: dict[str, tuple[float, dict]] = {}
 
-    def lideres(self, engine: Engine, grupo: str, stat: str, limite: int) -> dict[str, Any]:
-        clave = (grupo, stat, limite)
+    def _carreras(self, conn: Connection, grupo: str) -> dict[str, dict]:
         ahora = time.monotonic()
-        guardado = self._guardado.get(clave)
+        guardado = self._guardado.get(grupo)
         if guardado and ahora - guardado[0] < self.segundos:
             return guardado[1]
-        with engine.connect() as conn:
-            valor = lideres(conn, grupo, stat, limite)
-        self._guardado[clave] = (ahora, valor)
+        valor = carreras(conn, grupo)
+        self._guardado[grupo] = (ahora, valor)
         return valor
+
+    def lideres(self, engine: Engine, grupo: str, stat: str, limite: int) -> dict[str, Any]:
+        with engine.connect() as conn:
+            return lideres(conn, grupo, stat, limite, self._carreras(conn, grupo))
+
+    def resumen(self, engine: Engine) -> dict[str, list[dict]]:
+        """El líder de cada categoría de RESUMEN, en una sola llamada."""
+        salida: dict[str, list[dict]] = {}
+        with engine.connect() as conn:
+            for grupo, stats in RESUMEN.items():
+                todos = self._carreras(conn, grupo)
+                salida[grupo] = []
+                for stat in stats:
+                    r = lideres(conn, grupo, stat, 1, todos)
+                    salida[grupo].append({
+                        "stat": stat, "label": r["label"], "is_rate": r["is_rate"],
+                        "leader": r["data"][0] if r["data"] else None,
+                    })
+        return salida

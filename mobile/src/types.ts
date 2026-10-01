@@ -403,6 +403,118 @@ export interface PlayerProfile {
   is_pitcher: boolean;
   /** null si no tiene filas en su papel principal. */
   context: PlayerContext | null;
+  /**
+   * Sus temporadas antes de 2012-13 (DIGIMETRICS) y la carrera completa con
+   * las dos fuentes. null si no jugó antes de 2012-13. Mismo tipo que la web.
+   */
+  history: HistoriaJugador | null;
+}
+
+/* ── La historia (DIGIMETRICS, 1951-2012) ──────────────────────────────── */
+
+/** Lo que agrega una temporada de DIGIMETRICS a la forma de las vistas. */
+interface ExtraHistorico {
+  /** "regular", "round_robin" o "final". */
+  stage: string;
+  /** El nombre del equipo ESA temporada ("Azucareros del Este"). */
+  team_name: string | null;
+  source: "digimetrics";
+}
+export type TemporadaHistoricaBateo = PlayerBattingSeason & ExtraHistorico;
+export type TemporadaHistoricaPitcheo = PlayerPitchingSeason & ExtraHistorico & {
+  complete_games: number;
+  shutouts: number;
+};
+
+export interface HistoriaJugador {
+  batting: TemporadaHistoricaBateo[];
+  pitching: TemporadaHistoricaPitcheo[];
+  /** La carrera completa: DIGIMETRICS antes de 2012-13 + MLB API después. */
+  career_batting: CareerBatting | null;
+  career_pitching: CareerPitching | null;
+  teams: CareerTeam[];
+  id_miembro: number;
+  source: string;
+}
+
+/** Un jugador que solo está en DIGIMETRICS (GET /historia/miembros/{id}). */
+export interface MiembroHistorico {
+  player: { id_miembro: number; name: string; player_id: string | null };
+  batting: TemporadaHistoricaBateo[];
+  pitching: TemporadaHistoricaPitcheo[];
+  career_batting: CareerBatting | null;
+  career_pitching: CareerPitching | null;
+  postseason_batting: CareerBatting | null;
+  postseason_pitching: CareerPitching | null;
+  teams: CareerTeam[];
+  is_pitcher: boolean;
+  source: string;
+}
+
+export type GrupoHistorico = "bateo" | "pitcheo";
+
+export interface LiderHistorico {
+  rank: number;
+  name: string;
+  /** Con player_id abre la ficha (Jugador); sin él, la ficha histórica (Historico). */
+  player_id: string | null;
+  id_miembro: number | null;
+  value: number;
+  seasons: number;
+  first_season: string;
+  last_season: string;
+  teams: string[];
+  pa?: number;
+  outs?: number;
+}
+
+export interface CategoriaHistorica {
+  stat: string;
+  label: string;
+  is_rate: boolean;
+}
+
+export interface LideresHistoricos {
+  group: GrupoHistorico;
+  stat: string;
+  label: string;
+  is_rate: boolean;
+  /** "1500 apariciones al plato", o null si la categoría no exige mínimo. */
+  minimum: string | null;
+  count: number;
+  data: LiderHistorico[];
+  categories: CategoriaHistorica[];
+}
+
+/** GET /historia/resumen: el líder de cada categoría principal. */
+export type ResumenHistorico = Record<
+  GrupoHistorico,
+  (CategoriaHistorica & { leader: LiderHistorico | null })[]
+>;
+
+/** Un jugador que solo está en DIGIMETRICS, en el buscador. */
+export interface HistoricoHit {
+  id_miembro: number;
+  name: string;
+  first_season: string;
+  last_season: string;
+  teams: string[];
+}
+
+export interface PlayerSearchHit {
+  player_id: string;
+  full_name: string;
+  birth_date: string | null;
+  nationality: string | null;
+  bats_label: string | null;
+  throws_label: string | null;
+  /**
+   * Códigos separados por coma ("LIC,TOR,EST"), o null si nunca bateó/lanzó.
+   * Vienen así, y no como arreglo, porque salen de un GROUP_CONCAT de SQLite.
+   * Es lo que permite distinguir de un vistazo a dos homónimos en la lista.
+   */
+  batting_teams: string | null;
+  pitching_teams: string | null;
 }
 
 export interface PlayerSearchHit {

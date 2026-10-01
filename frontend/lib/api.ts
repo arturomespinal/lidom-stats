@@ -2,13 +2,18 @@ import {
   BattingRow,
   Calendario,
   Gamelog,
+  GrupoHistorico,
+  HistoricoHit,
   Jornada,
   JuegoHistorico,
+  LideresHistoricos,
   LiveDetailResponse,
   LiveGameState,
+  MiembroHistorico,
   PitchingRow,
   PlayerProfile,
   PlayerSearchHit,
+  ResumenHistorico,
   StandingRow,
   TeamProfile,
   WinProbResponse,
@@ -185,18 +190,46 @@ export async function fetchPlayerProfile(
   return apiFetch<PlayerProfile>(`/players/${encodeURIComponent(playerId)}`);
 }
 
+export interface ResultadoBusqueda {
+  jugadores: PlayerSearchHit[];
+  /** Los que solo están en DIGIMETRICS (antes de 2012-13, sin enlace). */
+  historicos: HistoricoHit[];
+}
+
 export async function searchPlayers(
   query: string,
   limit = 20
-): Promise<PlayerSearchHit[]> {
+): Promise<ResultadoBusqueda> {
   // La API exige 2 caracteres y devuelve 422 con uno solo. Cortar aquí evita
   // un viaje garantizado a fallar mientras alguien escribe la primera letra.
-  if (query.trim().length < 2) return [];
+  if (query.trim().length < 2) return { jugadores: [], historicos: [] };
   const params = new URLSearchParams({ q: query.trim(), limit: String(limit) });
-  const data = await apiFetch<{ data: PlayerSearchHit[] }>(
+  const data = await apiFetch<{ data: PlayerSearchHit[]; historicos?: HistoricoHit[] }>(
     `/players/search?${params}`
   );
-  return data?.data ?? [];
+  return { jugadores: data?.data ?? [], historicos: data?.historicos ?? [] };
+}
+
+/* ── La historia ─────────────────────────────────────────────────────────── */
+
+/** Líderes de todos los tiempos de una categoría (serie regular, desde 1951). */
+export async function fetchLideresHistoricos(
+  grupo: GrupoHistorico,
+  stat: string,
+  limit = 25
+): Promise<LideresHistoricos | null> {
+  const params = new URLSearchParams({ group: grupo, stat, limit: String(limit) });
+  return apiFetch<LideresHistoricos>(`/historia/lideres?${params}`);
+}
+
+/** El líder de cada categoría principal, en una sola llamada. */
+export async function fetchResumenHistorico(): Promise<ResumenHistorico | null> {
+  return apiFetch<ResumenHistorico>("/historia/resumen");
+}
+
+/** La ficha de un jugador que solo está en DIGIMETRICS. */
+export async function fetchMiembroHistorico(id: number): Promise<MiembroHistorico | null> {
+  return apiFetch<MiembroHistorico>(`/historia/miembros/${id}`);
 }
 
 /**

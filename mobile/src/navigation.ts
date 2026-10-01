@@ -7,6 +7,7 @@
  */
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import type { GrupoHistorico } from './types';
 
 /**
  * Las fichas existen en TODAS las pilas.
@@ -37,6 +38,13 @@ export type FichasParamList = {
    * desde Hoy.
    */
   Juego: { gameId: string; awayCode: string; homeCode: string };
+  /**
+   * Un jugador que solo existe en DIGIMETRICS (antes de 2012-13, sin enlace a
+   * la MLB API). Los enlazados abren `Jugador`, que ya trae esos años.
+   */
+  Historico: { idMiembro: number; nombre?: string };
+  /** Récords de todos los tiempos de una categoría. Se abre desde Buscar. */
+  Records: { grupo: GrupoHistorico; stat: string };
 };
 
 export type LiveStackParamList = FichasParamList & {

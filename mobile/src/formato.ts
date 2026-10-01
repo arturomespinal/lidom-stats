@@ -63,6 +63,28 @@ export function rangoTemporadas(primera: string, ultima: string): string {
 }
 
 /** Valor de un destacado de equipo según la estadística que lo decide. */
+/**
+ * El valor de un líder de todos los tiempos según su categoría. Misma función
+ * que la web (lib/formato.ts).
+ */
+export function valorHistorico(stat: string, v: number | null | undefined): string {
+  if (v == null) return '—';
+  if (['avg', 'obp', 'slg', 'ops'].includes(stat)) return pct3(v);
+  if (stat === 'era' || stat === 'whip') return v.toFixed(2);
+  if (stat === 'outs') return entradas(v / 3);
+  return String(v);
+}
+
+/**
+ * La época de una carrera histórica con años completos: "1984-85" a
+ * "2010-11" → "1984–2011". Misma función que la web.
+ */
+export function epocaHistorica(primera: string, ultima: string): string {
+  const desde = primera.slice(0, 4);
+  const hasta = ultima.includes('-') ? String(Number(ultima.slice(0, 4)) + 1) : ultima.slice(0, 4);
+  return desde === hasta ? desde : `${desde}–${hasta}`;
+}
+
 export function valorDestacado(stat: string, v: number): string {
   if (['avg', 'obp', 'slg', 'ops'].includes(stat)) return pct3(v);
   if (['era', 'whip'].includes(stat)) return v.toFixed(2);

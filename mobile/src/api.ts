@@ -3,13 +3,18 @@ import {
   BattingRow,
   Calendario,
   Gamelog,
+  GrupoHistorico,
+  HistoricoHit,
   Jornada,
   JuegoHistorico,
+  LideresHistoricos,
   LiveDetailResponse,
   LiveGameState,
+  MiembroHistorico,
   PitchingRow,
   PlayerProfile,
   PlayerSearchHit,
+  ResumenHistorico,
   StandingRow,
   TeamProfile,
   WinProbResponse,
@@ -23,13 +28,19 @@ import {
  */
 const TIEMPO_LIMITE_MS = 10_000;
 
-async function get<T>(path: string, signal?: AbortSignal): Promise<T | null> {
+/**
+ * `si404`: lo que vale un 404. Por defecto null, como cualquier fallo; el
+ * buscador lo usa porque la API responde 404 cuando nadie coincide, y sin
+ * esto la pantalla decía "Sin conexión" ante una búsqueda sin resultados.
+ */
+async function get<T>(path: string, signal?: AbortSignal, si404: T | null = null): Promise<T | null> {
   const ctrl = new AbortController();
   const reloj = setTimeout(() => ctrl.abort(), TIEMPO_LIMITE_MS);
   // Quien llama también puede cancelar (una búsqueda que quedó vieja).
   signal?.addEventListener('abort', () => ctrl.abort());
   try {
     const res = await fetch(`${API_BASE}${path}`, { signal: ctrl.signal });
+    if (res.status === 404) return si404;
     if (!res.ok) return null;
     return (await res.json()) as T;
   } catch {
@@ -134,20 +145,50 @@ export async function fetchTeamProfile(
  * `signal` deja cancelar la búsqueda anterior — sin eso la respuesta lenta de
  * "mun" puede llegar después de la de "munguia" y pisarla.
  */
+export interface ResultadoBusqueda {
+  jugadores: PlayerSearchHit[];
+  /** Los que solo están en DIGIMETRICS (antes de 2012-13, sin enlace). */
+  historicos: HistoricoHit[];
+}
+
 export async function searchPlayers(
   query: string,
   signal?: AbortSignal,
   limit = 20,
-): Promise<PlayerSearchHit[] | null> {
+): Promise<ResultadoBusqueda | null> {
   const q = query.trim();
-  if (q.length < 2) return [];
-  const data = await get<{ data: PlayerSearchHit[] }>(
+  if (q.length < 2) return { jugadores: [], historicos: [] };
+  const data = await get<{ data: PlayerSearchHit[]; historicos?: HistoricoHit[] }>(
     `/players/search?q=${encodeURIComponent(q)}&limit=${limit}`,
     signal,
+    // La API responde 404 cuando nadie coincide: eso es "sin resultados",
+    // no un fallo.
+    { data: [] },
   );
-  // null = falló (red o cancelada), [] = no hubo resultados. La pantalla
-  // trata distinto las dos cosas: un fallo no vacía la lista que ya había.
-  return data ? data.data : null;
+  // null = falló (red o cancelada); listas vacías = no hubo resultados. La
+  // pantalla trata distinto las dos cosas: un fallo no vacía lo que ya había.
+  return data ? { jugadores: data.data, historicos: data.historicos ?? [] } : null;
+}
+
+/* ── La historia ─────────────────────────────────────────────────────────── */
+
+/** El líder de todos los tiempos de cada categoría principal. */
+export async function fetchResumenHistorico(): Promise<ResumenHistorico | null> {
+  return get<ResumenHistorico>('/historia/resumen');
+}
+
+/** Líderes de todos los tiempos de una categoría (serie regular, desde 1951). */
+export async function fetchLideresHistoricos(
+  grupo: GrupoHistorico,
+  stat: string,
+  limit = 25,
+): Promise<LideresHistoricos | null> {
+  return get<LideresHistoricos>(`/historia/lideres?group=${grupo}&stat=${encodeURIComponent(stat)}&limit=${limit}`);
+}
+
+/** La ficha de un jugador que solo está en DIGIMETRICS. */
+export async function fetchMiembroHistorico(id: number): Promise<MiembroHistorico | null> {
+  return get<MiembroHistorico>(`/historia/miembros/${id}`);
 }
 
 // crestUrl() se eliminó junto con los escudos. Las marcas de equipo ahora son

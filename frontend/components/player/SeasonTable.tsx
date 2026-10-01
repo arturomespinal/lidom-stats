@@ -72,14 +72,90 @@ const COLS_PITCHEO: Col<FilaPitcheo>[] = [
   { k: "WHIP", t: "Embasados por entrada", val: (f) => num(f.whip, 2), fuerte: true },
 ];
 
-interface Props<T> {
-  titulo: string;
-  temporadas: (T & { season_id: string; team_code: string })[];
-  carrera: (T & { seasons: number }) | null;
-  cols: Col<T>[];
+/** Lo que traen de más las filas de DIGIMETRICS (antes de 2012-13). */
+interface ExtraHistorico {
+  stage?: string;
+  team_name?: string | null;
 }
 
-function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
+type Fila<T> = T & { season_id: string; team_code: string } & ExtraHistorico;
+
+interface Props<T> {
+  titulo: string;
+  temporadas: Fila<T>[];
+  carrera: (T & { seasons: number }) | null;
+  cols: Col<T>[];
+  /** Temporadas de DIGIMETRICS, debajo de las de la MLB API. */
+  historicas?: Fila<T>[];
+  /**
+   * La franja que separa las dos fuentes. null para no ponerla (la ficha de
+   * un histórico solo tiene filas de DIGIMETRICS).
+   */
+  separador?: string | null;
+  /** Rótulo de la fila de totales: "Carrera", o "Carrera completa" si suma las dos fuentes. */
+  etiquetaCarrera?: string;
+  /** Una segunda fila de totales: la postemporada, en la ficha de un histórico. */
+  postemporada?: (T & { seasons: number }) | null;
+}
+
+/** Las etapas que no son la regular llevan una marca junto a la temporada. */
+const ETAPA: Record<string, string> = { round_robin: "RR", final: "Final" };
+
+function Tabla<T>({
+  titulo,
+  temporadas,
+  carrera,
+  cols,
+  historicas = [],
+  separador = "Antes de 2012-13 · DIGIMETRICS",
+  etiquetaCarrera = "Carrera",
+  postemporada = null,
+}: Props<T>) {
+  const fila = (f: Fila<T>, i: number, historica: boolean) => (
+    <tr
+      key={`${historica ? "h" : ""}${f.season_id}-${f.team_code}-${f.stage ?? ""}-${i}`}
+      className="border-b border-line-soft last:border-0 hover:bg-raised"
+    >
+      <td className="num sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-2 text-left text-fg2">
+        {f.season_id}
+        {f.stage && ETAPA[f.stage] && (
+          <span className="ml-1.5 rounded bg-header px-1 py-0.5 text-[10px] font-semibold uppercase tracking-[0.06em] text-dim">
+            {ETAPA[f.stage]}
+          </span>
+        )}
+      </td>
+      <td className="px-2 py-2">
+        {historica ? (
+          // De los años de DIGIMETRICS no hay ficha de equipo: la teja va
+          // sin enlace, con el nombre de esa época en el tooltip
+          // ("Azucareros del Este").
+          <span className="inline-block" title={f.team_name ?? undefined}>
+            <TeamBadge code={f.team_code} size="sm" />
+          </span>
+        ) : (
+          <Link
+            // El equipo EN ESA temporada, como en el móvil: desde la
+            // fila de 2016-17 uno quiere ver aquel roster, no el de hoy.
+            href={`/teams/${f.team_code}?season=${f.season_id}`}
+            className="inline-block"
+          >
+            <TeamBadge code={f.team_code} size="sm" />
+          </Link>
+        )}
+      </td>
+      {cols.map((c) => (
+        <td
+          key={c.k}
+          className={`num px-2 py-2 text-right ${
+            c.fuerte ? "font-medium text-fg" : "text-fg2"
+          }`}
+        >
+          {c.val(f)}
+        </td>
+      ))}
+    </tr>
+  );
+
   return (
     <section>
       <h2 className="mb-3 font-cond text-2xl leading-none tracking-[0.02em] text-fg">
@@ -109,36 +185,21 @@ function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
             </tr>
           </thead>
           <tbody>
-            {temporadas.map((f, i) => (
-              <tr
-                key={`${f.season_id}-${f.team_code}-${i}`}
-                className="border-b border-line-soft last:border-0 hover:bg-raised"
-              >
-                <td className="num sticky left-0 z-10 whitespace-nowrap bg-card px-3 py-2 text-left text-fg2">
-                  {f.season_id}
+            {temporadas.map((f, i) => fila(f, i, false))}
+            {historicas.length > 0 && separador && (
+              <tr className="border-b border-line-soft bg-header">
+                {/* La franja que separa las fuentes ocupa la fila entera: en
+                    una sola celda de la primera columna, su texto la
+                    ensanchaba para toda la tabla. El rótulo va `sticky` para
+                    quedarse a la vista al desplazar. */}
+                <td colSpan={cols.length + 2} className="px-0 py-1.5">
+                  <span className="sticky left-0 whitespace-nowrap px-3 text-[10px] font-semibold uppercase tracking-[0.08em] text-dim">
+                    {separador}
+                  </span>
                 </td>
-                <td className="px-2 py-2">
-                  <Link
-                    // El equipo EN ESA temporada, como en el móvil: desde la
-                    // fila de 2016-17 uno quiere ver aquel roster, no el de hoy.
-                    href={`/teams/${f.team_code}?season=${f.season_id}`}
-                    className="inline-block"
-                  >
-                    <TeamBadge code={f.team_code} size="sm" />
-                  </Link>
-                </td>
-                {cols.map((c) => (
-                  <td
-                    key={c.k}
-                    className={`num px-2 py-2 text-right ${
-                      c.fuerte ? "font-medium text-fg" : "text-fg2"
-                    }`}
-                  >
-                    {c.val(f)}
-                  </td>
-                ))}
               </tr>
-            ))}
+            )}
+            {historicas.map((f, i) => fila(f, i, true))}
           </tbody>
 
           {/* La carrera va en <tfoot> y no como una fila más: es de otra
@@ -147,8 +208,8 @@ function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
           {carrera && (
             <tfoot>
               <tr className="border-t-2 border-line bg-header font-semibold">
-                <td className="sticky left-0 z-10 bg-header px-3 py-2.5 text-left text-fg">
-                  Carrera
+                <td className="sticky left-0 z-10 whitespace-nowrap bg-header px-3 py-2.5 text-left text-fg">
+                  {etiquetaCarrera}
                 </td>
                 <td className="num px-2 py-2.5 text-left text-[11px] text-dim">
                   {carrera.seasons}T
@@ -159,6 +220,17 @@ function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
                   </td>
                 ))}
               </tr>
+              {postemporada && (
+                <tr className="border-t border-line bg-header text-fg2">
+                  <td className="sticky left-0 z-10 bg-header px-3 py-2 text-left">Postemporada</td>
+                  <td className="num px-2 py-2 text-left text-[11px] text-dim">{postemporada.seasons}T</td>
+                  {cols.map((c) => (
+                    <td key={c.k} className="num px-2 py-2 text-right">
+                      {c.val(postemporada)}
+                    </td>
+                  ))}
+                </tr>
+              )}
             </tfoot>
           )}
         </table>
@@ -167,19 +239,29 @@ function Tabla<T>({ titulo, temporadas, carrera, cols }: Props<T>) {
   );
 }
 
+/** Lo que las dos tablas aceptan además de las temporadas de la MLB API. */
+interface Opcionales<T, C> {
+  historicas?: (T & ExtraHistorico)[];
+  separador?: string | null;
+  etiquetaCarrera?: string;
+  postemporada?: C | null;
+}
+
 export function BattingSeasons({
   temporadas,
   carrera,
+  ...resto
 }: {
   temporadas: PlayerBattingSeason[];
   carrera: CareerBatting | null;
-}) {
+} & Opcionales<PlayerBattingSeason, CareerBatting>) {
   return (
     <Tabla<FilaBateo>
       titulo="Bateo"
       temporadas={temporadas}
       carrera={carrera}
       cols={COLS_BATEO}
+      {...resto}
     />
   );
 }
@@ -187,16 +269,18 @@ export function BattingSeasons({
 export function PitchingSeasons({
   temporadas,
   carrera,
+  ...resto
 }: {
   temporadas: PlayerPitchingSeason[];
   carrera: CareerPitching | null;
-}) {
+} & Opcionales<PlayerPitchingSeason, CareerPitching>) {
   return (
     <Tabla<FilaPitcheo>
       titulo="Pitcheo"
       temporadas={temporadas}
       carrera={carrera}
       cols={COLS_PITCHEO}
+      {...resto}
     />
   );
 }

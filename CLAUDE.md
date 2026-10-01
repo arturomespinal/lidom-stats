@@ -195,7 +195,7 @@ la 2015-16. No cambiar esa clave.
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
 | `verify_digimetrics.py` | 67 comprobaciones del scraper sin red (76 con la caché y la capa histórica); parsea también la caché real si existe |
 | `src/historia.py` | Enlace DIGIMETRICS ↔ MLB API, carrera completa de las dos fuentes y líderes de todos los tiempos |
-| `api/historia_routes.py` | `/historia/lideres`, `/historia/miembros/{id}`, el bloque `history` de la ficha y los `historicos` del buscador |
+| `api/historia_routes.py` | `/historia/lideres`, `/historia/resumen`, `/historia/miembros/{id}`, el bloque `history` de la ficha y los `historicos` del buscador |
 | `verify_historia.py` | El enlace, la carrera sin contar dos veces 2012-2019, los líderes; contra una base sintética y contra la real |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
@@ -1752,6 +1752,7 @@ números. Se rehace al final de cada `ingest-historia` y con
 | Endpoint | Qué da |
 |----------|--------|
 | `GET /historia/lideres?group=bateo&stat=hr` | Líderes de todos los tiempos, serie regular, las dos fuentes sumadas por persona. Trae la lista de `categories` |
+| `GET /historia/resumen` | El líder de las categorías principales (5 de bateo, 4 de pitcheo) en una llamada: la portada de récords |
 | `GET /historia/miembros/{id_miembro}` | La ficha de un jugador que solo está en DIGIMETRICS: temporadas con etapas, carrera regular y postemporada aparte |
 | `GET /players/{id}` → `history` | Sus temporadas antes de 2012-13 y la carrera completa. `null` si no tiene años anteriores |
 | `GET /players/search` → `historicos` | Los que solo están en DIGIMETRICS. Lista aparte: no tienen `player_id`. Ya no da 404 si solo hay históricos |
@@ -1769,11 +1770,58 @@ números. Se rehace al final de cada `ingest-historia` y con
   recorrer todas las líneas de las dos fuentes tarda ~0,3 s.
 - **Nombres para mostrar:** los que la fuente escribe en mayúsculas pasan a
   tipo título ("Tony Peña"); los demás se respetan.
+- **La clave de persona de los no enlazados es `hist:<id>`**, no `m<id>`.
+  La primera versión (entrega 50) usaba `m<id>` y la distinguía del slug por
+  la letra inicial: un slug de la MLB API que empieza con "m"
+  ("moises-sierra-…") se tomaba por histórico y `/historia/lideres` daba 500.
+  `es_historico()` e `id_historico()` en `src/historia.py`; la suite tiene a
+  "moises-sierra" de regresión.
+
+## La historia en la web y el móvil (30-sep-2026)
+
+Tres puertas, iguales en las dos plataformas:
+
+| Qué | Web | Móvil |
+|-----|-----|-------|
+| Récords de todos los tiempos | `/historia?grupo=&stat=` (pestaña "Historia" de la barra) | `RecordsScreen` (ruta `Records`), desde el panel de récords del buscador |
+| Ficha de un histórico | `/historia/jugador/[idMiembro]` | `HistoricoScreen` (ruta `Historico`) |
+| Años anteriores en la ficha | `app/players/[playerId]` | `PlayerScreen` |
+
+- **Récords:** Bateo | Pitcheo en pestañas (dos opciones) y la categoría con
+  el selector de temporada (`SelectorOpciones` en la web, `SelectorTemporada`
+  con `icono={null}` en el móvil): trece categorías no caben en pestañas. El
+  primero va en una tarjeta navy, sin color de club (el récord es de la
+  liga); el resto en filas que abren la ficha de la MLB API si el jugador
+  está enlazado y la histórica si no. Las tasas anuncian su mínimo.
+- **El buscador del móvil, vacío, muestra los récords** (`/historia/resumen`)
+  en tarjetas de dos columnas. En la web el buscador añade la sección
+  "Históricos · antes de 2012-13".
+- **Ficha de un histórico:** la misma forma que la de la MLB API (cabecera
+  héroe con monograma, trayectoria, franja de carrera, año a año) sin lo que
+  esos años no tienen. La tabla trae la postemporada con su etapa marcada
+  (RR, Final) y su total aparte; la carrera es solo la regular. Si el miembro
+  resulta estar enlazado, la pantalla se reemplaza por la ficha completa
+  (`navigation.replace` en el móvil, `redirect` en la web).
+- **Ficha de un jugador con años viejos:** la carrera y la trayectoria son las
+  de las dos fuentes (`history.career_*`, `history.teams`), y la tabla añade
+  sus temporadas de DIGIMETRICS bajo una franja "Antes de 2012-13". En el
+  móvil el texto de esa franja va en la parte desplazable de la tabla: en la
+  columna fija (104 pt) salía cortado. Las filas viejas no abren el equipo:
+  de esos años no hay ficha de equipo.
+- `epocaHistorica()` (en `formato.ts` de las dos) pinta el rango con años
+  completos: "1984–2011", no "1984-85–2010-11" ni el ambiguo "1986–06".
+
+### Sin resultados no es sin conexión (móvil)
+
+`/players/search` responde 404 cuando no encuentra a nadie, y el buscador del
+móvil lo pintaba como "Sin conexión". `get()` en `mobile/src/api.ts` acepta
+`si404`: con él, un 404 es una respuesta vacía y no un fallo. Lo usa la
+búsqueda; el resto de los endpoints siguen tratando el 404 como error.
 
 ## Próximos pasos
 
 1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Pantallas de la historia en la web y el móvil: récords de todos los tiempos, la ficha de un histórico y los años anteriores a 2012-13 en la ficha de cada jugador (los endpoints ya están).
+2. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen; y récords por temporada (mejor temporada de la historia), que salen de las mismas tablas.
 3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal

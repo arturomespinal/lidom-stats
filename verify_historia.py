@@ -104,7 +104,7 @@ with tempfile.TemporaryDirectory() as tmp:
         for code in ("AGU", "LIC"):
             s.add(Team(team_code=code, full_name=code))
         s.add(Season(season_id="2015-16", short_label="15-16"))
-        for pid, nombre in [("p-uno", "Juan Pérez"), ("p-gordon", "Dee Strange-Gordon"),
+        for pid, nombre in [("moises-sierra", "Moisés Sierra"), ("p-uno", "Juan Pérez"), ("p-gordon", "Dee Strange-Gordon"),
                             ("p-diaz1", "Luis Díaz"), ("p-diaz2", "Luis Díaz"),
                             ("p-suplente", "Kevin Sanchez"), ("p-lolo", "Lolo Sanchez")]:
             s.add(Player(player_id=pid, full_name=nombre))
@@ -122,6 +122,10 @@ with tempfile.TemporaryDirectory() as tmp:
         # Dos Luis Díaz en AGU con números distintos (el caso ambiguo).
         s.add(BattingLine(game_id="g0", player_id="p-diaz1", team_code="AGU", at_bats=3, hits=1, plate_appearances=3))
         s.add(BattingLine(game_id="g1", player_id="p-diaz2", team_code="AGU", at_bats=9, hits=3, plate_appearances=9))
+        # Un jugador de la MLB API cuyo slug empieza con "m": con la clave
+        # "m123" para los históricos, se lo confundía con uno (30-sep).
+        s.add(BattingLine(game_id="g2", player_id="moises-sierra", team_code="LIC", at_bats=4, hits=1,
+                          home_runs=20, plate_appearances=4))
         # Un suplente con 2 VB: poco volumen para enlazar por números.
         s.add(BattingLine(game_id="g0", player_id="p-lolo", team_code="LIC", at_bats=2, hits=0, plate_appearances=2))
         # Juan Pérez también lanzó (para la carrera de pitcheo): 9 outs, 1 CL, G.
@@ -178,8 +182,8 @@ with tempfile.TemporaryDirectory() as tmp:
     check("la postemporada de 1990 no entra en la carrera", uno["ab"] < 440, True)
     check("tasas recompuestas sobre la suma", uno["avg"], round(124 / 412, 3))
     check("pitcheo de las dos fuentes: 2 G en 1990 + 1 G en 2015", (p["p-uno"]["wins"], p["p-uno"]["outs"]), (3, 39))
-    check("la leyenda sin enlace es su propia persona", b["m5"]["h"], 500)
-    check("y califica para las tasas", (b["m5"]["pa"] >= MIN_PA_CARRERA, b["m5"]["califica"]), (True, True))
+    check("la leyenda sin enlace es su propia persona", b["hist:5"]["h"], 500)
+    check("y califica para las tasas", (b["hist:5"]["pa"] >= MIN_PA_CARRERA, b["hist:5"]["califica"]), (True, True))
     check("temporadas históricas del enlazado: solo 1990, solo regular",
           [(t["season_id"], t["stage"], t["ab"]) for t in th["batting"]], [("1990-91", "regular", 400)])
     check("con la forma de v_batting_season (y la fuente)",
@@ -193,9 +197,9 @@ with tempfile.TemporaryDirectory() as tmp:
         hr = lideres(conn, "bateo", "hr", 10)
         avg = lideres(conn, "bateo", "avg", 10)
         era = lideres(conn, "pitcheo", "era", 10)
-    check("líderes de HR: Juan Pérez (dos fuentes) y la leyenda",
-          [(x["name"], x["value"], x["player_id"], x["id_miembro"]) for x in hr["data"]][:2],
-          [("Juan Pérez", 11, "p-uno", 1), ("Viejo Leyenda", 9, None, 5)])
+    check("líderes de HR: un slug que empieza con 'm' sigue siendo de la MLB API; luego Juan Pérez (dos fuentes) y la leyenda",
+          [(x["name"], x["value"], x["player_id"], x["id_miembro"]) for x in hr["data"]][:3],
+          [("Moisés Sierra", 20, "moises-sierra", None), ("Juan Pérez", 11, "p-uno", 1), ("Viejo Leyenda", 9, None, 5)])
     check("en AVG solo entra quien pasa el mínimo", [x["name"] for x in avg["data"]], ["Viejo Leyenda"])
     check("y el mínimo se anuncia", avg["minimum"], f"{MIN_PA_CARRERA} apariciones al plato")
     check("en EFE nadie llega a las entradas mínimas", (era["data"], era["minimum"]), ([], f"{MIN_OUTS_CARRERA // 3} entradas"))
@@ -268,6 +272,14 @@ else:
     check("GET /historia/lideres", (r.status_code, r.json()["data"][0]["name"], len(r.json()["categories"])),
           (200, "Luis Polonia", 13))
     check("categoría inválida: 422", c.get("/historia/lideres", params={"stat": "xx"}).status_code, 422)
+    r = c.get("/historia/resumen")
+    res = r.json()
+    check("GET /historia/resumen: las 5 de bateo y las 4 de pitcheo, en orden",
+          (r.status_code, [x["stat"] for x in res["bateo"]], [x["stat"] for x in res["pitcheo"]]),
+          (200, ["h", "hr", "rbi", "avg", "sb"], ["wins", "saves", "so", "era"]))
+    # El resumen y /historia/lideres salen de la misma caché: el mismo líder.
+    check("el resumen da el mismo líder que /historia/lideres",
+          [x["leader"]["name"] for x in res["bateo"]][0], "Luis Polonia")
     s = c.get("/players/search", params={"q": "pena"}).json()
     check("el buscador encuentra a TONY PEÑA escribiendo 'pena' (sin tilde, en minúsculas)",
           any(h["name"] == "Tony Peña" for h in s["historicos"]), True)

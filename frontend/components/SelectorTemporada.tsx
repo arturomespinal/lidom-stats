@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { etiquetaTemporada } from "@/lib/formato";
 
@@ -31,11 +31,20 @@ export function SelectorOpciones({
   opciones,
   activa,
   titulo = "Temporada",
+  resumen,
+  icono = true,
+  antes,
 }: {
   opciones: OpcionTemporada[];
   /** La `label` de la elegida. */
   activa: string;
   titulo?: string;
+  /** La línea de arriba de la lista. Por defecto, "N temporadas en la base". */
+  resumen?: string;
+  /** El calendario a la izquierda: solo tiene sentido para temporadas. */
+  icono?: boolean;
+  /** Controles que van en la misma franja, a la izquierda del botón. */
+  antes?: ReactNode;
 }) {
   const [abierto, setAbierto] = useState(false);
   const caja = useRef<HTMLDivElement>(null);
@@ -88,7 +97,8 @@ export function SelectorOpciones({
 
   return (
     <div className="sticky top-14 z-[5] border-b border-line bg-bg/95 backdrop-blur">
-      <div className="mx-auto max-w-5xl px-4 py-2">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-2">
+        {antes}
         <div ref={caja} className="relative inline-block">
           <button
             ref={boton}
@@ -105,7 +115,7 @@ export function SelectorOpciones({
             aria-controls={id}
             className="tocable inline-flex min-h-11 items-center gap-2.5 rounded-xl border border-line bg-card pl-3 pr-2.5 shadow-[0_1px_2px_rgb(9_28_58/0.06)] hover:border-fg2 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ink"
           >
-            <Calendario />
+            {icono && <Calendario />}
             <span className="text-[11px] font-semibold uppercase tracking-[0.08em] text-dim">{titulo}</span>
             <span className="font-cond text-[22px] leading-none text-fg">{activa}</span>
             <svg
@@ -127,7 +137,7 @@ export function SelectorOpciones({
               className="desplegar absolute left-0 top-full z-20 mt-2 max-h-[min(70vh,520px)] w-[min(18rem,calc(100vw-2rem))] origin-top-left overflow-y-auto rounded-2xl border border-line bg-card p-1.5 shadow-[0_16px_48px_rgb(9_28_58/0.18)]"
             >
               <p className="px-3 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-dim">
-                {opciones.length} temporadas en la base
+                {resumen ?? `${opciones.length} temporadas en la base`}
               </p>
               {opciones.map((o, i) => {
                 const es = o.label === activa;

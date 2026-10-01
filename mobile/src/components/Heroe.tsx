@@ -75,13 +75,19 @@ export default function Heroe({
  * ~27 pt más por cada 100 de alto. La letra se apoya abajo, donde el plano es
  * más ancho, y su borde superior es el que manda:
  *
- *   ancho(código) + 10 de margen ≤ 80 + 0.267 × (y del borde superior)
+ *   ancho(código) + MARGEN ≤ 80 + 0.267 × (y del borde superior)
  *
  * que despejado da el divisor de abajo. Bebas con lineHeight = tamaño deja la
  * letra entre 0.1 y 0.8 del alto de la línea (mayúsculas de 0.7 em).
+ *
+ * El margen pasó de 10 a 24 pt (iPhone de Arturo, 30-sep): con 10 la R
+ * quedaba pegada al borde y a la barra de desplazamiento de iOS, que aparece
+ * justo ahí, y se leía como cortada aunque estuviera entera.
  */
+const MARGEN_MARCA = 24;
+
 function medidaMarca(marca: string) {
-  const t = Math.min(150, Math.floor(114 / (anchoBebas(marca) + 0.19)));
+  const t = Math.min(150, Math.floor((124 - MARGEN_MARCA) / (anchoBebas(marca) + 0.19)));
   return { fontSize: t, lineHeight: t, top: Math.round(146 - 0.8 * t) };
 }
 
@@ -143,7 +149,7 @@ const styles = StyleSheet.create({
   // Tamaño y altura los pone medidaMarca().
   marca: {
     position: 'absolute',
-    right: 10,
+    right: MARGEN_MARCA,
     fontFamily: FONTS.display,
     color: 'rgba(9, 28, 58, 0.16)',
   },

@@ -86,27 +86,38 @@ export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: stri
 
 // ── Las filas de equipo ────────────────────────────────────────────────────
 
+/**
+ * Teja y nombre son un solo enlace a la ficha del equipo, en la temporada del
+ * juego: un juego de 2016 abre el equipo de 2016. El marcador queda fuera.
+ */
 function FilaEquipo({
   lado,
   gano,
   perdio,
   grande = false,
+  temporada,
 }: {
   lado: JuegoJornada["home"];
   gano: boolean;
   perdio: boolean;
   grande?: boolean;
+  temporada?: string | null;
 }) {
   return (
     <div className={`flex items-center gap-3 ${grande ? "min-h-[56px]" : "min-h-10"}`}>
-      <TeamBadge code={lado.code} size={grande ? "md" : "sm"} variant={grande ? "solid" : "outline"} />
       <Link
-        href={`/teams/${lado.code}`}
-        className={`min-w-0 flex-1 truncate font-semibold hover:underline ${grande ? "text-lg" : "text-[15px]"} ${
-          perdio ? "text-dim" : "text-fg"
-        }`}
+        href={`/teams/${lado.code}${temporada ? `?season=${temporada}` : ""}`}
+        className="group flex min-w-0 flex-1 items-center gap-3"
+        aria-label={`Abrir ${lado.name}`}
       >
-        {grande ? lado.name : lado.short_name}
+        <TeamBadge code={lado.code} size={grande ? "md" : "sm"} variant={grande ? "solid" : "outline"} />
+        <span
+          className={`min-w-0 flex-1 truncate font-semibold group-hover:underline ${grande ? "text-lg" : "text-[15px]"} ${
+            perdio ? "text-dim" : "text-fg"
+          }`}
+        >
+          {grande ? lado.name : lado.short_name}
+        </span>
       </Link>
       {lado.runs != null && (
         <span
@@ -194,8 +205,8 @@ export function TarjetaDestacado({
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </div>
       <div className="px-4 pb-1 pt-2">
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} grande />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} grande />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} grande temporada={juego.season_id} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} grande temporada={juego.season_id} />
         {juego.status === "scheduled" && juego.time_local && (
           <p className="mt-1 font-cond text-3xl text-fg">{juego.time_local}</p>
         )}
@@ -239,8 +250,8 @@ export function TarjetaJuego({ juego }: { juego: JuegoJornada }) {
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </div>
       <div className="px-4 pb-3 pt-1">
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={juego.season_id} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={juego.season_id} />
       </div>
       {href && (
         <Link href={href} className="block px-4 pb-3 font-cond text-[15px] tracking-[0.04em] text-fg hover:underline">

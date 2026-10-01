@@ -75,7 +75,7 @@ export default async function JuegoPage(props: Props) {
             }
           />
           {juego.boxscore_available ? (
-            <BoxScore home={juego.home} away={juego.away} />
+            <BoxScore home={juego.home} away={juego.away} temporada={g.season_id} />
           ) : (
             <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-dim">
               Este juego está en el calendario pero no tiene boxscore: se perdió por forfeit, se pospuso o todavía no

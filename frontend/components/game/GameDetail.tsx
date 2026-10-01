@@ -312,13 +312,29 @@ function FilaHeroe({
     .join(" · ");
   return (
     <div className="flex min-h-[56px] items-center gap-3">
-      <TeamBadge code={lado.team_code ?? "—"} size="md" variant="solid" />
-      <div className="min-w-0 flex-1">
-        <p className={`truncate text-base font-bold sm:text-lg ${atras ? "text-ink-dim" : "text-ink-fg"}`}>
-          {lado.team_name ?? lado.team_code ?? "—"}
-        </p>
-        <p className="num text-xs text-ink-dim">{extra}</p>
-      </div>
+      {/* Teja y nombre abren el equipo. Un juego en vivo es de la temporada
+          actual, que es la que abre la ficha sin `season`. Sin código (no
+          pasa en LIDOM, pero el tipo lo permite) no hay a dónde ir. */}
+      {lado.team_code ? (
+      <Link href={`/teams/${lado.team_code}`} className="group flex min-w-0 flex-1 items-center gap-3">
+        <TeamBadge code={lado.team_code ?? "—"} size="md" variant="solid" />
+        <div className="min-w-0 flex-1">
+          <p
+            className={`truncate text-base font-bold group-hover:underline sm:text-lg ${
+              atras ? "text-ink-dim" : "text-ink-fg"
+            }`}
+          >
+            {lado.team_name ?? lado.team_code ?? "—"}
+          </p>
+          <p className="num text-xs text-ink-dim">{extra}</p>
+        </div>
+      </Link>
+      ) : (
+        <div className="flex min-w-0 flex-1 items-center gap-3">
+          <TeamBadge code="—" size="md" variant="solid" />
+          <p className="truncate text-base font-bold text-ink-fg sm:text-lg">{lado.team_name ?? "—"}</p>
+        </div>
+      )}
       <p
         className={`num min-w-[40px] text-right font-cond text-[56px] leading-none sm:text-[64px] ${
           atras ? "text-ink-dim" : "text-ink-fg"

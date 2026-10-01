@@ -1269,6 +1269,8 @@ Reglas que no conviene deshacer:
   el juego): el toque lo toma el más interno, y el marcador queda fuera, así
   que tocar el 6 sigue abriendo el juego. Con el lector de pantalla la
   tarjeta chica es un solo elemento: los dos equipos van como acciones suyas.
+  En la web, teja y nombre son un solo enlace (`/teams/{code}?season=`) en
+  las mismas cuatro partes; antes solo el nombre enlazaba, y sin temporada.
 - **Un juego se abre solo si la caché tiene su detalle** (`has_detail`). Un
   juego viejo no tiene relato; una tarjeta que parece tocable y no hace nada
   es peor que una que no lo parece. Un juego terminado sin detalle en vivo

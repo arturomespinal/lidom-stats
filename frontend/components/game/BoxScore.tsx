@@ -1,3 +1,4 @@
+import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
 import NombreJugador from "@/components/game/NombreJugador";
 import { BatterLine, PitcherLine, TeamBox } from "@/lib/types";
@@ -72,12 +73,26 @@ function PitcherRow({ p }: { p: PitcherLine }) {
   );
 }
 
-function TeamBlock({ team }: { team: TeamBox }) {
+function TeamBlock({ team, temporada }: { team: TeamBox; temporada?: string | null }) {
+  const code = team.team_code;
   return (
     <section className="min-w-0">
       <header className="flex items-center gap-2.5 bg-bg px-4 py-2.5">
-        <TeamBadge code={team.team_code ?? "—"} />
-        <h3 className="flex-1 truncate text-sm font-bold">{team.team_name}</h3>
+        {/* Teja y nombre abren el equipo, en la temporada del juego. */}
+        {code ? (
+          <Link
+            href={`/teams/${code}${temporada ? `?season=${temporada}` : ""}`}
+            className="group flex min-w-0 flex-1 items-center gap-2.5"
+          >
+            <TeamBadge code={code} />
+            <h3 className="flex-1 truncate text-sm font-bold group-hover:underline">{team.team_name}</h3>
+          </Link>
+        ) : (
+          <>
+            <TeamBadge code="—" />
+            <h3 className="flex-1 truncate text-sm font-bold">{team.team_name}</h3>
+          </>
+        )}
         <span className="shrink-0 text-xs tabular-nums text-dim">
           {team.runs} C · {team.hits} H{team.errors != null ? ` · ${team.errors} E` : ""}
         </span>
@@ -126,9 +141,12 @@ function TeamBlock({ team }: { team: TeamBox }) {
 export default function BoxScore({
   home,
   away,
+  temporada,
 }: {
   home: TeamBox;
   away: TeamBox;
+  /** La temporada del juego: la cabecera de cada equipo abre su ficha en ella. */
+  temporada?: string | null;
 }) {
   if (away.batters.length === 0 && home.batters.length === 0) {
     return (
@@ -141,8 +159,8 @@ export default function BoxScore({
   // boxscore impreso.
   return (
     <div className="grid gap-2 lg:grid-cols-2">
-      <TeamBlock team={away} />
-      <TeamBlock team={home} />
+      <TeamBlock team={away} temporada={temporada} />
+      <TeamBlock team={home} temporada={temporada} />
     </div>
   );
 }

@@ -31,9 +31,12 @@ type Temporada = {
 const ALTO_FILA = 44;
 const ALTO_CABECERA = 32;
 const ALTO_SEPARADOR = 28;
-const ANCHO_FIJA = 104;
-/** Con marcas de etapa ("1973-74 RR") la columna fija necesita más. */
-const ANCHO_FIJA_ETAPAS = 136;
+// Medido en el iPhone (30-sep): con 104 "2011-12" se partía en dos líneas
+// junto a la teja, y con 136 la marca "Final" salía cortada ("Fina"). La
+// fuente del sistema de iOS es un poco más ancha que la de la web.
+const ANCHO_FIJA = 116;
+/** Con marcas de etapa ("1973-74 Final") la columna fija necesita más. */
+const ANCHO_FIJA_ETAPAS = 156;
 
 /** Las etapas que no son la regular llevan una marca junto a la temporada. */
 const ETAPA: Record<string, string> = { round_robin: 'RR', final: 'Final' };
@@ -112,14 +115,16 @@ export default function TablaTemporadas<T>({
               accessibilityRole="button"
               accessibilityLabel={`${f.team_code} en ${f.season_id}. Abrir equipo`}
             >
-              <Text style={styles.temporada}>{f.season_id}</Text>
+              <Text style={styles.temporada} numberOfLines={1}>
+                {f.season_id}
+              </Text>
               <TeamBadge code={f.team_code} size={24} />
             </Pressable>
           ))}
           {/* La franja entre fuentes: la columna fija lleva una franja vacía
               y el texto va en la parte desplazable, a la MISMA altura, que es
-              lo que mantiene alineadas las filas de abajo. En la fija no cabe:
-              con 104 pt "Antes de 2012-13" salía cortado. */}
+              lo que mantiene alineadas las filas de abajo. En la fija no cabía:
+              con 104 pt "Antes de 2012-13" salía cortado (hoy mide 116). */}
           {conSeparador && <View style={styles.separador} />}
           {historicas.map((f, i) => (
             <View
@@ -129,8 +134,10 @@ export default function TablaTemporadas<T>({
               accessibilityLabel={`${f.team_code} en ${f.season_id}${f.stage && ETAPA[f.stage] ? `, ${ETAPA[f.stage]}` : ''}`}
             >
               <View style={styles.temporadaCaja}>
-                <Text style={styles.temporada}>{f.season_id}</Text>
-                {!!f.stage && !!ETAPA[f.stage] && <Text style={styles.etapa}>{ETAPA[f.stage]}</Text>}
+                <Text style={styles.temporada} numberOfLines={1}>
+                  {f.season_id}
+                </Text>
+                {!!f.stage && !!ETAPA[f.stage] && <Text style={styles.etapa} numberOfLines={1}>{ETAPA[f.stage]}</Text>}
               </View>
               <TeamBadge code={f.team_code} size={24} />
             </View>
@@ -270,13 +277,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 8,
     paddingLeft: 16,
     paddingRight: 8,
     borderBottomWidth: 1,
     borderBottomColor: COLORS.borderSoft,
   },
   presionada: { backgroundColor: COLORS.bgRaised },
-  temporada: { color: COLORS.textSupport, fontSize: 14, fontVariant: ['tabular-nums'] },
+  // La temporada no se encoge: si algo cede, que sea la marca de etapa.
+  temporada: { color: COLORS.textSupport, fontSize: 14, fontVariant: ['tabular-nums'], flexShrink: 0 },
   filaCifras: {
     height: ALTO_FILA,
     flexDirection: 'row',

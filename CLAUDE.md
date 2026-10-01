@@ -1806,7 +1806,7 @@ Tres puertas, iguales en las dos plataformas:
   de las dos fuentes (`history.career_*`, `history.teams`), y la tabla añade
   sus temporadas de DIGIMETRICS bajo una franja "Antes de 2012-13". En el
   móvil el texto de esa franja va en la parte desplazable de la tabla: en la
-  columna fija (104 pt) salía cortado. Las filas viejas no abren el equipo:
+  columna fija salía cortado. Las filas viejas no abren el equipo:
   de esos años no hay ficha de equipo.
 - `epocaHistorica()` (en `formato.ts` de las dos) pinta el rango con años
   completos: "1984–2011", no "1984-85–2010-11" ni el ambiguo "1986–06".

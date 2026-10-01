@@ -43,13 +43,24 @@ function Fila({
   );
 }
 
-function TeamHeader({ team }: { team: TeamBox }) {
+/** La cabecera de cada equipo: teja y nombre abren su ficha. */
+function TeamHeader({ team, temporada }: { team: TeamBox; temporada?: string }) {
+  const nav = useFichas();
+  const code = team.team_code;
   return (
     <View style={styles.teamHeader}>
-      <TeamBadge code={team.team_code ?? '—'} size={28} />
-      <Text style={styles.teamName} numberOfLines={1}>
-        {team.team_name ?? '—'}
-      </Text>
+      <Pressable
+        disabled={!code}
+        onPress={() => code && nav.push('Equipo', { code, season: temporada })}
+        style={({ pressed }) => [styles.teamTocable, pressed && styles.teamPresionado]}
+        accessibilityRole={code ? 'link' : undefined}
+        accessibilityLabel={code ? `Abrir ${team.team_name ?? code}` : undefined}
+      >
+        <TeamBadge code={code ?? '—'} size={28} />
+        <Text style={styles.teamName} numberOfLines={1}>
+          {team.team_name ?? '—'}
+        </Text>
+      </Pressable>
       <Text style={styles.teamLine}>
         {team.runs} C · {team.hits} H{team.errors != null ? ` · ${team.errors} E` : ''}
       </Text>
@@ -103,10 +114,10 @@ function PitcherRow({ p }: { p: PitcherLine }) {
   );
 }
 
-function TeamBlock({ team }: { team: TeamBox }) {
+function TeamBlock({ team, temporada }: { team: TeamBox; temporada?: string }) {
   return (
     <View style={styles.block}>
-      <TeamHeader team={team} />
+      <TeamHeader team={team} temporada={temporada} />
 
       <View style={[styles.row, styles.headRow]}>
         <Text style={[styles.nameCell, styles.head]}>Bateadores</Text>
@@ -139,9 +150,12 @@ function TeamBlock({ team }: { team: TeamBox }) {
 export default function BoxScore({
   home,
   away,
+  temporada,
 }: {
   home: TeamBox;
   away: TeamBox;
+  /** La temporada del juego: la cabecera de cada equipo abre su ficha en ella. */
+  temporada?: string;
 }) {
   if (away.batters.length === 0 && home.batters.length === 0) {
     return (
@@ -154,8 +168,8 @@ export default function BoxScore({
   // boxscore impreso.
   return (
     <View>
-      <TeamBlock team={away} />
-      <TeamBlock team={home} />
+      <TeamBlock team={away} temporada={temporada} />
+      <TeamBlock team={home} temporada={temporada} />
     </View>
   );
 }
@@ -167,9 +181,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 9,
     paddingHorizontal: 14,
-    paddingVertical: 11,
+    paddingVertical: 8,
     backgroundColor: COLORS.bgPage,
   },
+  // Teja + nombre, 44 pt de alto: se toca para abrir el equipo.
+  teamTocable: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 9, minHeight: 44 },
+  teamPresionado: { opacity: 0.6 },
   teamName: { flex: 1, color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },
   teamLine: {
     color: COLORS.textSecondary,

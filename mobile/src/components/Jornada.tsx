@@ -14,6 +14,7 @@ import StatusBadge from './StatusBadge';
 import TeamBadge from './TeamBadge';
 import WinProbBand from './WinProbBand';
 import { Tocable } from './Movimiento';
+import { useFichas } from '../navigation';
 
 /*
  * Las piezas de la portada "Hoy". Todo lo que dice algo —qué juego se
@@ -77,23 +78,40 @@ export function FranjaFechas({
 
 // ── Las filas de equipo ────────────────────────────────────────────────────
 
+/**
+ * Teja y nombre abren la ficha del equipo en la temporada del juego. Es un
+ * Pressable dentro de la tarjeta (que abre el juego): el toque lo toma el más
+ * interno, así que el equipo abre el equipo y el resto de la tarjeta, el
+ * juego. El marcador queda fuera a propósito: tocar el 6 es tocar el juego.
+ */
 function FilaEquipo({
   lado,
   gano,
   perdio,
   grande = false,
+  temporada,
 }: {
   lado: JuegoJornada['home'];
   gano: boolean;
   perdio: boolean;
   grande?: boolean;
+  temporada?: string;
 }) {
+  const nav = useFichas();
   return (
     <View style={[styles.filaEquipo, grande && styles.filaEquipoGrande]}>
-      <TeamBadge code={lado.code} size={grande ? 36 : 28} variant={grande ? 'solid' : 'outline'} />
-      <Text style={[styles.equipo, grande && styles.equipoGrande, perdio && styles.apagado]} numberOfLines={1}>
-        {grande ? lado.name : lado.short_name}
-      </Text>
+      <Pressable
+        onPress={() => nav.push('Equipo', { code: lado.code, season: temporada })}
+        hitSlop={{ top: 4, bottom: 4 }}
+        style={({ pressed }) => [styles.equipoTocable, pressed && styles.equipoPresionado]}
+        accessibilityRole="link"
+        accessibilityLabel={`Abrir ${lado.name}`}
+      >
+        <TeamBadge code={lado.code} size={grande ? 36 : 28} variant={grande ? 'solid' : 'outline'} />
+        <Text style={[styles.equipo, grande && styles.equipoGrande, perdio && styles.apagado]} numberOfLines={1}>
+          {grande ? lado.name : lado.short_name}
+        </Text>
+      </Pressable>
       {lado.runs != null && (
         <Text style={[styles.carreras, grande && styles.carrerasGrande, perdio && styles.apagado]}>
           {lado.runs}
@@ -156,8 +174,11 @@ export function TarjetaDestacado({
   onJugador,
   etiqueta = 'Juego destacado',
   accion = 'Ver el juego ›',
+  temporada,
 }: {
   juego: JuegoJornada;
+  /** La temporada del juego: los equipos abren su ficha en ella. */
+  temporada?: string;
   destacado: Pick<NonNullable<Jornada['featured']>, 'headline' | 'win_prob'>;
   onAbrir?: () => void;
   onJugador: (p: PitcherDecision) => void;
@@ -174,8 +195,8 @@ export function TarjetaDestacado({
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </View>
       <View style={styles.cuerpo}>
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={!!juego.winner && juego.winner !== juego.away.code} grande />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={!!juego.winner && juego.winner !== juego.home.code} grande />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={!!juego.winner && juego.winner !== juego.away.code} grande temporada={temporada} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={!!juego.winner && juego.winner !== juego.home.code} grande temporada={temporada} />
         {juego.status === 'scheduled' && !!juego.time_local && (
           <Text style={styles.hora}>{juego.time_local}</Text>
         )}
@@ -237,7 +258,16 @@ function Banda({
  * vivo, o el boxscore de la base si ya terminó. Un juego que no ha empezado
  * no parece tocable, porque no lo es.
  */
-export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?: () => void }) {
+export function TarjetaJuego({
+  juego,
+  onAbrir,
+  temporada,
+}: {
+  juego: JuegoJornada;
+  onAbrir?: () => void;
+  temporada?: string;
+}) {
+  const nav = useFichas();
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;
   const cuerpo = (
     <>
@@ -248,8 +278,8 @@ export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </View>
       <View style={styles.cuerpoChico}>
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={temporada} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={temporada} />
       </View>
       {!!onAbrir && <Text style={styles.abrir}>Ver el juego ›</Text>}
     </>
@@ -257,9 +287,25 @@ export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?
   const etiqueta =
     `${juego.away.short_name} ${juego.away.runs ?? ''}, ${juego.home.short_name} ${juego.home.runs ?? ''}. ` +
     `${juego.status_label}.`;
+  // Con el lector de pantalla la tarjeta es UN elemento y sus filas no se
+  // alcanzan por separado: los dos equipos van como acciones de la tarjeta.
+  const acciones = [
+    { name: 'visitante', label: `Abrir ${juego.away.name}` },
+    { name: 'local', label: `Abrir ${juego.home.name}` },
+  ];
+  const alAccionar = (e: { nativeEvent: { actionName: string } }) => {
+    const lado = e.nativeEvent.actionName === 'visitante' ? juego.away : juego.home;
+    nav.push('Equipo', { code: lado.code, season: temporada });
+  };
   if (!onAbrir) {
     return (
-      <View style={styles.tarjetaChica} accessible accessibilityLabel={etiqueta}>
+      <View
+        style={styles.tarjetaChica}
+        accessible
+        accessibilityLabel={etiqueta}
+        accessibilityActions={acciones}
+        onAccessibilityAction={alAccionar}
+      >
         {cuerpo}
       </View>
     );
@@ -270,6 +316,8 @@ export function TarjetaJuego({ juego, onAbrir }: { juego: JuegoJornada; onAbrir?
       style={({ pressed }) => [styles.tarjetaChica, pressed && styles.presionado]}
       accessibilityRole="button"
       accessibilityLabel={`${etiqueta} Ver el juego`}
+      accessibilityActions={[{ name: 'activate' }, ...acciones]}
+      onAccessibilityAction={e => (e.nativeEvent.actionName === 'activate' ? onAbrir() : alAccionar(e))}
     >
       {cuerpo}
     </Tocable>
@@ -413,6 +461,9 @@ const styles = StyleSheet.create({
   cuerpoChico: { paddingHorizontal: 12, paddingTop: 4, paddingBottom: 8 },
 
   filaEquipo: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 40 },
+  // Teja + nombre: lo tocable de la fila. Ocupa lo que deja el marcador.
+  equipoTocable: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 40 },
+  equipoPresionado: { opacity: 0.6 },
   filaEquipoGrande: { minHeight: 52 },
   equipo: { flex: 1, fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
   equipoGrande: { fontSize: 17 },

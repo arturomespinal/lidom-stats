@@ -86,6 +86,7 @@ export default function JuegoScreen({ route, navigation }: Props) {
         etiqueta={`${juego.label}${g.season_id ? ` · ${g.season_id}` : ''}`}
         onAbrir={enVivo}
         accion="Relato y línea ›"
+        temporada={g.season_id ?? undefined}
         onJugador={p => navigation.push('Jugador', { playerId: p.player_id, nombre: p.full_name })}
       />
 
@@ -109,7 +110,7 @@ export default function JuegoScreen({ route, navigation }: Props) {
       />
       {juego.boxscore_available ? (
         <View style={styles.box}>
-          <BoxScore home={juego.home} away={juego.away} />
+          <BoxScore home={juego.home} away={juego.away} temporada={g.season_id ?? undefined} />
         </View>
       ) : (
         <Text style={styles.sinBox}>

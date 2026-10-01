@@ -3,6 +3,7 @@ import { setStatusBarStyle } from 'expo-status-bar';
 import {
   AppState,
   AppStateStatus,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -14,7 +15,7 @@ import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail, fetchWinProb } from '../api';
 import { COLORS, FONTS } from '../constants';
 import { LiveGameDetail, WinProbResponse } from '../types';
-import type { LiveStackParamList } from '../navigation';
+import { useFichas, type LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
 import PlayByPlay from '../components/PlayByPlay';
 import InningGrid from '../components/InningGrid';
@@ -304,23 +305,37 @@ function FilaHeroe({
   const atras = lado.runs < rival.runs;
   const gano = terminado && lado.runs > rival.runs;
   const extra = [`H ${lado.hits}`, lado.errors != null ? `E ${lado.errors}` : null].filter(Boolean).join(' · ');
+  const nav = useFichas();
+  const code = lado.team_code;
+  // Teja y nombre abren el equipo (un juego en vivo es de la temporada
+  // actual: la ficha abre en ella sin pasarle `season`). Con el lector de
+  // pantalla, ese botón lleva también el marcador.
   return (
-    <View
-      style={styles.fila}
-      accessible
-      accessibilityLabel={`${lado.team_name ?? lado.team_code ?? 'Equipo'}: ${lado.runs} ${
-        lado.runs === 1 ? 'carrera' : 'carreras'
-      }, ${lado.hits} hits${gano ? '. Ganó' : ''}`}
-    >
-      <TeamBadge code={lado.team_code ?? '—'} size={40} variant="solid" />
-      <View style={styles.filaTexto}>
-        <Text style={[styles.nombre, atras && styles.apagado]} numberOfLines={1}>
-          {lado.team_name ?? lado.team_code ?? '—'}
-        </Text>
-        <Text style={styles.extra}>{extra}</Text>
-      </View>
-      <Text style={[styles.carreras, atras && styles.apagado]}>{lado.runs}</Text>
-      <Text style={styles.marca}>{gano ? '◂' : ''}</Text>
+    <View style={styles.fila}>
+      <Pressable
+        disabled={!code}
+        onPress={() => code && nav.push('Equipo', { code })}
+        style={({ pressed }) => [styles.filaEquipo, pressed && { opacity: 0.7 }]}
+        accessibilityRole={code ? 'link' : undefined}
+        accessibilityLabel={`${lado.team_name ?? code ?? 'Equipo'}: ${lado.runs} ${
+          lado.runs === 1 ? 'carrera' : 'carreras'
+        }, ${lado.hits} hits${gano ? '. Ganó' : ''}`}
+        accessibilityHint={code ? 'Abre el equipo' : undefined}
+      >
+        <TeamBadge code={code ?? '—'} size={40} variant="solid" />
+        <View style={styles.filaTexto}>
+          <Text style={[styles.nombre, atras && styles.apagado]} numberOfLines={1}>
+            {lado.team_name ?? code ?? '—'}
+          </Text>
+          <Text style={styles.extra}>{extra}</Text>
+        </View>
+      </Pressable>
+      <Text style={[styles.carreras, atras && styles.apagado]} accessibilityElementsHidden importantForAccessibility="no">
+        {lado.runs}
+      </Text>
+      <Text style={styles.marca} accessibilityElementsHidden importantForAccessibility="no">
+        {gano ? '◂' : ''}
+      </Text>
     </View>
   );
 }
@@ -346,6 +361,7 @@ const styles = StyleSheet.create({
   contextoAviso: { color: COLORS.inkFg },
   filas: { gap: 8 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
+  filaEquipo: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
   filaTexto: { flex: 1, minWidth: 0, gap: 2 },
   nombre: { color: COLORS.inkFg, fontSize: 16, fontWeight: '700' },
   extra: { color: COLORS.inkDim, fontSize: 12, fontVariant: ['tabular-nums'] },

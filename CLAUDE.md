@@ -1262,6 +1262,13 @@ Reglas que no conviene deshacer:
 - **La caché en vivo manda sobre la base** mientras tenga el juego: un juego
   en curso figura `scheduled` en `games` hasta que termina y se ingesta. Y las
   decisiones (G/P/SV) solo se muestran con el juego terminado.
+- **Los equipos se tocan** (30-sep, pedido de Arturo): en las tarjetas de
+  Hoy, en la cabecera de la página de un juego, en la del detalle en vivo y
+  en el boxscore, teja y nombre abren la ficha del equipo **en la temporada
+  del juego**. En el móvil es un `Pressable` dentro de la tarjeta (que abre
+  el juego): el toque lo toma el más interno, y el marcador queda fuera, así
+  que tocar el 6 sigue abriendo el juego. Con el lector de pantalla la
+  tarjeta chica es un solo elemento: los dos equipos van como acciones suyas.
 - **Un juego se abre solo si la caché tiene su detalle** (`has_detail`). Un
   juego viejo no tiene relato; una tarjeta que parece tocable y no hace nada
   es peor que una que no lo parece. Un juego terminado sin detalle en vivo

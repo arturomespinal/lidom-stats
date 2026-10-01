@@ -188,6 +188,7 @@ export default function HoyScreen({ navigation, route }: Props) {
             destacado={jornada.featured}
             onAbrir={abrirJuego(destacado)}
             onJugador={p => abrirJugador(p.player_id, p.full_name)}
+            temporada={jornada.season_id ?? undefined}
           />
         )}
 
@@ -199,7 +200,7 @@ export default function HoyScreen({ navigation, route }: Props) {
             />
             <View style={styles.lista}>
               {resto.map(g => (
-                <TarjetaJuego key={g.game_id} juego={g} onAbrir={abrirJuego(g)} />
+                <TarjetaJuego key={g.game_id} juego={g} onAbrir={abrirJuego(g)} temporada={jornada.season_id ?? undefined} />
               ))}
             </View>
           </>

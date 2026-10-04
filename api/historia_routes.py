@@ -129,6 +129,8 @@ def historicos_que_coinciden(conn: Connection, q: str, limite: int) -> list[dict
       SQLite solo pasa a minúsculas las letras sin tilde (LOWER('PEÑA') da
       'peÑa') y los años viejos están en mayúsculas. Así "pena" encuentra a
       "TONY PEÑA". Son unos pocos miles de nombres: se recorren sin problema.
+    - Se mira también el nombre que se muestra: "diomedes" encuentra a
+      "DIOM. GUAYUBIN OLIVO", que en la app sale como Diómedes Olivo.
     """
     if not hay_historia(conn):
         return []
@@ -149,7 +151,10 @@ def historicos_que_coinciden(conn: Connection, q: str, limite: int) -> list[dict
         GROUP BY j.id_miembro, j.nombre
         HAVING MIN(t.temporada) < :corte
         """), {"corte": ANIO_CORTE})
-    coinciden = [r for r in filas if buscado in normalizar_nombre(r.nombre)]
+    coinciden = [
+        r for r in filas
+        if buscado in normalizar_nombre(r.nombre) or buscado in normalizar_nombre(nombre_para_mostrar(r.nombre))
+    ]
     # Los más recientes primero, como el buscador de la MLB API.
     coinciden.sort(key=lambda r: (-r.ultima, r.nombre))
     return [

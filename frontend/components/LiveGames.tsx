@@ -102,21 +102,18 @@ export default function LiveGames() {
     return (
       <div className="bg-card border border-line rounded-lg px-6 py-10 text-center">
         <p className="text-3xl mb-3">⚾</p>
-        <p className="text-sm text-fg2 mb-1">
-          No hay juegos en seguimiento
-        </p>
-        <p className="text-xs text-dim mb-5 max-w-md mx-auto">
-          La temporada de LIDOM va de octubre a enero. Fuera de temporada
-          puedes reproducir un juego terminado: el marcador recibe exactamente
-          los mismos eventos que recibirá en vivo.
-        </p>
-        <pre className="text-[11px] text-left inline-block bg-bg border border-line rounded px-4 py-3 text-dim leading-relaxed">
-          <code>
-            set LIDOM_LIVE_POLLER=1{"\n"}
-            set LIDOM_LIVE_REPLAY=826343{"\n"}
-            python -m uvicorn api.main:app
-          </code>
-        </pre>
+        <p className="text-sm text-fg2 mb-1">No hay juegos en vivo ahora</p>
+        <p className="text-xs text-dim max-w-md mx-auto">La temporada de LIDOM va de octubre a enero.</p>
+        {/* Cómo reproducir un juego: solo en desarrollo. */}
+        {process.env.NODE_ENV === "development" && (
+          <pre className="mt-5 text-[11px] text-left inline-block bg-bg border border-line rounded px-4 py-3 text-dim leading-relaxed">
+            <code>
+              set LIDOM_LIVE_POLLER=1{"\n"}
+              set LIDOM_LIVE_REPLAY=826343{"\n"}
+              python -m uvicorn api.main:app
+            </code>
+          </pre>
+        )}
       </div>
     );
   }

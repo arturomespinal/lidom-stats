@@ -70,6 +70,24 @@ print("━━━ Nombres ━━━")
 check("normalizar: sin tildes, sin puntos, sin Jr.", normalizar_nombre("José A. Váldez Jr."), "jose a valdez")
 check("mostrar: los años viejos en mayúsculas pasan a tipo título", nombre_para_mostrar("TONY  PEÑA"), "Tony Peña")
 check("mostrar: los que ya vienen bien se respetan", nombre_para_mostrar("Juan Francisco"), "Juan Francisco")
+# Los nombres de la planilla, como se escriben en la app (src/nombres.py).
+for planilla, esperado, que in [
+    ("DIOM. GUAYUBIN OLIVO", 'Diómedes "Guayubín" Olivo', "los que la liga conoce por otro nombre"),
+    ("JESUS ROJAS ALOU", "Jesús Alou", "los Alou, sin el Rojas de la planilla"),
+    ("FDO. (BICHO) PEDROSO", 'Fernando "Bicho" Pedroso', "abreviatura y apodo entre comillas"),
+    ("LUIS E. (TITE) ARROYO", 'Luis E. "Tite" Arroyo', "el apodo en medio se queda donde estaba"),
+    ("Abraham Nunez (Eo)", 'Abraham "Eo" Núñez', "el apodo del final va tras el nombre de pila"),
+    ("JOSE SANTOS (L)", "José Santos (L)", "una marca de una letra no es un apodo"),
+    ("CESAR GERONIMO", "César Gerónimo", "las tildes que la planilla no lleva"),
+    ("Julio Mañon", "Julio Mañón", "las tildes que lleva a medias"),
+    ("MARTIN RIVAS", "Martín Rivas", "Martín como nombre de pila"),
+    ("BILLY MARTIN", "Billy Martin", "pero no como apellido"),
+    ("Franklin German", "Franklin German", "German apellido no es Germán"),
+    ("WILLIE MCCOVEY", "Willie McCovey", "los Mc"),
+    ("JOSE REYES €", "José Reyes", "la basura de planilla se va"),
+    ("RAMON DE LOS SANTOS", "Ramón De Los Santos", "las partículas como en RD"),
+]:
+    check(f"mostrar: {que}", nombre_para_mostrar(planilla), esperado)
 check("lanzador de los años sin designado: lanza en sus juegos y batea en casi todos",
       es_lanzador_historico([{"games_batted": 32}], [{"games": 30}]), True)
 check("un jugador de posición que lanzó una vez no es lanzador",
@@ -253,7 +271,7 @@ else:
         # Carreras cerradas antes de 2012: exactas.
         check("más hits: Luis Polonia, 927", primero("bateo", "h"), ("Luis Polonia", 927))
         check("mejor promedio (1.500 AP): Manuel Mota, .333", primero("bateo", "avg"), ("Manuel Mota", 0.333))
-        check("más victorias: Diómedes Olivo, 86", primero("pitcheo", "wins"), ("Diom. Guayubin Olivo", 86))
+        check("más victorias: Diómedes Olivo, 86", primero("pitcheo", "wins"), ('Diómedes "Guayubín" Olivo', 86))
         check("mejor efectividad (400 IP): Juan Marichal, 1.87", primero("pitcheo", "era"), ("Juan Marichal", 1.87))
         # Jugadores activos: como mínimo lo del 30-sep-2026.
         n, v = primero("bateo", "hr")
@@ -293,6 +311,9 @@ else:
     f = c.get(f"/players/{pid}").json()
     check("la ficha de Juan Francisco trae sus años anteriores a 2012-13",
           (f["history"]["batting"][-1]["season_id"], f["history"]["career_batting"]["hr"] >= 85), ("2007-08", True))
+    s = c.get("/players/search", params={"q": "diomedes"}).json()
+    check("el buscador encuentra por el nombre que se muestra: 'diomedes' (la planilla dice DIOM.)",
+          any(h["name"] == 'Diómedes "Guayubín" Olivo' for h in s.get("historicos", [])), True)
     check("un miembro que no existe: 404", c.get("/historia/miembros/999999999").status_code, 404)
 
 print()

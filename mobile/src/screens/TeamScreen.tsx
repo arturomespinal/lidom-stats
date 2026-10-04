@@ -281,7 +281,6 @@ export default function TeamScreen({ route, navigation }: Props) {
             <Seccion
               titulo={`Últimos ${equipo.last10.length}`}
               nota={`${equipo.last10.filter(j => j.result === 'G').length}-${equipo.last10.filter(j => j.result === 'P').length}`}
-              sub="El más reciente, a la derecha. Toca uno para abrir el juego."
             />
             <UltimosDiez
               juegos={equipo.last10}
@@ -302,7 +301,7 @@ export default function TeamScreen({ route, navigation }: Props) {
               titulo="La carrera"
               nota={equipo.season_id}
               titular={equipo.race_headline}
-              sub="Juegos sobre .500, partido a partido. Por encima de la línea, más ganados que perdidos."
+              sub="Juegos sobre .500, partido a partido."
             />
             <CarreraBanderin carrera={equipo.race} equipo={code} />
           </>
@@ -326,8 +325,7 @@ export default function TeamScreen({ route, navigation }: Props) {
             </ScrollView>
             {hayTasa && (
               <Text style={styles.nota}>
-                * Con mínimo: {equipo.min_pa} AP para el bateo, {entradas(equipo.min_ip)} IP
-                para el pitcheo. Las acumuladas no llevan mínimo.
+                * Con mínimo: {equipo.min_pa} AP en el bateo, {entradas(equipo.min_ip)} IP en el pitcheo.
               </Text>
             )}
           </>
@@ -459,10 +457,6 @@ export default function TeamScreen({ route, navigation }: Props) {
           );
         })}
       </View>
-      <Text style={styles.nota}>
-        Toca una temporada para ver sus destacados y su plantilla. Las barras se
-        escalan contra la mejor campaña del propio equipo.
-      </Text>
     </ScrollView>
   );
 }

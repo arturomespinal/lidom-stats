@@ -593,6 +593,11 @@ lt = ctx["latest"]
 check("cifras de la cabecera: la última temporada, equipos sumados",
       (lt["season_id"], lt["team_code"], lt["hr"], lt["rbi"], round(lt["ops"], 3)),
       ("2025-26", "ESC", 6, 26, 0.873))
+# Juan Francisco: 6 AP en 2024-25 y 46 en 2023-24. La cabecera salta a
+# 2022-23 (89 AP), la última con el volumen de un punto lleno de la curva.
+jf = call("/players/juan-francisco-1987-06-24")["context"]["latest"]
+check("la cabecera salta las temporadas mínimas (menos de 50 AP)",
+      (jf["season_id"], jf["team_code"], jf["pa"]), ("2022-23", "GIG", 89))
 
 print("\n━━━ la jornada: portada Hoy ━━━")
 import glob as _glob

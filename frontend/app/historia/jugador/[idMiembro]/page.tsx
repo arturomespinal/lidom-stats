@@ -132,8 +132,7 @@ export default async function MiembroPage(props: Props) {
         )}
 
         <p className="text-[11px] leading-relaxed text-faint">
-          Datos: DIGIMETRICS (estadisticas.lidom.com), el portal de estadísticas de la liga. La fila de carrera es
-          la serie regular; RR y Final marcan el round robin y la serie final.
+          Fuente: LIDOM. La carrera es la serie regular.
         </p>
       </main>
     </>

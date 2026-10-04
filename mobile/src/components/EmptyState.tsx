@@ -25,11 +25,17 @@ export default function EmptyState({
     <View style={styles.container}>
       <Text style={styles.icon}>⚾</Text>
       <Text style={styles.msg}>
-        {sinConexion ? 'No se pudo conectar con la API.' : message ?? 'No hay datos disponibles.'}
+        {sinConexion ? (__DEV__ ? 'No se pudo conectar con la API.' : 'No se pudo conectar.') : message ?? 'No hay datos disponibles.'}
       </Text>
-      <Text style={styles.hint}>
-        {sinConexion ? `Se intentó en ${API_BASE}` : 'Corre: python main.py ingest 2025'}
-      </Text>
+      {/* Lo técnico (la dirección, el comando) solo en desarrollo: en un
+          build de verdad __DEV__ es false y la persona ve un mensaje normal. */}
+      {sinConexion ? (
+        <Text style={__DEV__ ? styles.hint : styles.ayuda}>
+          {__DEV__ ? `Se intentó en ${API_BASE}` : 'Revisa tu conexión e intenta de nuevo.'}
+        </Text>
+      ) : (
+        __DEV__ && <Text style={styles.hint}>Corre: python main.py ingest 2025</Text>
+      )}
       {!!onReintentar && (
         <Pressable
           onPress={onReintentar}
@@ -54,6 +60,7 @@ const styles = StyleSheet.create({
   icon: { fontSize: 48, marginBottom: 16 },
   msg: { color: COLORS.textSecondary, fontSize: 15, textAlign: 'center', marginBottom: 8 },
   hint: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center', fontFamily: 'monospace' },
+  ayuda: { color: COLORS.textSecondary, fontSize: 13, textAlign: 'center' },
   boton: {
     marginTop: 20,
     minHeight: 44,

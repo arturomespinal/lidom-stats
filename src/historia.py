@@ -33,6 +33,7 @@ from sqlalchemy import text
 from sqlalchemy.engine import Connection, Engine
 
 from src.models.hist_models import etiqueta_historica
+from src.nombres import mostrar_nombre
 
 # Primera temporada que sale de la MLB API. Antes de esta, DIGIMETRICS.
 ANIO_CORTE = 2012
@@ -57,14 +58,11 @@ def normalizar_nombre(nombre: str) -> str:
 
 def nombre_para_mostrar(nombre: str) -> str:
     """
-    DIGIMETRICS escribe los años viejos en mayúsculas ("TONY PEÑA"). Esos se
-    pasan a tipo título; los que ya vienen en mayúsculas y minúsculas se
-    respetan tal cual ("Juan Francisco").
+    El nombre de DIGIMETRICS como se escribe en la app: tipo título, apodos
+    entre comillas, abreviaturas y tildes, y los que la liga conoce por otro
+    nombre ("JESUS ROJAS ALOU" → "Jesús Alou"). Ver `src/nombres.py`.
     """
-    nombre = " ".join(nombre.split())
-    if nombre != nombre.upper():
-        return nombre
-    return nombre.title()
+    return mostrar_nombre(nombre)
 
 
 def _apellido_parecido(a: str, b: str) -> bool:

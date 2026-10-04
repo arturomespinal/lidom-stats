@@ -40,11 +40,12 @@ export default async function PlayerPage(props: Props) {
   const perfil = await fetchPlayerProfile(playerId);
   if (!perfil) notFound();
 
-  // El equipo de la temporada más reciente da el color de la cabecera. Las dos
-  // listas llegan de la más nueva a la más vieja, así que basta el primer
-  // elemento de la que exista: un lanzador puro no tiene filas de bateo.
+  // El equipo de la temporada de la cabecera da el color y el nombre: si la
+  // cabecera salta a una temporada con volumen (context.latest), el equipo es
+  // el de ESA temporada. Sin contexto, el de la más reciente (las listas
+  // llegan de la más nueva a la más vieja).
   const equipoActual =
-    perfil.batting[0]?.team_code ?? perfil.pitching[0]?.team_code ?? null;
+    perfil.context?.latest.team_code ?? perfil.batting[0]?.team_code ?? perfil.pitching[0]?.team_code ?? null;
 
   // Un lanzador con tres turnos al bate no necesita una tabla de bateo de
   // dieciséis columnas, y un bateador que lanzó una entrada en un juego roto
@@ -103,7 +104,7 @@ export default async function PlayerPage(props: Props) {
                   nota={ctx.ranking.season_id}
                   titular={ctx.ranking.headline}
                   sub={
-                    `Puesto entre los ${ctx.ranking.pool} calificados ` +
+                    `Entre ${ctx.ranking.pool} calificados ` +
                     (ctx.role === "batting"
                       ? `(${ctx.ranking.minimum}+ AP). En ponches, 1º es quien menos se poncha.`
                       : `(${entradas(ctx.ranking.minimum)}+ IP). En efectividad, WHIP y boletos, 1º es el más bajo.`)
@@ -120,7 +121,7 @@ export default async function PlayerPage(props: Props) {
                   titular={ctx.curve.headline}
                   sub={
                     ctx.role === "batting"
-                      ? "Punto hueco: menos de 50 AP. Calificada: la que habría entrado en la tabla de líderes."
+                      ? "Punto hueco: menos de 50 AP."
                       : "Más arriba, mejor. Punto hueco: menos de 10 entradas."
                   }
                 />
@@ -177,16 +178,12 @@ export default async function PlayerPage(props: Props) {
 
         {!bateoRelevante && !pitcheoRelevante && (
           <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-dim">
-            Este jugador aparece en la base pero no acumula suficientes turnos
-            ni entradas para una tabla.
+            Sin turnos ni entradas suficientes para mostrar.
           </p>
         )}
 
         <p className="text-[11px] text-faint">
-          Datos: MLB Stats API
-          {historia ? " · antes de 2012-13, DIGIMETRICS (estadisticas.lidom.com), solo serie regular" : ""} ·{" "}
-          {perfil.batting.length + perfil.pitching.length + (historia ? historia.batting.length + historia.pitching.length : 0)}{" "}
-          temporadas-equipo registradas
+          {historia ? "Fuentes: MLB Stats API y, antes de 2012-13, LIDOM." : "Fuente: MLB Stats API."}
         </p>
       </main>
     </>

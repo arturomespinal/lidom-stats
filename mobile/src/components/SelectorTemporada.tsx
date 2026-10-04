@@ -82,7 +82,7 @@ export default function SelectorTemporada({
         visible={abierto}
         onClose={() => setAbierto(false)}
         titulo={titulo}
-        subtitulo={subtitulo ?? `${opciones.length} temporadas en la base`}
+        subtitulo={subtitulo ?? `${opciones.length} temporadas`}
       >
         <ScrollView ref={lista} contentContainerStyle={styles.lista}>
           {opciones.map((o, i) => {

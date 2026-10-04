@@ -137,7 +137,7 @@ export function SelectorOpciones({
               className="desplegar absolute left-0 top-full z-20 mt-2 max-h-[min(70vh,520px)] w-[min(18rem,calc(100vw-2rem))] origin-top-left overflow-y-auto rounded-2xl border border-line bg-card p-1.5 shadow-[0_16px_48px_rgb(9_28_58/0.18)]"
             >
               <p className="px-3 pb-1.5 pt-1 text-[11px] uppercase tracking-[0.08em] text-dim">
-                {resumen ?? `${opciones.length} temporadas en la base`}
+                {resumen ?? `${opciones.length} temporadas`}
               </p>
               {opciones.map((o, i) => {
                 const es = o.label === activa;

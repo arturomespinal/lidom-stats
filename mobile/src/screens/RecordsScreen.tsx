@@ -167,8 +167,7 @@ export default function RecordsScreen({ route, navigation }: Props) {
           )}
           ListFooterComponent={
             <Text style={styles.fuente}>
-              Antes de 2012-13: DIGIMETRICS (estadisticas.lidom.com). Desde 2012-13: MLB Stats API. Solo serie
-              regular; cada temporada cuenta una sola vez.
+              Serie regular. Fuentes: LIDOM hasta 2011-12 y MLB Stats API desde 2012-13.
             </Text>
           }
         />

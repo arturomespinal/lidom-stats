@@ -210,7 +210,6 @@ export default function HoyScreen({ navigation, route }: Props) {
           <>
             <Seccion
               titulo="Figuras de la jornada"
-              sub="Bateo: bases totales, impulsadas, anotadas, boletos y robos. Pitcheo: Game Score, con 3 entradas o más."
             />
             <CarruselFiguras figuras={jornada.figures} onJugador={f => abrirJugador(f.player_id, f.full_name)} />
           </>

@@ -99,9 +99,7 @@ export default function Leaders({
 
       {hayTasa && (
         <p className="mt-2 text-[11px] text-faint">
-          * Con mínimo de calificación: {minPa} apariciones al plato para el
-          bateo, {entradas(minIp)} entradas para el pitcheo. Las acumuladas no llevan
-          mínimo.
+          * Con mínimo: {minPa} AP en el bateo, {entradas(minIp)} IP en el pitcheo.
         </p>
       )}
     </section>

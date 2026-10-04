@@ -140,7 +140,9 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
         <div className="rounded-lg border border-line bg-card px-6 py-10 text-center">
           <p className="mb-1 text-sm text-fg2">No se pudo cargar el juego</p>
           <p className="text-xs text-dim">
-            El juego #{gamePk} no está en seguimiento, o el backend no responde.
+            {process.env.NODE_ENV === "development"
+              ? `El juego #${gamePk} no está en seguimiento, o el backend no responde.`
+              : "Revisa tu conexión e intenta de nuevo."}
           </p>
           <Link href="/live" className="mt-4 inline-block text-xs text-dim underline hover:text-fg">
             Volver a En Vivo

@@ -12,9 +12,12 @@ export default function EmptyState({
     <div className="flex flex-col items-center justify-center py-20 text-dim">
       <span className="text-4xl mb-4">⚾</span>
       <p className="text-sm">{message}</p>
-      <p className="text-xs mt-2 opacity-60">
-        Corre: <code className="bg-header px-1 rounded">{comando}</code>
-      </p>
+      {/* El comando que falta, solo en desarrollo: a un visitante no le dice nada. */}
+      {process.env.NODE_ENV === "development" && (
+        <p className="text-xs mt-2 opacity-60">
+          Corre: <code className="bg-header px-1 rounded">{comando}</code>
+        </p>
+      )}
     </div>
   );
 }

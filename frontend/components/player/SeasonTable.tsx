@@ -107,7 +107,7 @@ function Tabla<T>({
   carrera,
   cols,
   historicas = [],
-  separador = "Antes de 2012-13 · DIGIMETRICS",
+  separador = "Antes de 2012-13",
   etiquetaCarrera = "Carrera",
   postemporada = null,
 }: Props<T>) {

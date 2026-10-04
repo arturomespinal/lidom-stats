@@ -159,10 +159,9 @@ export default function GameDetailScreen({ route }: Props) {
       <View style={styles.center}>
         <Text style={styles.errorTitle}>No se pudo cargar el juego</Text>
         <Text style={styles.errorHint}>
-          {awayCode} vs {homeCode} · #{gamePk}
-        </Text>
-        <Text style={styles.errorHint}>
-          Revisa que el backend esté corriendo y accesible desde el celular.
+          {__DEV__
+            ? `${awayCode} vs ${homeCode} · #${gamePk}. Revisa que el backend esté corriendo y accesible desde el celular.`
+            : 'Revisa tu conexión e intenta de nuevo.'}
         </Text>
       </View>
     );

@@ -165,7 +165,7 @@ export default function SearchScreen() {
               </Text>
             </View>
           ) : !buscando && resultado.consulta === consulta ? (
-            <Text style={styles.ayuda}>Nadie se llama así en la base.</Text>
+            <Text style={styles.ayuda}>No encontramos a nadie con ese nombre.</Text>
           ) : null
         }
         renderItem={({ item: fila }) => {
@@ -335,7 +335,7 @@ function PanelRecords({
               {c.label}
             </Text>
             <Text style={styles.tarjetaValor}>{c.leader ? valorHistorico(c.stat, c.leader.value) : '—'}</Text>
-            <Text style={styles.tarjetaNombre} numberOfLines={1}>
+            <Text style={styles.tarjetaNombre} numberOfLines={2}>
               {c.leader?.name ?? 'Sin datos'}
             </Text>
           </Tocable>

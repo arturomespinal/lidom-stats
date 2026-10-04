@@ -204,8 +204,7 @@ export default function HistoricoScreen({ route, navigation }: Props) {
       </Aparecer>
 
       <Text style={styles.fuente}>
-        Datos: DIGIMETRICS (estadisticas.lidom.com), el portal de estadísticas de la liga. La carrera es la serie
-        regular; RR y Final marcan el round robin y la serie final.
+        Fuente: LIDOM. La carrera es la serie regular.
       </Text>
     </ScrollView>
   );

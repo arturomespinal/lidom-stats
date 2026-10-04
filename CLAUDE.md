@@ -195,6 +195,7 @@ la 2015-16. No cambiar esa clave.
 | `src/pipeline/cruce_historia.py` | DIGIMETRICS contra el esquema de juego, equipo por equipo |
 | `verify_digimetrics.py` | 67 comprobaciones del scraper sin red (76 con la caché y la capa histórica); parsea también la caché real si existe |
 | `src/historia.py` | Enlace DIGIMETRICS ↔ MLB API, carrera completa de las dos fuentes y líderes de todos los tiempos |
+| `src/nombres.py` | Cómo se escriben en pantalla los nombres de DIGIMETRICS: apodos, abreviaturas, tildes |
 | `api/historia_routes.py` | `/historia/lideres`, `/historia/resumen`, `/historia/miembros/{id}`, el bloque `history` de la ficha y los `historicos` del buscador |
 | `verify_historia.py` | El enlace, la carrera sin contar dos veces 2012-2019, los líderes; contra una base sintética y contra la real |
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
@@ -302,7 +303,7 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 - `NEXT_PUBLIC_API_URL` en `frontend/.env.local` apunta al backend (default: `http://localhost:8000`)
 - Tema claro con tinta navy (ver "La paleta"); colores de equipos en `frontend/lib/constants.ts`
 - Tablas sortables por clic en columna (client components), fetch en server components
-- Empty state visible cuando la DB está vacía (muestra el comando `python main.py ingest`)
+- Empty state visible cuando la DB está vacía (el comando `python main.py ingest` solo se muestra en desarrollo)
 
 ### Next.js 16 — lo que cambió y por qué importa
 
@@ -1168,7 +1169,7 @@ papel principal):
 | Campo | Qué es |
 |-------|--------|
 | `role` | `batting` o `pitching`, el mismo criterio que `es_lanzador()` |
-| `latest` | Su última temporada con los equipos **sumados**: las cifras grandes de la cabecera |
+| `latest` | Su última temporada **con volumen** (50 AP o 10 entradas, el listón de la curva), con los equipos **sumados**: las cifras grandes de la cabecera. Si ninguna llega, la de más volumen. Con la última a secas, Juan Francisco abría con ".000 OPS" por 6 AP |
 | `ranking` | Su puesto entre los calificados de su última temporada calificada, por categoría, con `headline` |
 | `curve` | OPS (o EFE) temporada a temporada, el promedio de la liga y un `headline` |
 
@@ -1460,6 +1461,24 @@ con 76 de alto) salía con el "2" y el "7" planos arriba (30-sep). La regla:
 `marginTop` en negativo para que la cifra no se mueva. Los nombres de la
 cabecera ya llevaban su `paddingTop`; el récord del equipo y las carreras del
 detalle de juego no. En el arnés web no se ve: el navegador no recorta.
+
+## La voz de la app (3-oct-2026)
+
+La app no se explica. Fuera los subtítulos que contaban cómo se calcula o cómo
+se usa algo ("El más reciente, a la derecha. Toca uno para abrir el juego",
+"Sin errores ni línea por entradas: la base guarda…", la fórmula de las
+figuras) y las notas de fuente de tres líneas. Quedan las que cambian cómo se
+lee un dato ("Punto hueco: menos de 50 AP", el mínimo de una tasa) y la
+fuente en una línea: "Fuente: MLB Stats API" o "Fuentes: MLB Stats API y,
+antes de 2012-13, LIDOM". Al público no se le nombra DIGIMETRICS: es el
+sistema detrás del portal de la liga.
+
+**Lo técnico solo en desarrollo.** La dirección de la API, el comando de
+ingesta, cómo reproducir un juego o "revisa que el backend esté corriendo"
+van detrás de `__DEV__` en el móvil y de `process.env.NODE_ENV ===
+"development"` en la web. En un build de verdad la persona ve "No se pudo
+conectar. Revisa tu conexión e intenta de nuevo." En Expo Go `__DEV__` es
+`true`: ahí se siguen viendo, y está bien, porque ahí se depura.
 
 ## Micro-animaciones (30-sep-2026)
 
@@ -1787,8 +1806,18 @@ números. Se rehace al final de cada `ingest-historia` y con
   encuentra a "TONY PEÑA".
 - **Los líderes se guardan 10 minutos en memoria (`CacheCarreras`):**
   recorrer todas las líneas de las dos fuentes tarda ~0,3 s.
-- **Nombres para mostrar:** los que la fuente escribe en mayúsculas pasan a
-  tipo título ("Tony Peña"); los demás se respetan.
+- **Nombres para mostrar** (`src/nombres.py`, 3-oct): la planilla trae
+  mayúsculas, abreviaturas, apodos entre paréntesis y nombres sin tildes
+  ("DIOM. GUAYUBIN OLIVO", "JESUS ROJAS ALOU"); 1.348 de los 6.461 cambian
+  más allá del tipo título. En orden: los que la liga conoce por otro nombre
+  (`CONOCIDOS`: los Alou sin el Rojas, Rico Carty), tipo título con los Mc,
+  abreviaturas sin ambigüedad (Fdo., Fed., Diom.), el apodo entre comillas
+  (Diómedes "Guayubín" Olivo) y tildes contra listas cerradas. "Martín" solo
+  como nombre de pila: Billy Martin no lleva tilde. Una marca de una letra
+  ("(L)") no es apodo y se queda al final. Solo para DIGIMETRICS: los nombres
+  de la MLB API son su registro oficial. El buscador compara también contra
+  el nombre mostrado ("diomedes" encuentra a "DIOM."). La suite fija los
+  casos.
 - **La clave de persona de los no enlazados es `hist:<id>`**, no `m<id>`.
   La primera versión (entrega 50) usaba `m<id>` y la distinguía del slug por
   la letra inicial: un slug de la MLB API que empieza con "m"
@@ -1839,9 +1868,10 @@ búsqueda; el resto de los endpoints siguen tratando el 404 como error.
 
 ## Próximos pasos
 
-1. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-2. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen; y récords por temporada (mejor temporada de la historia), que salen de las mismas tablas.
-3. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+1. Decidir dónde corre la API y la base para que la app funcione sin la PC de Arturo, antes del arranque de la 2026-27.
+2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
+3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen; y récords por temporada (mejor temporada de la historia), que salen de las mismas tablas.
+4. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal
 

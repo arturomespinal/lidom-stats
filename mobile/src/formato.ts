@@ -114,7 +114,10 @@ const SUFIJOS = new Set(['jr', 'jr.', 'sr', 'sr.', 'ii', 'iii', 'iv']);
  * lugar de la foto: primera letra del nombre y del último apellido.
  */
 export function iniciales(nombre: string): string {
-  const partes = nombre.split(/\s+/).filter(p => p && !SUFIJOS.has(p.toLowerCase()));
+  // Fuera los sufijos, el apodo entre comillas y las marcas como "(L)".
+  const partes = nombre
+    .split(/\s+/)
+    .filter(p => p && !SUFIJOS.has(p.toLowerCase()) && !/^["(]/.test(p));
   if (partes.length === 0) return '?';
   const a = partes[0][0];
   const b = partes.length > 1 ? partes[partes.length - 1][0] : '';

@@ -35,7 +35,7 @@ export default async function BattingPage(props: Props) {
           <div>
             <h1 className="font-cond text-[30px] leading-none tracking-[0.01em] text-fg">Líderes de Bateo</h1>
             <p className="text-xs text-dim mt-0.5">
-              Clic en columna para ordenar · Datos: MLB Stats API
+              Fuente: MLB Stats API
             </p>
           </div>
           <span className="shrink-0 whitespace-nowrap text-xs text-dim">Temporada {etiquetaTemporada(season)}</span>

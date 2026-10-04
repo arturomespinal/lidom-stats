@@ -174,21 +174,21 @@ export default function LiveScreen() {
       ListEmptyComponent={
         <View style={styles.empty}>
           <Text style={styles.emptyIcon}>⚾</Text>
-          <Text style={styles.emptyTitle}>No hay juegos en seguimiento</Text>
-          <Text style={styles.emptyText}>
-            La temporada de LIDOM va de octubre a enero. Fuera de temporada se
-            puede reproducir un juego terminado: el marcador recibe los mismos
-            datos que recibirá en vivo.
-          </Text>
-          <View style={styles.code}>
-            <Text style={styles.codeText}>set LIDOM_LIVE_POLLER=1</Text>
-            <Text style={styles.codeText}>set LIDOM_LIVE_REPLAY=826343</Text>
-            <Text style={styles.codeText}>python -m uvicorn api.main:app --host 0.0.0.0</Text>
-          </View>
-          <Text style={styles.emptyHint}>
-            El celular necesita que el backend escuche en 0.0.0.0 y que la IP de
-            src/config.ts sea la de esta máquina en la red.
-          </Text>
+          <Text style={styles.emptyTitle}>No hay juegos en vivo ahora</Text>
+          <Text style={styles.emptyText}>La temporada de LIDOM va de octubre a enero.</Text>
+          {/* Cómo ver un juego reproducido: solo en desarrollo. */}
+          {__DEV__ && (
+            <>
+              <View style={styles.code}>
+                <Text style={styles.codeText}>set LIDOM_LIVE_POLLER=1</Text>
+                <Text style={styles.codeText}>set LIDOM_LIVE_REPLAY=826343</Text>
+                <Text style={styles.codeText}>python -m uvicorn api.main:app --host 0.0.0.0</Text>
+              </View>
+              <Text style={styles.emptyHint}>
+                El celular necesita que el backend escuche en 0.0.0.0.
+              </Text>
+            </>
+          )}
         </View>
       }
     />

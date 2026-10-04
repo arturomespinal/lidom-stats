@@ -68,18 +68,12 @@ export default async function JuegoPage(props: Props) {
         <section>
           <Seccion
             titulo="Boxscore"
-            sub={
-              juego.boxscore_available
-                ? "Sin errores ni línea por entradas: la base guarda lo que hizo cada jugador, y eso solo existe para los juegos seguidos en vivo."
-                : undefined
-            }
           />
           {juego.boxscore_available ? (
             <BoxScore home={juego.home} away={juego.away} temporada={g.season_id} />
           ) : (
             <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-dim">
-              Este juego está en el calendario pero no tiene boxscore: se perdió por forfeit, se pospuso o todavía no
-              se ha procesado.
+              Este juego no tiene boxscore.
             </p>
           )}
         </section>

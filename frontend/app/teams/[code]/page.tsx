@@ -61,7 +61,6 @@ export default async function TeamPage(props: Props) {
             <Seccion
               titulo={`Últimos ${equipo.last10.length}`}
               nota={`${ganados}-${equipo.last10.length - ganados}`}
-              sub="El más reciente, a la derecha. Cada uno abre su juego."
             />
             <UltimosDiez juegos={equipo.last10} />
           </section>
@@ -73,7 +72,7 @@ export default async function TeamPage(props: Props) {
               titulo="La carrera"
               nota={equipo.season_id}
               titular={equipo.race_headline}
-              sub="Juegos sobre .500, partido a partido. Por encima de la línea, más ganados que perdidos."
+              sub="Juegos sobre .500, partido a partido."
             />
             <CarreraBanderin carrera={equipo.race} equipo={codigo} />
           </section>

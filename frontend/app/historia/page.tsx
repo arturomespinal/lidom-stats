@@ -85,8 +85,7 @@ export default async function HistoriaPage(props: Props) {
               <ListaLideres datos={lideres} />
             </section>
             <p className="text-[11px] leading-relaxed text-faint">
-              Antes de 2012-13: DIGIMETRICS (estadisticas.lidom.com). Desde 2012-13: MLB Stats API. Solo serie
-              regular. Las tasas exigen 1.500 apariciones al plato o 400 entradas en la carrera.
+              Serie regular. Fuentes: LIDOM hasta 2011-12 y MLB Stats API desde 2012-13.
             </p>
           </main>
         </>

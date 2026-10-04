@@ -116,7 +116,6 @@ export default async function HoyPage(props: Props) {
           <section>
             <Seccion
               titulo="Figuras de la jornada"
-              sub="Bateo: bases totales, impulsadas, anotadas, boletos y robos. Pitcheo: Game Score, con 3 entradas o más."
             />
             <Figuras figuras={jornada.figures} />
           </section>

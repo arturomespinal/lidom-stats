@@ -102,11 +102,6 @@ export default function JuegoScreen({ route, navigation }: Props) {
 
       <Seccion
         titulo="Boxscore"
-        sub={
-          juego.boxscore_available
-            ? 'Sin errores ni línea por entradas: la base guarda lo que hizo cada jugador, y eso solo existe para los juegos seguidos en vivo.'
-            : undefined
-        }
       />
       {juego.boxscore_available ? (
         <View style={styles.box}>
@@ -114,8 +109,7 @@ export default function JuegoScreen({ route, navigation }: Props) {
         </View>
       ) : (
         <Text style={styles.sinBox}>
-          Este juego está en el calendario pero no tiene boxscore: se perdió por forfeit, se
-          pospuso o todavía no se ha procesado.
+          Este juego no tiene boxscore.
         </Text>
       )}
     </ScrollView>

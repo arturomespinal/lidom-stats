@@ -40,6 +40,8 @@ from src.constants import LIDOM_TEAMS, LIDOM_TEAMS_BY_CODE
 from src.contexto import (
     CATEGORIAS_BATEO,
     CATEGORIAS_PITCHEO,
+    MUESTRA_CHICA_OUTS,
+    MUESTRA_CHICA_PA,
     agregar_bateo,
     agregar_pitcheo,
     curva_de_carrera,
@@ -506,9 +508,18 @@ def contexto_del_jugador(
             ),
         }
 
-    # La última temporada, equipos sumados: las cifras grandes de la cabecera.
-    # El equipo que se nombra es el de más volumen esa temporada.
-    reciente = max(temporadas, key=lambda t: t["season_id"])
+    # La última temporada CON VOLUMEN, equipos sumados: las cifras grandes de
+    # la cabecera. Con la última a secas, Juan Francisco abría con ".000 OPS,
+    # 0 HR" por seis turnos en 2024-25. Es el mismo listón que pinta hueco un
+    # punto de la curva (50 AP o 10 entradas). Si ninguna lo pasa, la de más
+    # volumen. El equipo que se nombra es el de más volumen esa temporada.
+    piso = MUESTRA_CHICA_PA if rol == "batting" else MUESTRA_CHICA_OUTS
+    con_volumen = [t for t in temporadas if (t[volumen] or 0) >= piso]
+    reciente = (
+        max(con_volumen, key=lambda t: t["season_id"])
+        if con_volumen
+        else max(temporadas, key=lambda t: (t[volumen] or 0, t["season_id"]))
+    )
     filas_reciente = [f for f in filas if f["season_id"] == reciente["season_id"]]
     principal = max(filas_reciente, key=lambda f: f.get(volumen) or 0)
     latest = {k: v for k, v in reciente.items() if k != "player_id"}

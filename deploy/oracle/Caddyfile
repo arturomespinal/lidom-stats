@@ -1,0 +1,21 @@
+# Caddy delante de la API: HTTPS con certificado de Let's Encrypt, sacado y
+# renovado solo. instalar.sh copia esto a /etc/caddy/Caddyfile cambiando
+# DOMINIO por el de verdad (por ejemplo deportiv.duckdns.org).
+#
+# Lo que Caddy hace aquí y por qué:
+# - Ignora el X-Forwarded-For que mande el cliente y pone la IP real. Por eso
+#   la API puede confiar en esa cabecera (LIDOM_CONFIAR_PROXY=1).
+# - Pasa los flujos SSE del en vivo sin acumular: con text/event-stream
+#   reenvía cada evento en cuanto llega.
+# - Comprime el JSON (las respuestas grandes bajan a la cuarta parte o menos),
+#   menos los flujos /stream: comprimir un flujo obliga a juntar bytes antes
+#   de enviar, y un marcador que llega tarde no sirve.
+
+DOMINIO {
+	@comprimible not path */stream
+	encode @comprimible zstd gzip
+
+	header Strict-Transport-Security "max-age=31536000"
+
+	reverse_proxy 127.0.0.1:8000
+}

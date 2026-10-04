@@ -1,0 +1,13 @@
+# Cada madrugada a las 4:30 de RD, cuando ningún juego está en curso.
+# Persistent: si la máquina estaba apagada a esa hora, corre al encender.
+
+[Unit]
+Description=Respaldo diario de la base de Deportiv
+
+[Timer]
+OnCalendar=*-*-* 04:30:00 America/Santo_Domingo
+Persistent=true
+RandomizedDelaySec=5min
+
+[Install]
+WantedBy=timers.target

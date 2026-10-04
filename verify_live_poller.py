@@ -83,6 +83,23 @@ check("encuentra el juego LIDOM del día", found, [GAME_PK])
 check("le asigna el game_id de nuestro esquema",
       p._tracking[GAME_PK], "2025-10-15-TOR-EST-1")
 
+# Sin fecha fija, la jornada es la de RD y no la del reloj de la máquina. El
+# servidor corre en UTC: a la 1:30 UTC del 16 en RD siguen siendo las 9:30 de
+# la noche del 15, en pleno juego, y date.today() ya diría 16.
+from datetime import datetime as _dt, timezone as _tz
+import src.live.poller as _pl
+from src.jornada import hoy_rd as _hoy_rd
+_madrugada_utc = _dt(2025, 10, 16, 1, 30, tzinfo=_tz.utc)
+check("a la 1:30 UTC del 16, en RD sigue siendo el 15",
+      _hoy_rd(_madrugada_utc).isoformat(), "2025-10-15")
+_original = _pl.hoy_rd
+_pl.hoy_rd = lambda: _hoy_rd(_madrugada_utc)
+try:
+    check("sin fecha fija, el poller sigue la jornada de RD",
+          LivePoller(store=LiveStore(), client=FakeClient()).discover(), [GAME_PK])
+finally:
+    _pl.hoy_rd = _original
+
 print("\n━━━ 2. Primer sondeo: feed completo ━━━")
 p._poll_game(GAME_PK)
 e = st.get(GAME_PK)

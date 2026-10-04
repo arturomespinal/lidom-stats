@@ -1,0 +1,18 @@
+# Una copia de la base. Lo dispara deportiv-respaldo.timer; ver respaldo.py.
+
+[Unit]
+Description=Respaldo de la base de Deportiv
+
+[Service]
+Type=oneshot
+User=deportiv
+Group=deportiv
+WorkingDirectory=/opt/deportiv/lidom-stats
+ExecStart=/opt/deportiv/venv/bin/python deploy/oracle/respaldo.py
+Nice=10
+
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/deportiv/respaldos

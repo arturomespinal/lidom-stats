@@ -31,11 +31,11 @@ USO desde la API:
 
 from __future__ import annotations
 
-from datetime import date as date_cls
 from typing import Any, Optional
 
 from src.clients.mlb_api import MLBAPIClient
 from src.constants import LIDOM_TEAMS
+from src.jornada import hoy_rd
 from src.utils.logger import logger
 
 DEFAULT_STEP = 4
@@ -65,7 +65,7 @@ class ReplayClient:
         self.interval = max(1, interval)
         # La fecha con que se presenta el juego al calendario. Por defecto hoy,
         # para que discover() lo encuentre sin más configuración.
-        self.game_date = game_date or date_cls.today().isoformat()
+        self.game_date = game_date or hoy_rd().isoformat()  # la de RD, como el poller
 
         self.stamps: list[str] = self._client.get_live_timestamps(game_pk)
         if not self.stamps:

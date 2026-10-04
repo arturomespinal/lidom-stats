@@ -1,0 +1,57 @@
+# La API de Deportiv como servicio de systemd. Lo instala instalar.sh.
+#
+# Un solo worker A PROPÓSITO: la caché del motor en vivo y el límite por IP
+# viven en la memoria del proceso. Con dos workers habría dos pollers pidiendo
+# lo mismo a la MLB API y el límite efectivo sería el doble.
+#
+# Escucha solo en 127.0.0.1: desde fuera se entra por Caddy (HTTPS). Eso es
+# también lo que hace seguro LIDOM_CONFIAR_PROXY=1: nadie llega a la API sin
+# pasar por Caddy, y Caddy no deja pasar un X-Forwarded-For inventado.
+
+[Unit]
+Description=Deportiv API (FastAPI y motor en vivo)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=deportiv
+Group=deportiv
+WorkingDirectory=/opt/deportiv/lidom-stats
+
+# Las claves y la configuración de producción. Fuera del repositorio, legible
+# solo por root y el grupo deportiv. Ver .env.example.
+EnvironmentFile=/etc/deportiv/api.env
+
+# La hora de RD en los registros. El código ya calcula la jornada con la hora
+# de RD (hoy_rd); esto es para que quien lea journalctl no tenga que restar 4.
+Environment=TZ=America/Santo_Domingo
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+
+# --timeout-graceful-shutdown: los flujos SSE del en vivo no terminan solos, y
+# sin tope un reinicio esperaría 90 s a que systemd los matara.
+ExecStart=/opt/deportiv/venv/bin/uvicorn api.main:app \
+    --host 127.0.0.1 --port 8000 --workers 1 \
+    --timeout-graceful-shutdown 5 --no-server-header
+
+Restart=on-failure
+RestartSec=5
+
+# Endurecimiento: todo el sistema de archivos es de solo lectura para la API
+# salvo data/, donde están la base y su diario. El código no se puede
+# modificar desde el proceso.
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/deportiv/lidom-stats/data
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true
+
+[Install]
+WantedBy=multi-user.target

@@ -201,6 +201,7 @@ la 2015-16. No cambiar esa clave.
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
+| `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo diario y la guía (`GUIA.md`) |
 
 Las once suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
@@ -1866,9 +1867,53 @@ móvil lo pintaba como "Sin conexión". `get()` en `mobile/src/api.ts` acepta
 `si404`: con él, un 404 es una respuesta vacía y no un fallo. Lo usa la
 búsqueda; el resto de los endpoints siguen tratando el 404 como error.
 
+## El despliegue: Oracle Cloud Always Free (3-oct-2026)
+
+Decidido el 3-oct: la API, la base y el motor en vivo en una instancia A1
+(ARM, 2 OCPU y 12 GB) del plan Always Free de Oracle, con Caddy delante para
+el HTTPS; la web en Vercel Hobby; el nombre, un subdominio de DuckDNS. Costo
+cero mientras no haya anuncios. Todo en `deploy/oracle/`, con la guía paso a
+paso en `GUIA.md`.
+
+- **Un solo worker de uvicorn**, a propósito: la caché en vivo y el límite
+  por IP son de proceso. Dos workers serían dos pollers y el doble de límite.
+- **La API escucha solo en 127.0.0.1** y Caddy pone la IP real en
+  `X-Forwarded-For` ignorando la del cliente. Las dos cosas juntas son las que
+  hacen seguro `LIDOM_CONFIAR_PROXY=1`. Probado: 400 peticiones con 400
+  `X-Forwarded-For` inventados dan 429 al pasar el cupo, como una sola IP.
+- **Caddy comprime todo menos `/stream`**: comprimir un flujo SSE obliga a
+  juntar bytes antes de enviar. La búsqueda baja de 5.1 KB a 0.9 KB, y el
+  primer evento del flujo llega en el acto.
+- **`/etc/deportiv/api.env`** lo genera `instalar.sh` con claves nuevas (43
+  caracteres, distintas), `root:deportiv 640`. Nunca entra al repositorio.
+  Correr el instalador otra vez conserva las claves y solo cambia los
+  orígenes.
+- **El servicio no puede escribir fuera de `data/`** (`ProtectSystem=strict`).
+  La API no escribe nada más: la base y su diario. `setup_logger()` (que
+  escribe en `logs/`) no lo llama la API; sus registros van a journald.
+- **`correr.sh`** corre `main.py` como el usuario `deportiv`: un diario de
+  SQLite creado por root dejaría a la API sin poder escribir.
+- **Respaldo diario** con la API de respaldo de SQLite (no copiando el
+  archivo, que con la API escribiendo puede salir a medias), comprobado con
+  `integrity_check`, 14 copias. Con la temporada en marcha la base del
+  servidor ya no se reconstruye desde la PC.
+- **Pay As You Go**: Oracle reclama instancias gratis ociosas (CPU, red y
+  memoria bajo el 20% una semana), y la API usa ~1% de la memoria. La guía
+  pasa la cuenta a Pay As You Go con un presupuesto de 1 USD con alerta.
+- Todas las dependencias tienen paquete precompilado para ARM y Python 3.12
+  (el de Ubuntu 24.04): en el servidor no se compila nada.
+
+**La jornada es la de RD, no la del reloj de la máquina.** El poller pedía
+los juegos de `date.today()`, que en la PC de Arturo es la fecha de RD y en
+el servidor (UTC) pasa al día siguiente a las 8 de la noche de aquí, en plena
+jornada. Ahora usa `hoy_rd()` (`src/jornada.py`), igual que `/day`; también la
+repetición y la edad de las fichas. La unidad de systemd pone además
+`TZ=America/Santo_Domingo`, para que los registros salgan en hora de RD.
+`verify_live_poller.py` lo fija: a la 1:30 UTC del 16 el poller sigue el 15.
+
 ## Próximos pasos
 
-1. Decidir dónde corre la API y la base para que la app funcione sin la PC de Arturo, antes del arranque de la 2026-27.
+1. Desplegar en Oracle siguiendo `deploy/oracle/GUIA.md` antes del arranque de la 2026-27 (mediados de octubre), y apuntar la app y la web a la API de allá.
 2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
 3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen; y récords por temporada (mejor temporada de la historia), que salen de las mismas tablas.
 4. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.

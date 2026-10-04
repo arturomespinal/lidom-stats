@@ -25,13 +25,13 @@ from __future__ import annotations
 
 import threading
 import time
-from datetime import date as date_cls
 from typing import Callable, Optional
 
 import jsonpatch
 
 from src.clients.mlb_api import MLBAPIClient
 from src.constants import LIDOM_TEAMS
+from src.jornada import hoy_rd
 from src.live.gumbo import parse_live_feed
 from src.live.store import LiveStore, store as default_store
 from src.utils.logger import logger
@@ -159,7 +159,10 @@ class LivePoller:
         Filtra por LIDOM igual que el ingestor: solo juegos donde ambos equipos
         están en LIDOM_TEAMS.
         """
-        target = self.game_date or date_cls.today().isoformat()
+        # La jornada es la de RD, no la del reloj de la máquina: el servidor
+        # corre en UTC, y desde las 8 de la noche de aquí (medianoche UTC)
+        # date.today() ya daría el día siguiente, justo a la hora de los juegos.
+        target = self.game_date or hoy_rd().isoformat()
         season = str(int(target[:4]) if int(target[5:7]) >= 9 else int(target[:4]) - 1)
 
         raw = self.client.get_schedule(season=season, game_type=None)

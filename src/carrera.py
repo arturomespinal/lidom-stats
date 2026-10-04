@@ -21,6 +21,8 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Iterable
 
+from src.jornada import hoy_rd
+
 # Conteos que se suman tal cual. Los de bateo primero, los de pitcheo después;
 # una lista por disciplina, porque `h` y `so` significan cosas distintas en cada
 # una (hits conectados contra hits permitidos) y mezclarlas sería un desastre
@@ -162,7 +164,7 @@ def edad(fecha_nacimiento: str | None, hoy: date | None = None) -> int | None:
     except ValueError:
         return None
 
-    referencia = hoy or date.today()
+    referencia = hoy or hoy_rd()  # la fecha de RD, no la del servidor (UTC)
     años = referencia.year - nacimiento.year
     if (referencia.month, referencia.day) < (nacimiento.month, nacimiento.day):
         años -= 1

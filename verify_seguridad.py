@@ -160,7 +160,10 @@ print("\n━━━ Parámetros acotados ━━━")
 check("limit negativo: 422 (en SQLite LIMIT -1 es la tabla entera)", get("/batting?limit=-1").status_code, 422)
 check("limit 0: 422", get("/games?limit=0").status_code, 422)
 check("búsqueda de más de 60 letras: 422", get("/players/search?q=" + "a" * 61).status_code, 422)
-check("búsqueda normal: 200", get("/players/search?q=munguia").status_code, 200)
+# Una búsqueda normal pasa la validación: 200 si hay jugadores con ese nombre y
+# 404 si no hay (en CI la base está vacía). Lo que no puede dar es 422 ni 429.
+check("búsqueda normal: la seguridad no la rechaza",
+      get("/players/search?q=munguia").status_code in (200, 404), True)
 
 print()
 if fails:

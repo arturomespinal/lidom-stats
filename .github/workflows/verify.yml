@@ -1,0 +1,133 @@
+# Continuous verification: runs on every push to main and on every pull request.
+#
+# Three jobs in parallel:
+#   - pipeline: the eight verification suites that need no database
+#   - web:      type check, lint and production build of the Next.js app
+#   - mobile:   type check of the Expo app
+#
+# The other three suites (verify_game_routes, verify_capas, verify_winprob)
+# check the REAL database, which is not versioned (it is built from the MLB API
+# and its redistribution is restricted). They run locally before each delivery.
+
+name: Verify
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: verify-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PYTHONUNBUFFERED: "1"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  pipeline:
+    name: Pipeline and API
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"   # same as production (Ubuntu 24.04)
+          cache: pip
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Prepare data directory
+        run: mkdir -p data   # gitignored; the suites create their own SQLite files here
+
+      # The live-engine suites replay real snapshots of game 826343. They are
+      # not versioned (about 8 MB of JSON), so they are downloaded once from
+      # the MLB API and cached. The capture is deterministic: same timestamps,
+      # same snapshots, same patch chain.
+      - name: Restore live-feed snapshots
+        id: snapshots
+        uses: actions/cache@v6
+        with:
+          path: fixtures
+          key: fixtures-826343-${{ hashFiles('capture_gumbo.py', 'capture_diffs.py') }}
+
+      - name: Download live-feed snapshots (cache miss only)
+        if: steps.snapshots.outputs.cache-hit != 'true'
+        run: |
+          python capture_gumbo.py
+          python capture_diffs.py
+
+      - name: Box score ingestor (simulated MLB client)
+        run: python verify_boxscore_ingestor.py
+
+      - name: Pydantic models against real API JSON
+        run: python verify_api_models.py
+
+      - name: League-portal scraper against saved pages
+        run: python verify_digimetrics.py
+
+      - name: Cross-source linking and all-time leaders (synthetic database)
+        run: python verify_historia.py
+
+      - name: API in production mode (rate limit, CORS, diagnostics)
+        run: python verify_seguridad.py
+
+      - name: Live feed parser
+        run: python verify_live_parser.py
+
+      - name: Live game detail
+        run: python verify_live_detail.py
+
+      - name: Live poller and patch chain
+        run: python verify_live_poller.py
+
+  web:
+    name: Web (Next.js)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+      - name: Type check
+        run: npx tsc --noEmit
+      - name: Lint
+        run: npm run lint
+      # Every page renders on request, so the build does not need the API.
+      - name: Production build
+        run: npm run build
+
+  mobile:
+    name: Mobile (Expo)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+
+      - run: npm ci --no-audit --no-fund
+      - name: Type check
+        run: npx tsc --noEmit

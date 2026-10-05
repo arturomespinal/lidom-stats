@@ -1,5 +1,7 @@
 # Deportiv
 
+[![Verify](https://github.com/arturomespinal/lidom-stats/actions/workflows/verify.yml/badge.svg)](https://github.com/arturomespinal/lidom-stats/actions/workflows/verify.yml)
+
 **Stats, live scores and history for LIDOM, the Dominican Professional Baseball League.**
 
 Deportiv is a data platform for Dominican winter baseball. It covers:
@@ -142,6 +144,14 @@ python verify_game_routes.py && python verify_live_detail.py && python verify_li
   && python verify_winprob.py && python verify_capas.py && python verify_seguridad.py \
   && python verify_digimetrics.py && python verify_historia.py
 ```
+
+**Continuous integration** ([`.github/workflows/verify.yml`](.github/workflows/verify.yml)): every push and pull request runs three jobs in parallel.
+
+- The eight suites that need no database. The live-engine suites replay real snapshots of a game, downloaded once from the MLB API and cached.
+- Type check, lint and production build of the web app.
+- Type check of the mobile app.
+
+The other three suites check the real database, which is not versioned, and run locally before each change ships.
 
 `verify_capas.py` cross-validates the two storage layers season by season. `verify_seguridad.py` boots the API in production mode and checks the rate limit, CORS and diagnostics. `verify_winprob.py` fails if anyone changes a transition probability.
 

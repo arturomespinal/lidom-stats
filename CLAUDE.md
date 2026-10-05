@@ -201,10 +201,12 @@ la 2015-16. No cambiar esa clave.
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
+| `.github/workflows/verify.yml` | Integración continua: 8 suites, la web y el móvil en cada push |
 | `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo diario y la guía (`GUIA.md`) |
 
 Las once suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
+Ocho corren además en GitHub Actions en cada push (ver "Integración continua").
 
 ## Endpoints
 
@@ -1910,6 +1912,37 @@ jornada. Ahora usa `hoy_rd()` (`src/jornada.py`), igual que `/day`; también la
 repetición y la edad de las fichas. La unidad de systemd pone además
 `TZ=America/Santo_Domingo`, para que los registros salgan en hora de RD.
 `verify_live_poller.py` lo fija: a la 1:30 UTC del 16 el poller sigue el 15.
+
+## Integración continua (5-oct-2026)
+
+`.github/workflows/verify.yml`, en cada push a `main` y en cada pull request.
+Tres trabajos en paralelo: las suites de Python, la web (tsc, lint y `next
+build`) y el móvil (tsc).
+
+- **Corren 8 de las 11 suites.** `verify_game_routes`, `verify_capas` y
+  `verify_winprob` necesitan la base REAL, que no se versiona (se arma desde
+  la MLB API y redistribuirla choca con sus términos). Esas siguen corriendo
+  a mano antes de cada entrega. `verify_historia` y `verify_digimetrics`
+  corren la parte que no necesita la base y se saltan el resto solas.
+- **Las capturas del motor en vivo se bajan una vez y se guardan en la caché
+  de Actions** (clave: el hash de `capture_gumbo.py` y `capture_diffs.py`).
+  La captura es determinista: con las mismas 359 marcas elige las mismas 10
+  instantáneas y la misma cadena de parches que hay en `fixtures/` de la PC
+  (comprobado). Si se cambia un script de captura, la clave cambia y se
+  vuelven a bajar.
+- **`data/` no existe en un clon limpio** y SQLite no crea la carpeta: el
+  flujo hace `mkdir -p data`. Sin eso `verify_seguridad` falla con "unable to
+  open database file".
+- **`verify_seguridad` acepta 200 o 404 en la búsqueda normal.** Lo que
+  comprueba es que la seguridad no la rechace (422 o 429); con la base vacía
+  de CI no hay jugadores y la respuesta correcta es 404.
+- **`next build` no necesita la API**: todas las páginas se arman al
+  pedirlas (ƒ en la salida del build). Sí necesita bajar las fuentes de
+  Google, que en Actions hay red para eso.
+- Acciones en sus versiones vigentes (checkout, setup-python y setup-node v7,
+  cache v6; todas en Node 24). Python 3.12, el de producción.
+- Validado con actionlint 1.7.12. `npm ci` probado desde un clon limpio en la
+  web y el móvil: los `package-lock.json` coinciden con sus `package.json`.
 
 ## Próximos pasos
 

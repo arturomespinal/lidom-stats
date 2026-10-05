@@ -69,3 +69,9 @@ fixtures/
 # haberlo decidido. Ver static/crests/README.md.
 static/crests/*
 !static/crests/README.md
+
+# ── Dagster ──────────────────────────────────────────────────────────────────
+# Historial de ejecuciones y checks (DAGSTER_HOME) y la carpeta temporal que
+# `dagster dev` crea si DAGSTER_HOME no está puesto.
+.dagster/
+.tmp_dagster_home_*/

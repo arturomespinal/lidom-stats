@@ -61,9 +61,9 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las once suites. Ninguna necesita red: corren contra fixtures, un cliente
-# MLB simulado o la base local. Son scripts, no pytest — salen con código 0
-# si todo pasa, así que encadenarlas con && funciona.
+# Las doce suites. Ninguna necesita red: corren contra fixtures, un cliente
+# MLB simulado, una base sintética o la base local. Son scripts, no pytest —
+# salen con código 0 si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
 python verify_live_detail.py         # parser del detalle
 python verify_live_parser.py         # parser de la tarjeta
@@ -75,6 +75,11 @@ python verify_capas.py               # tablas planas contra el esquema de juego,
 python verify_seguridad.py           # la API en modo producción: límite, CORS, diagnóstico con clave
 python verify_digimetrics.py         # scraper de DIGIMETRICS contra páginas reales guardadas
 python verify_historia.py            # enlace entre fuentes, carrera completa y líderes de todos los tiempos
+python verify_orquestacion.py        # assets y checks de Dagster (pide requirements-orquestacion.txt)
+
+# La orquestación con Dagster (ver "La orquestación con Dagster")
+pip install -r requirements-orquestacion.txt
+dagster dev -m orquestacion          # UI en http://localhost:3000, desde la raíz del repo
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -184,6 +189,7 @@ la 2015-16. No cambiar esa clave.
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 50 comprobaciones del ingestor contra un boxscore sintético, incluida la ingesta de un solo juego |
 | `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
+| `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
 | `verify_seguridad.py` | 49 comprobaciones de la API levantada en modo producción |
@@ -201,12 +207,15 @@ la 2015-16. No cambiar esa clave.
 | `verify_datos/digimetrics/` | Páginas reales de DIGIMETRICS guardadas byte a byte para la suite |
 | `src/live/detail.py` | Proyección detallada de un juego: relato, línea, boxscore, alineaciones |
 | `dev_live_offline.py` | Siembra la caché en vivo desde `fixtures/` y levanta la API, sin red |
-| `.github/workflows/verify.yml` | Integración continua: 8 suites, la web y el móvil en cada push |
+| `orquestacion/` | Dagster: assets por temporada, checks, el job y el schedule de la madrugada |
+| `requirements-orquestacion.txt` | Dagster, aparte: la API en producción no lo necesita |
+| `verify_orquestacion.py` | Assets y checks contra una base sintética que se daña a propósito, y contra la real si está |
+| `.github/workflows/verify.yml` | Integración continua: 9 suites, la web y el móvil en cada push |
 | `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo diario y la guía (`GUIA.md`) |
 
-Las once suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+Las doce suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
-Ocho corren además en GitHub Actions en cada push (ver "Integración continua").
+Nueve corren además en GitHub Actions en cada push (ver "Integración continua").
 
 ## Endpoints
 
@@ -283,7 +292,7 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 
 ## Validación cruzada
 
-Las dos capas nacen de la misma API por caminos independientes, así que deben coincidir. `verify_capas.py` lo comprueba en cada temporada que esté en las dos: posiciones equipo por equipo, totales de bateo y pitcheo de la liga, y jugador por jugador (cruzado por `players.mlb_id`, sumando los equipos de quien cambió de club). Antes de eso comprueba que cada juego final cuadre consigo mismo: las carreras de bateo de cada equipo y las permitidas por el pitcheo rival suman el marcador, en los 2.005 juegos.
+Las dos capas nacen de la misma API por caminos independientes, así que deben coincidir. Las comprobaciones viven en `src/validacion.py` (con las diferencias conocidas, `FORFEITS` y `FUENTE`); `verify_capas.py` las corre sobre todas las temporadas y la orquestación, después de cada carga. `verify_capas.py` lo comprueba en cada temporada que esté en las dos: posiciones equipo por equipo, totales de bateo y pitcheo de la liga, y jugador por jugador (cruzado por `players.mlb_id`, sumando los equipos de quien cambió de club). Antes de eso comprueba que cada juego final cuadre consigo mismo: las carreras de bateo de cada equipo y las permitidas por el pitcheo rival suman el marcador, en los 2.005 juegos.
 
 Con las 14 temporadas cargadas (30-sep-2026): **8 idénticas al dígito** (2012-13 a 2015-16, 2018-19, 2019-20, 2024-25, 2025-26). Para 2025-26: 9.998 VB, 2.472 H, 195 HR, 1.209 CL, 2.351 K, 72 SV. Las otras seis difieren por causas conocidas, y la suite las fija EXACTAS —cuánto cambia cada total y qué jugadores—, así que cualquier diferencia nueva la hace fallar:
 
@@ -1913,11 +1922,77 @@ repetición y la edad de las fichas. La unidad de systemd pone además
 `TZ=America/Santo_Domingo`, para que los registros salgan en hora de RD.
 `verify_live_poller.py` lo fija: a la 1:30 UTC del 16 el poller sigue el 15.
 
+## La orquestación con Dagster (5-oct-2026)
+
+`orquestacion/` — las ingestas como assets de Dagster. No reimplementa nada:
+cada asset llama a los mismos ingestores que `main.py`. Lo que agrega es el
+grafo, la partición por temporada, el historial de cada carga y que **cada
+carga se valida sola al terminar**. `main.py` sigue funcionando igual.
+
+| Asset | Qué carga | Partición | Check |
+|-------|-----------|-----------|-------|
+| `juegos` | Calendario y boxscores de la regular (`BoxscoreIngestor`) | Temporada MLB (`"2025"`) | `juegos_cuadran`, **bloqueante** |
+| `tablas_planas` | /standings y /stats (`MLBIngestor`) | Temporada MLB | `capas_coinciden` |
+| `historia` | DIGIMETRICS 1951-2019, config `desde`/`hasta`/`sin_red`/`refrescar` | — | `tasas_cuadran` |
+| `enlaces_historia` | `enlazar()` | — | `cobertura_enlaces` (≥ 98%, WARN) |
+| `cruce_historia` | `cruzar()`, con el informe como metadato | — | — |
+
+- **Los checks son `src/validacion.py`**, las mismas funciones que corre
+  `verify_capas.py`. Antes vivían dentro de la suite; se sacaron a un módulo
+  para que la prueba y la producción compartan UNA definición de "las capas
+  coinciden". Con la base real, el check de una carga de las 14 temporadas
+  hace las mismas 82 comprobaciones por temporada que la suite (más la de
+  los juegos, 83).
+- **`juegos_cuadran` bloquea**: si las líneas de un juego no suman su
+  marcador, `tablas_planas` no corre en esa ejecución. Para que el bloqueo
+  funcione, `tablas_planas` declara `deps=[juegos]`. Declarar la dependencia
+  solo en el check (`additional_deps`) NO alcanza: ni ordena los pasos ni
+  bloquea. Lo encontró la suite: con un juego dañado, las planas se cargaban
+  igual. La ingesta de las planas no usa nada de `juegos`; la arista existe
+  porque su check lo lee.
+- **Todo en serie.** `in_process_executor` en las definiciones y
+  `BackfillPolicy.single_run()` en los assets particionados: una carga de
+  varias temporadas es UNA ejecución que las recorre en orden. SQLite admite
+  un solo escritor, y la MLB API agradece no recibir dos ingestas a la vez.
+- **Las particiones van de 2012 a `temporada_actual()`**, que desde
+  septiembre ya cuenta la temporada que viene. Se calculan al cargar las
+  definiciones: la nueva aparece sola.
+- **Una temporada sin juegos terminados no falla el check** (no hay nada que
+  comparar), pero una con juegos terminados y sin tablas planas sí.
+- **El schedule `cada_madrugada`** (5:30 de RD, de octubre a febrero) pone al
+  día la temporada en curso y la valida. Nace **apagado**
+  (`DefaultScheduleStatus.STOPPED`): se enciende en la UI. Es la red de
+  seguridad del motor en vivo: juegos que el motor no vio, correcciones de
+  /stats, y la validación diaria.
+- **Sin `from __future__ import annotations` en los módulos de Dagster**: con
+  los tipos como texto, Dagster no reconoce la clase `Config` del asset y las
+  definiciones no cargan.
+- La base es un recurso (`BaseDatos`), `LIDOM_DB_URL` la cambia. `dagster dev`
+  se corre desde la raíz del repo: la URL por defecto es relativa.
+- **`DAGSTER_HOME`** guarda el historial de ejecuciones y checks entre
+  sesiones. Sin él, `dagster dev` usa una carpeta temporal
+  (`.tmp_dagster_home_*`) que se borra al cerrar. En CMD:
+  `mkdir .dagster` y `set DAGSTER_HOME=%CD%\.dagster`. Las dos carpetas están
+  en `.gitignore`.
+- Dagster va en `requirements-orquestacion.txt`, aparte: la API en producción
+  no lo necesita. Probado con las versiones fijas del proyecto: `pip check`
+  sin conflictos.
+- `verify_orquestacion.py` reemplaza los ingestores por dobles (lo que prueba
+  es el cableado y los checks, no la ingesta) y arma una base sintética cuyas
+  tablas planas salen de las propias vistas, así que coinciden por
+  construcción. Después la daña a propósito: un juego descuadrado, un ganado
+  de más, un hit de más, las planas borradas. Con la base real, compara su
+  check contra `verify_capas.py`.
+- **`conectar()` usa `Path.as_uri()`** para la URI de solo lectura de SQLite:
+  armada a mano se rompía con las barras de Windows o con espacios en la ruta.
+
 ## Integración continua (5-oct-2026)
 
 `.github/workflows/verify.yml`, en cada push a `main` y en cada pull request.
-Tres trabajos en paralelo: las suites de Python, la web (tsc, lint y `next
-build`) y el móvil (tsc).
+Cuatro trabajos en paralelo: las suites de Python, la orquestación (las
+definiciones de Dagster y `verify_orquestacion.py`), la web (tsc, lint y
+`next build`) y el móvil (tsc). La orquestación va en su propio trabajo para
+que las suites de siempre no carguen con instalar Dagster.
 
 - **Corren 8 de las 11 suites.** `verify_game_routes`, `verify_capas` y
   `verify_winprob` necesitan la base REAL, que no se versiona (se arma desde

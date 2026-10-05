@@ -1,0 +1,11 @@
+# Orquestación del pipeline (Dagster). Aparte de requirements.txt a propósito:
+# la API en producción no la necesita, y Dagster arrastra decenas de paquetes.
+#
+#   pip install -r requirements.txt -r requirements-orquestacion.txt
+#   dagster dev -m orquestacion
+#
+# Probado con las versiones fijas de requirements.txt (FastAPI 0.111,
+# Pydantic 2.7, SQLAlchemy 2.0.30): `pip check` sin conflictos.
+-r requirements.txt
+dagster==1.13.25
+dagster-webserver==1.13.25

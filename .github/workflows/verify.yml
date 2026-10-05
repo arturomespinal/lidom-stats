@@ -1,9 +1,10 @@
 # Continuous verification: runs on every push to main and on every pull request.
 #
-# Three jobs in parallel:
-#   - pipeline: the eight verification suites that need no database
-#   - web:      type check, lint and production build of the Next.js app
-#   - mobile:   type check of the Expo app
+# Four jobs in parallel:
+#   - pipeline:      the eight verification suites that need no database
+#   - orchestration: the Dagster definitions and verify_orquestacion.py
+#   - web:           type check, lint and production build of the Next.js app
+#   - mobile:        type check of the Expo app
 #
 # The other three suites (verify_game_routes, verify_capas, verify_winprob)
 # check the REAL database, which is not versioned (it is built from the MLB API
@@ -86,6 +87,33 @@ jobs:
 
       - name: Live poller and patch chain
         run: python verify_live_poller.py
+
+  orchestration:
+    name: Orchestration (Dagster)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements*.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements-orquestacion.txt
+
+      - name: Prepare data directory
+        run: mkdir -p data
+
+      - name: Definitions load
+        run: dagster definitions validate -m orquestacion
+
+      # Assets and checks against a synthetic database, with the ingestors
+      # replaced by doubles. The real-database section skips itself here.
+      - name: Assets, checks and schedule
+        run: python verify_orquestacion.py
 
   web:
     name: Web (Next.js)

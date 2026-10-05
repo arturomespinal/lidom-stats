@@ -13,7 +13,7 @@ Deportiv is a data platform for Dominican winter baseball. It covers:
 
 The project has three parts:
 
-- a Python data pipeline and REST API;
+- a Python data pipeline, orchestrated with Dagster, and a REST API;
 - a Next.js web app;
 - an Expo / React Native mobile app.
 
@@ -54,6 +54,20 @@ flowchart LR
 
 **One source per season.** Before 2012-13 the only source is the league's official stats portal. From 2012-13 on, it's the MLB Stats API. The overlapping years (2012-2019) are used only to link players across sources (1,588 of 1,614 linked, 98.4%) and to cross-check totals. They are never summed twice.
 
+**Orchestration.** [Dagster](orquestacion/) runs the ingestion as software-defined assets partitioned by season. Every load validates itself with asset checks. If a game's lines don't add up to its score, the check blocks the downstream load. If the two layers disagree beyond the known differences, the check fails and shows which team or player. The checks call the same functions as `verify_capas.py` (`src/validacion.py`), so tests and production share one definition of "correct".
+
+```mermaid
+flowchart LR
+    J[juegos<br/>per season] -- "juegos_cuadran (blocking)" --> T[tablas_planas<br/>per season]
+    T -. capas_coinciden .-> T
+    H[historia<br/>1951-2019] -. tasas_cuadran .-> H
+    H --> E[enlaces_historia]
+    J --> E
+    E -. cobertura_enlaces .-> E
+    H --> X[cruce_historia]
+    J --> X
+```
+
 **The live engine** polls the official feed. After the first full download it applies only JSON Patch diffs, which measured **10.5× less traffic** than refetching. It keeps state in memory, not in the database. When a game ends, it ingests that game's box score and refreshes the season tables.
 
 ## Engineering highlights
@@ -62,6 +76,7 @@ flowchart LR
 - **Rates are recomposed, never averaged.** Career and multi-team AVG, OBP and ERA are rebuilt from summed counts on the server, so web and mobile can never disagree.
 - **Defensive scraping.** Columns are mapped by header, never by position. Every scraped row is checked against the rates the source page publishes itself, so a shifted column fails loudly instead of corrupting data. Known errors in the source are listed one by one, page by page.
 - **Production hardening.** Per-IP rate limiting, which accounts for mobile carrier CGNAT. Configuration-driven CORS that is never `*`. Diagnostics behind a key, with constant-time comparison. A server key for the web's server-side rendering. The API refuses to start with an insecure configuration.
+- **Data quality as code, run in two places.** The cross-layer validation is one module, used by the test suite and by the Dagster asset checks after every load. A blocking check stops a bad load from spreading downstream. The suite proves it by corrupting a synthetic database on purpose and checking that the right check fails.
 - **Idempotent ingestion everywhere.** Re-running any ingest never duplicates data, and edge cases such as postponed-game collisions, extra innings and forfeits are handled deterministically.
 
 ## Tech stack
@@ -69,9 +84,10 @@ flowchart LR
 | Layer | Tools |
 |-------|-------|
 | Pipeline and API | Python 3.11+, FastAPI, SQLAlchemy 2, Pydantic 2, httpx, tenacity, BeautifulSoup, jsonpatch, SQLite |
+| Orchestration | Dagster 1.13 (partitioned assets, blocking asset checks, schedules) |
 | Web | Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS |
 | Mobile | Expo SDK 57, React Native 0.86, React Navigation 7, react-native-svg |
-| Deployment | Oracle Cloud (Ampere A1), systemd, Caddy (automatic HTTPS), Vercel |
+| Deployment and CI | Oracle Cloud (Ampere A1), systemd, Caddy (automatic HTTPS), Vercel, GitHub Actions |
 
 ## Data coverage
 
@@ -107,7 +123,16 @@ uvicorn api.main:app --reload        # http://localhost:8000/docs
 
 Note on seasons: the MLB API labels a winter season by the year it **starts**, so `2025` is the 2025-26 season. The API accepts both `2025` and `2025-26`.
 
-### 2. Web
+### 2. Orchestration (optional)
+
+```bash
+pip install -r requirements-orquestacion.txt
+dagster dev -m orquestacion          # http://localhost:3000, from the repository root
+```
+
+The UI shows the asset graph, one partition per season, the history of every load and its checks. To keep that history between sessions, point `DAGSTER_HOME` at a folder first. The `cada_madrugada` schedule refreshes the current season every morning during the season; it ships turned off.
+
+### 3. Web
 
 ```bash
 cd frontend
@@ -117,7 +142,7 @@ npm run dev                          # http://localhost:3000
 
 It points at `http://localhost:8000` by default. Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to use another API.
 
-### 3. Mobile
+### 4. Mobile
 
 ```bash
 cd mobile
@@ -136,24 +161,26 @@ python dev_live_offline.py 826343 --hasta 5   # stops mid-game, so it shows as L
 
 ## Tests
 
-There are eleven verification suites. They need no network: they run against captured feeds, a simulated MLB client, saved source pages or the local database. Each one exits with code 0 only if every check passes.
+There are twelve verification suites. They need no network: they run against captured feeds, a simulated MLB client, saved source pages, a synthetic database or the local database. Each one exits with code 0 only if every check passes.
 
 ```bash
 python verify_game_routes.py && python verify_live_detail.py && python verify_live_parser.py \
   && python verify_live_poller.py && python verify_boxscore_ingestor.py && python verify_api_models.py \
   && python verify_winprob.py && python verify_capas.py && python verify_seguridad.py \
   && python verify_digimetrics.py && python verify_historia.py
+python verify_orquestacion.py        # needs requirements-orquestacion.txt
 ```
 
-**Continuous integration** ([`.github/workflows/verify.yml`](.github/workflows/verify.yml)): every push and pull request runs three jobs in parallel.
+**Continuous integration** ([`.github/workflows/verify.yml`](.github/workflows/verify.yml)): every push and pull request runs four jobs in parallel.
 
 - The eight suites that need no database. The live-engine suites replay real snapshots of a game, downloaded once from the MLB API and cached.
+- The Dagster definitions and their suite.
 - Type check, lint and production build of the web app.
 - Type check of the mobile app.
 
 The other three suites check the real database, which is not versioned, and run locally before each change ships.
 
-`verify_capas.py` cross-validates the two storage layers season by season. `verify_seguridad.py` boots the API in production mode and checks the rate limit, CORS and diagnostics. `verify_winprob.py` fails if anyone changes a transition probability.
+`verify_capas.py` cross-validates the two storage layers season by season. `verify_orquestacion.py` runs the assets against a synthetic database, corrupts it on purpose, and checks that the right asset check fails and that the blocking one stops the downstream load. `verify_seguridad.py` boots the API in production mode and checks the rate limit, CORS and diagnostics. `verify_winprob.py` fails if anyone changes a transition probability.
 
 ## Deployment
 
@@ -175,10 +202,12 @@ src/
   clients/      MLB Stats API and league-portal HTTP clients
   scrapers/     League-portal table parser
   pipeline/     Season, box-score and history ingestors; cross-source checks
+  validacion.py Cross-layer validation, shared by the tests and the asset checks
   live/         Live feed parser, poller, in-memory cache, replay
   models/       SQLAlchemy models and SQL views
   *.py          Domain logic: career totals, win probability, daily slate,
                 pennant race, qualification minimums, name display
+orquestacion/   Dagster assets, checks, job and schedule
 frontend/       Next.js web app
 mobile/         Expo / React Native app
 deploy/oracle/  Production deployment (installer, systemd, Caddy, backups)

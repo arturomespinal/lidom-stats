@@ -75,3 +75,10 @@ static/crests/*
 # `dagster dev` crea si DAGSTER_HOME no está puesto.
 .dagster/
 .tmp_dagster_home_*/
+
+# La capa analítica: el Parquet y la base de DuckDB se regeneran desde la
+# base (python main.py exportar-parquet; cd analitica && dbt build). Y los
+# artefactos de dbt (analitica/.gitignore lleva los suyos).
+data/parquet/
+data/*.duckdb
+data/*.duckdb.wal

@@ -1,5 +1,5 @@
 """
-orquestacion/definitions.py — Lo que Dagster carga: assets, job, schedule y recursos.
+orquestacion/definitions.py — Lo que Dagster carga: assets, jobs, schedules y recursos.
 
     dagster dev -m orquestacion          # desde la raíz del repo; UI en http://localhost:3000
 
@@ -21,7 +21,10 @@ from dagster import (
 
 from src.constants import DEFAULT_DB_URL
 
+from dagster_dbt import DbtCliResource
+
 from .activos import cruce_historia, enlaces_historia, historia, juegos, tablas_planas
+from .analitica import CapaAnalitica, ejecutable_dbt, modelos_dbt, parquet, proyecto_dbt
 from .recursos import BaseDatos
 from .temporadas import TEMPORADAS, temporada_actual
 
@@ -55,11 +58,36 @@ def cada_madrugada(context: ScheduleEvaluationContext) -> RunRequest:
     return RunRequest(partition_key=season, run_key=f"{season}-{hoy.isoformat()}")
 
 
+# La capa analítica: el Parquet y los modelos de dbt. Job aparte porque
+# `temporada_en_curso` está particionado por temporada y estos assets no.
+capa_analitica = define_asset_job(
+    "capa_analitica",
+    selection=AssetSelection.assets(parquet, modelos_dbt),
+    description="Exporta la base a Parquet y corre dbt build: modelos y pruebas.",
+)
+
+
+@schedule(
+    job=capa_analitica,
+    # 6:15 de RD: después de `cada_madrugada`, que pone al día la temporada.
+    cron_schedule="15 6 * 10,11,12,1,2 *",
+    execution_timezone="America/Santo_Domingo",
+    default_status=DefaultScheduleStatus.STOPPED,
+    description="Cada mañana de la temporada: el Parquet y los modelos de dbt al día.",
+)
+def cada_manana(context: ScheduleEvaluationContext) -> RunRequest:
+    return RunRequest(run_key=context.scheduled_execution_time.date().isoformat())
+
+
 defs = Definitions(
-    assets=[juegos, tablas_planas, historia, enlaces_historia, cruce_historia],
-    jobs=[temporada_en_curso],
-    schedules=[cada_madrugada],
-    resources={"base": BaseDatos(url=os.environ.get("LIDOM_DB_URL", DEFAULT_DB_URL))},
+    assets=[juegos, tablas_planas, historia, enlaces_historia, cruce_historia, parquet, modelos_dbt],
+    jobs=[temporada_en_curso, capa_analitica],
+    schedules=[cada_madrugada, cada_manana],
+    resources={
+        "base": BaseDatos(url=os.environ.get("LIDOM_DB_URL", DEFAULT_DB_URL)),
+        "analitica": CapaAnalitica(),
+        "dbt": DbtCliResource(project_dir=proyecto_dbt, dbt_executable=ejecutable_dbt()),
+    },
     # En serie: SQLite admite un solo escritor. Ver orquestacion/activos.py.
     executor=in_process_executor,
 )

@@ -61,7 +61,7 @@ uvicorn api.main:app --reload          # http://localhost:8000
 # La API con un juego ya cargado en la caché en vivo, desde fixtures/. Sin red.
 python dev_live_offline.py             # ver "Trabajar la pantalla de juego sin red"
 
-# Las doce suites. Ninguna necesita red: corren contra fixtures, un cliente
+# Las trece suites. Ninguna necesita red: corren contra fixtures, un cliente
 # MLB simulado, una base sintética o la base local. Son scripts, no pytest —
 # salen con código 0 si todo pasa, así que encadenarlas con && funciona.
 python verify_game_routes.py         # endpoints del esquema de juego
@@ -76,11 +76,18 @@ python verify_seguridad.py           # la API en modo producción: límite, CORS
 python verify_digimetrics.py         # scraper de DIGIMETRICS contra páginas reales guardadas
 python verify_historia.py            # enlace entre fuentes, carrera completa y líderes de todos los tiempos
 python verify_orquestacion.py        # assets y checks de Dagster (pide requirements-orquestacion.txt)
+python verify_analitica.py           # Parquet, dbt y su paso por Dagster (pide requirements-orquestacion.txt)
 
 # La orquestación con Dagster (ver "La orquestación con Dagster")
 pip install -r requirements-orquestacion.txt
 dagster dev -m orquestacion          # UI en http://localhost:3000, desde la raíz del repo
 python -m dagster dev -m orquestacion  # lo mismo, si `dagster` no está en el PATH (Python de la Store)
+
+# La capa analítica a mano, sin Dagster (ver "La capa analítica (dbt)")
+pip install -r requirements-analitica.txt
+python main.py exportar-parquet      # data/parquet/<tabla>.parquet
+cd analitica && dbt build            # modelos y pruebas → data/analitica.duckdb
+python -m dbt.cli.main build         # lo mismo, si `dbt` no está en el PATH (Python de la Store)
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -211,12 +218,17 @@ la 2015-16. No cambiar esa clave.
 | `orquestacion/` | Dagster: assets por temporada, checks, el job y el schedule de la madrugada |
 | `requirements-orquestacion.txt` | Dagster, aparte: la API en producción no lo necesita |
 | `verify_orquestacion.py` | Assets y checks contra una base sintética que se daña a propósito, y contra la real si está |
-| `.github/workflows/verify.yml` | Integración continua: 9 suites, la web y el móvil en cada push |
+| `.github/workflows/verify.yml` | Integración continua: 10 suites, la web y el móvil en cada push |
+| `src/exportar.py` | La base a Parquet para dbt, con las reglas de Python exportadas como tablas (mínimos, categorías, corte) |
+| `analitica/` | El proyecto dbt (DuckDB): las temporadas de las dos fuentes, las carreras y las mejores temporadas de la historia |
+| `orquestacion/analitica.py` | El Parquet y los modelos de dbt como assets de Dagster; las pruebas de dbt, como checks |
+| `requirements-analitica.txt` | pyarrow, DuckDB y dbt, aparte: la API en producción no los necesita |
+| `verify_analitica.py` | La capa analítica contra una base sintética con las dos fuentes, dañada a propósito, y contra la real |
 | `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo diario y la guía (`GUIA.md`) |
 
-Las doce suites corren sin red y se encadenan con `&&`: salen con código 0 solo
+Las trece suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
-Nueve corren además en GitHub Actions en cada push (ver "Integración continua").
+Diez corren además en GitHub Actions en cada push (ver "Integración continua").
 
 ## Endpoints
 
@@ -1938,6 +1950,8 @@ carga se valida sola al terminar**. `main.py` sigue funcionando igual.
 | `enlaces_historia` | `enlazar()` | — | `cobertura_enlaces` (≥ 98%, WARN) |
 | `cruce_historia` | `cruzar()`, con el informe como metadato | — | — |
 
+- **La capa analítica también está en el grafo**: el Parquet y los modelos
+  de dbt, en su propio job. Ver "La capa analítica (dbt)".
 - **Los checks son `src/validacion.py`**, las mismas funciones que corre
   `verify_capas.py`. Antes vivían dentro de la suite; se sacaron a un módulo
   para que la prueba y la producción compartan UNA definición de "las capas
@@ -1994,16 +2008,105 @@ carga se valida sola al terminar**. `main.py` sigue funcionando igual.
 - **`conectar()` usa `Path.as_uri()`** para la URI de solo lectura de SQLite:
   armada a mano se rompía con las barras de Windows o con espacios en la ruta.
 
+## La capa analítica (dbt) (5-oct-2026)
+
+`analitica/` — un proyecto dbt sobre DuckDB que lee la base exportada a
+Parquet. Es la capa para preguntas que cruzan toda la historia, empezando por
+**las mejores temporadas desde 1951**, uniendo las dos fuentes. La app sigue
+leyendo SQLite; esto no la toca.
+
+```
+SQLite ──src/exportar.py──► data/parquet/*.parquet ──dbt (DuckDB)──► data/analitica.duckdb
+```
+
+| Modelo | Grano | Qué es |
+|--------|-------|--------|
+| `fct_bateo_temporada` / `fct_pitcheo_temporada` | persona × temporada | Serie regular, una fuente por temporada, equipos sumados, tasas recompuestas y `califica` contra el mínimo de SU temporada |
+| `fct_carrera_bateo` / `fct_carrera_pitcheo` | persona | La suma de sus temporadas, con el mínimo de carrera |
+| `dim_personas` | persona | El nombre para mostrar: el de la MLB API o el de DIGIMETRICS ya arreglado |
+| `mejores_temporadas` | categoría × puesto | Top 10 por categoría de récords, empates compartidos (1, 2, 2, 4) |
+
+- **Las reglas viven en Python y se exportan como tablas**, para que dbt no
+  las reescriba: `minimos_temporada` (con `src/qualification.py`),
+  `categorias` (`CATEGORIAS_BATEO`/`_PITCHEO`), `constantes` (`ANIO_CORTE` y
+  los mínimos de carrera) y `nombres_historicos` (`src/nombres.py`). El caso
+  que lo obligó: **`round()` de Python redondea los .5 al par** (3.1 × 15 =
+  46.5 → 46) y el `ROUND` de SQL hacia arriba (47). Con el mínimo calculado
+  en SQL, un bateador con 46 AP en una temporada de 15 juegos calificaría en
+  la app y no en la capa analítica. La suite lo fija.
+- **El mínimo de una temporada sale de `v_standings`**, la misma vista que
+  `season_games_played()` de la API. Antes de 2012-13, de las decisiones de
+  los lanzadores (ganados + perdidos del equipo que más jugó). Se exporta
+  también en outs (`min_outs`, entero) para no comparar flotantes en SQL.
+- **Exportar con pyarrow, no con la extensión `sqlite` de DuckDB**: esa
+  extensión se baja de internet la primera vez y fallaría en una máquina sin
+  salida. Cada archivo se escribe a un temporal y se renombra: dbt nunca lee
+  uno a medias. Los BOOLEAN de SQLite (0/1) pasan a bool.
+- **Staging como `ephemeral`, marts como tablas.** Una vista en el archivo de
+  DuckDB guardaría la ruta relativa del Parquet y se rompería al abrir la base
+  desde otra carpeta. La suite comprueba que la base no tenga vistas.
+- **Las rutas** salen de `LIDOM_PARQUET_DIR` y `LIDOM_DUCKDB_PATH`; por
+  defecto, `../data/parquet` y `../data/analitica.duckdb`, relativas a
+  `analitica/`. El perfil (`analitica/profiles.yml`) vive en el proyecto: no
+  tiene nada secreto. Sin paquetes de dbt (pedirían red) y sin telemetría.
+- **Pruebas de dbt**: las genéricas (únicas, no nulas, valores aceptados, la
+  categoría existe) y nueve singulares en `analitica/tests/`: los juegos
+  cuadran en lo que leyó dbt, una sola fuente por temporada, cada fuente de
+  su lado del corte, conteos y tasas en rango, en las tasas solo calificados,
+  y un aviso si una temporada no tiene mínimos.
+
+### En Dagster
+
+`orquestacion/analitica.py`. Cada archivo de Parquet es un asset
+(`parquet/games`, `parquet/hist_bateo`…) que depende de la carga de la que
+sale, con un check `filas_completas` que lo cuenta contra la base; cada
+modelo de dbt es un asset y **cada prueba de dbt, un check**. El linaje va de
+la ingesta a las mejores temporadas sin cortes.
+
+- **Job aparte, `capa_analitica`**, con su schedule `cada_manana` (6:15 de RD,
+  octubre a febrero, apagado): un job particionado por temporada no puede
+  llevar assets sin partición. Corre después de `cada_madrugada`.
+- **Una prueba que falla bloquea lo de abajo**: `dbt build` no construye los
+  modelos que dependen de uno con una prueba en rojo. La suite lo comprueba.
+- **Las pruebas singulares que tocan dos nodos** llevan
+  `meta: dagster: ref` para colgar del modelo correcto; sin eso dagster-dbt
+  las corre pero no las muestra como checks. `juegos_cuadran_en_parquet`
+  lleva además `-- depends_on: {{ ref(...) }}`.
+- **Las fuentes de dbt no pueden compartir una clave de asset**: la primera
+  versión mapeaba todas a `parquet` y dagster-dbt lo rechaza. Por eso un
+  asset por archivo, que además da un linaje más fino.
+- **`ejecutable_dbt()` busca `dbt` aunque no esté en el PATH**, también en la
+  carpeta de scripts del usuario: con el Python de la Store, dagster-dbt
+  fallaba con "The dbt executable 'dbt' does not exist". Por lo mismo no se
+  usa `DbtProject.prepare_if_dev()`, que llama a `dbt` a secas:
+  `preparar_manifiesto()` corre `dbt parse` al cargar si falta el manifiesto,
+  y siempre con `dagster dev`.
+- `CapaAnalitica.entorno()` pone las rutas absolutas en las variables que lee
+  dbt y las quita al salir: el ejecutor es en proceso.
+
+### La suite
+
+`verify_analitica.py` (64 comprobaciones): una base sintética con las dos
+fuentes —un enlazado con años en las dos, una leyenda solo de DIGIMETRICS, un
+cambiado de equipo, postemporada que no cuenta, el caso del 46.5— exportada y
+construida con dbt; **la carrera de cada persona igual a `carreras()` de
+`src/historia.py`**, la que sirve la API; el Parquet dañado a propósito hace
+fallar la prueba que corresponde; el job de Dagster de punta a punta; y con
+la base real, cada temporada de la MLB API igual a la suma de sus líneas y
+las carreras de las 996 personas de bateo y las 1.300 de pitcheo iguales a
+las de la API. Con el mínimo redondeado como SQL, fallan tres comprobaciones.
+
 ## Integración continua (5-oct-2026)
 
 `.github/workflows/verify.yml`, en cada push a `main` y en cada pull request.
-Cuatro trabajos en paralelo: las suites de Python, la orquestación (las
-definiciones de Dagster y `verify_orquestacion.py`), la web (tsc, lint y
-`next build`) y el móvil (tsc). La orquestación va en su propio trabajo para
-que las suites de siempre no carguen con instalar Dagster.
+Cuatro trabajos en paralelo: las suites de Python, la orquestación y la capa
+analítica (las definiciones de Dagster, `verify_orquestacion.py` y
+`verify_analitica.py`), la web (tsc, lint y `next build`) y el móvil (tsc). La
+orquestación va en su propio trabajo para que las suites de siempre no
+carguen con instalar Dagster y dbt.
 
-- **Corren 9 de las 12 suites** (las 8 de siempre y `verify_orquestacion`, en
-  su propio trabajo). `verify_game_routes`, `verify_capas` y
+- **Corren 10 de las 13 suites** (las 8 de siempre, y `verify_orquestacion` y
+  `verify_analitica` en su propio trabajo). `verify_game_routes`, `verify_capas` y
   `verify_winprob` necesitan la base REAL, que no se versiona (se arma desde
   la MLB API y redistribuirla choca con sus términos). Esas siguen corriendo
   a mano antes de cada entrega. `verify_historia` y `verify_digimetrics`
@@ -2032,8 +2135,9 @@ que las suites de siempre no carguen con instalar Dagster.
 
 1. Desplegar en Oracle siguiendo `deploy/oracle/GUIA.md` antes del arranque de la 2026-27 (mediados de octubre), y apuntar la app y la web a la API de allá.
 2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
-3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen; y récords por temporada (mejor temporada de la historia), que salen de las mismas tablas.
-4. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
+3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen.
+4. Las mejores temporadas de la historia en la app: ya están en `mejores_temporadas` (capa analítica); falta servirlas en la API (leyendo `data/analitica.duckdb`) y pintarlas junto a los récords de carrera.
+5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal
 

@@ -1,11 +1,14 @@
 # Orquestación del pipeline (Dagster). Aparte de requirements.txt a propósito:
 # la API en producción no la necesita, y Dagster arrastra decenas de paquetes.
+# Incluye la capa analítica (requirements-analitica.txt): Dagster corre los
+# modelos de dbt como assets.
 #
-#   pip install -r requirements.txt -r requirements-orquestacion.txt
-#   dagster dev -m orquestacion
+#   pip install -r requirements-orquestacion.txt
+#   python -m dagster dev -m orquestacion
 #
 # Probado con las versiones fijas de requirements.txt (FastAPI 0.111,
 # Pydantic 2.7, SQLAlchemy 2.0.30): `pip check` sin conflictos.
--r requirements.txt
+-r requirements-analitica.txt
 dagster==1.13.25
 dagster-webserver==1.13.25
+dagster-dbt==0.29.25

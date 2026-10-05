@@ -202,9 +202,13 @@ print("━━━ 1. Las definiciones ━━━")
 Definitions.validate_loadable(defs)
 check("cargan sin error", True, True)
 rg = defs.get_repository_def()
-check("assets", sorted(k.to_user_string() for k in rg.asset_graph.get_all_asset_keys()),
+# Las de la ingesta. La capa analítica (el grupo `analitica`: el Parquet y
+# los modelos de dbt) la comprueba verify_analitica.py.
+ingesta = [k for k in rg.asset_graph.get_all_asset_keys()
+           if rg.asset_graph.get(k).group_name != "analitica"]
+check("assets de la ingesta", sorted(k.to_user_string() for k in ingesta),
       ["cruce_historia", "enlaces_historia", "historia", "juegos", "tablas_planas"])
-check("checks", sorted(c.name for c in rg.asset_graph.asset_check_keys),
+check("sus checks", sorted(c.name for c in rg.asset_graph.asset_check_keys if c.asset_key in ingesta),
       ["capas_coinciden", "cobertura_enlaces", "juegos_cuadran", "tasas_cuadran"])
 job = defs.resolve_job_def("temporada_en_curso")
 check("el job de la temporada toma juegos y tablas planas",

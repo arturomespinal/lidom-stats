@@ -1,0 +1,31 @@
+# La capa analítica: dbt sobre DuckDB, leyendo el Parquet que exporta
+# `python main.py exportar-parquet`. Se corre desde esta carpeta:
+#
+#     cd analitica
+#     dbt build          # modelos + pruebas
+#
+# Ver README.md de esta carpeta y "La capa analítica (dbt)" en CLAUDE.md.
+
+name: analitica
+version: "1.0.0"
+config-version: 2
+profile: analitica
+
+model-paths: ["models"]
+test-paths: ["tests"]
+macro-paths: ["macros"]
+target-path: target
+clean-targets: [target]
+
+flags:
+  send_anonymous_usage_stats: false
+
+models:
+  analitica:
+    # Staging como CTE y no como vistas: una vista en el archivo DuckDB
+    # guardaría la ruta relativa del Parquet y se rompería al abrir la base
+    # desde otra carpeta. Los marts sí se materializan.
+    staging:
+      +materialized: ephemeral
+    marts:
+      +materialized: table

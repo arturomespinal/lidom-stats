@@ -1,0 +1,79 @@
+version: 2
+
+models:
+  - name: fct_bateo_temporada
+    description: Bateo de serie regular por persona y temporada, desde 1951, una fuente por temporada.
+    columns:
+      - name: persona_temporada
+        description: Clave de la fila.
+        data_tests: [unique, not_null]
+      - name: persona
+        description: player_id de la MLB API o 'hist:<idMiembro>'.
+        data_tests: [not_null]
+      - name: season_id
+        data_tests: [not_null]
+      - name: fuente
+        description: "'liga' (DIGIMETRICS) antes del corte, 'mlb' desde entonces."
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [liga, mlb]
+      - name: califica
+        description: Si alcanzó el mínimo de apariciones al plato de su temporada.
+        data_tests: [not_null]
+
+  - name: fct_pitcheo_temporada
+    description: Pitcheo de serie regular por persona y temporada, desde 1951, una fuente por temporada.
+    columns:
+      - name: persona_temporada
+        data_tests: [unique, not_null]
+      - name: persona
+        data_tests: [not_null]
+      - name: fuente
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [liga, mlb]
+      - name: califica
+        description: Si alcanzó el mínimo de outs de su temporada.
+        data_tests: [not_null]
+
+  - name: fct_carrera_bateo
+    description: Carrera de bateo en serie regular, las dos fuentes sumadas.
+    columns:
+      - name: persona
+        data_tests: [unique, not_null]
+
+  - name: fct_carrera_pitcheo
+    description: Carrera de pitcheo en serie regular, las dos fuentes sumadas.
+    columns:
+      - name: persona
+        data_tests: [unique, not_null]
+
+  - name: dim_personas
+    description: Una fila por persona, con el nombre para mostrar.
+    columns:
+      - name: persona
+        data_tests: [unique, not_null]
+      - name: nombre
+        data_tests: [not_null]
+
+  - name: mejores_temporadas
+    description: Top 10 de temporadas por categoría de récords, con empates compartidos.
+    columns:
+      - name: grupo
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [bateo, pitcheo]
+      - name: stat
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: source('base', 'categorias')
+                field: stat
+      - name: puesto
+        data_tests: [not_null]
+      - name: valor
+        data_tests: [not_null]

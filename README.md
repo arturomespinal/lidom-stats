@@ -13,7 +13,7 @@ Deportiv is a data platform for Dominican winter baseball. It covers:
 
 The project has three parts:
 
-- a Python data pipeline, orchestrated with Dagster, and a REST API;
+- a Python data pipeline, orchestrated with Dagster, with a dbt analytics layer and a REST API;
 - a Next.js web app;
 - an Expo / React Native mobile app.
 
@@ -48,6 +48,8 @@ flowchart LR
     FLAT & GAME & HIST & CACHE --> API[FastAPI]
     API --> WEB[Next.js web]
     API --> APP[Expo mobile app]
+
+    GAME & HIST --> PQ[(Parquet)] --> DBT[dbt + DuckDB<br/>analytics marts]
 ```
 
 **Two storage layers fed by the same API through independent paths.** The flat tables store the season aggregates the API publishes. The game-level schema stores atomic counts from every box score; rates such as AVG, ERA and WHIP come only from SQL views. Because the paths are independent, they validate each other. Across all 14 seasons, 8 match to the digit and the other 6 differ for documented, test-pinned reasons: forfeits, and discrepancies inside the MLB API itself.
@@ -72,6 +74,20 @@ flowchart LR
     J --> X
 ```
 
+**Analytics layer.** The database is exported to Parquet and modeled with [dbt on DuckDB](analitica/): season and career facts for every player since 1951, with one source per season, and the **best seasons in league history** per category, ties shared. Business rules stay in Python and are exported as tables, so dbt never re-implements them. This matters: Python's `round()` rounds half to even (3.1 × 15 = 46.5 → 46) while SQL rounds half up (47), so a qualification minimum computed in SQL would disagree with the app. In Dagster, every Parquet file and every dbt model is an asset, and every dbt test is an asset check. A failing test blocks the models downstream of it.
+
+```mermaid
+flowchart LR
+    J[juegos] --> PQ["parquet/*<br/>(one asset per file)"]
+    H[historia] --> PQ
+    E[enlaces_historia] --> PQ
+    PQ --> FB[fct_bateo_temporada] & FP[fct_pitcheo_temporada]
+    FB & FP --> D[dim_personas]
+    FB --> CB[fct_carrera_bateo]
+    FP --> CP[fct_carrera_pitcheo]
+    FB & FP & D --> M[mejores_temporadas]
+```
+
 **The live engine** polls the official feed. After the first full download it applies only JSON Patch diffs, which measured **10.5× less traffic** than refetching. It keeps state in memory, not in the database. When a game ends, it ingests that game's box score and refreshes the season tables.
 
 ## Engineering highlights
@@ -81,6 +97,7 @@ flowchart LR
 - **Defensive scraping.** Columns are mapped by header, never by position. Every scraped row is checked against the rates the source page publishes itself, so a shifted column fails loudly instead of corrupting data. Known errors in the source are listed one by one, page by page.
 - **Production hardening.** Per-IP rate limiting, which accounts for mobile carrier CGNAT. Configuration-driven CORS that is never `*`. Diagnostics behind a key, with constant-time comparison. A server key for the web's server-side rendering. The API refuses to start with an insecure configuration.
 - **Data quality as code, run in two places.** The cross-layer validation is one module, used by the test suite and by the Dagster asset checks after every load. A blocking check stops a bad load from spreading downstream. The suite proves it by corrupting a synthetic database on purpose and checking that the right check fails.
+- **Two implementations, one answer.** The dbt career totals are compared, person by person, against the Python code the API serves: 996 batters and 1,300 pitchers, identical counts and rates. Corrupted Parquet files must fail the specific dbt test that guards against that corruption.
 - **Idempotent ingestion everywhere.** Re-running any ingest never duplicates data, and edge cases such as postponed-game collisions, extra innings and forfeits are handled deterministically.
 
 ## Tech stack
@@ -88,7 +105,8 @@ flowchart LR
 | Layer | Tools |
 |-------|-------|
 | Pipeline and API | Python 3.11+, FastAPI, SQLAlchemy 2, Pydantic 2, httpx, tenacity, BeautifulSoup, jsonpatch, SQLite |
-| Orchestration | Dagster 1.13 (partitioned assets, blocking asset checks, schedules) |
+| Orchestration | Dagster 1.13 (partitioned assets, blocking asset checks, schedules), dagster-dbt |
+| Analytics | dbt Core 1.12, DuckDB 1.5, Parquet (pyarrow) |
 | Web | Next.js 16 (App Router, Turbopack), React 19, TypeScript, Tailwind CSS |
 | Mobile | Expo SDK 57, React Native 0.86, React Navigation 7, react-native-svg |
 | Deployment and CI | Oracle Cloud (Ampere A1), systemd, Caddy (automatic HTTPS), Vercel, GitHub Actions |
@@ -138,7 +156,18 @@ On Windows with the Microsoft Store Python, the `dagster` command is not on the 
 
 The UI shows the asset graph, one partition per season, the history of every load and its checks. To keep that history between sessions, point `DAGSTER_HOME` at a folder first. The `cada_madrugada` schedule refreshes the current season every morning during the season; it ships turned off.
 
-### 3. Web
+### 3. Analytics layer (optional)
+
+```bash
+pip install -r requirements-analitica.txt
+python main.py exportar-parquet      # data/parquet/<table>.parquet
+cd analitica
+dbt build                            # models and tests → data/analitica.duckdb
+```
+
+With the Microsoft Store Python, use `python -m dbt.cli.main build` if `dbt` is not on the PATH. With Dagster installed, the `capa_analitica` job does both steps; its `cada_manana` schedule runs after the morning load and ships turned off.
+
+### 4. Web
 
 ```bash
 cd frontend
@@ -148,7 +177,7 @@ npm run dev                          # http://localhost:3000
 
 It points at `http://localhost:8000` by default. Set `NEXT_PUBLIC_API_URL` in `frontend/.env.local` to use another API.
 
-### 4. Mobile
+### 5. Mobile
 
 ```bash
 cd mobile
@@ -167,7 +196,7 @@ python dev_live_offline.py 826343 --hasta 5   # stops mid-game, so it shows as L
 
 ## Tests
 
-There are twelve verification suites. They need no network: they run against captured feeds, a simulated MLB client, saved source pages, a synthetic database or the local database. Each one exits with code 0 only if every check passes.
+There are thirteen verification suites. They need no network: they run against captured feeds, a simulated MLB client, saved source pages, a synthetic database or the local database. Each one exits with code 0 only if every check passes.
 
 ```bash
 python verify_game_routes.py && python verify_live_detail.py && python verify_live_parser.py \
@@ -175,18 +204,19 @@ python verify_game_routes.py && python verify_live_detail.py && python verify_li
   && python verify_winprob.py && python verify_capas.py && python verify_seguridad.py \
   && python verify_digimetrics.py && python verify_historia.py
 python verify_orquestacion.py        # needs requirements-orquestacion.txt
+python verify_analitica.py           # same
 ```
 
 **Continuous integration** ([`.github/workflows/verify.yml`](.github/workflows/verify.yml)): every push and pull request runs four jobs in parallel.
 
 - The eight suites that need no database. The live-engine suites replay real snapshots of a game, downloaded once from the MLB API and cached.
-- The Dagster definitions and their suite.
+- The Dagster definitions, their suite and the analytics suite (Parquet export, `dbt build`, dbt tests as Dagster checks).
 - Type check, lint and production build of the web app.
 - Type check of the mobile app.
 
 The other three suites check the real database, which is not versioned, and run locally before each change ships.
 
-`verify_capas.py` cross-validates the two storage layers season by season. `verify_orquestacion.py` runs the assets against a synthetic database, corrupts it on purpose, and checks that the right asset check fails and that the blocking one stops the downstream load. `verify_seguridad.py` boots the API in production mode and checks the rate limit, CORS and diagnostics. `verify_winprob.py` fails if anyone changes a transition probability.
+`verify_capas.py` cross-validates the two storage layers season by season. `verify_orquestacion.py` runs the assets against a synthetic database, corrupts it on purpose, and checks that the right asset check fails and that the blocking one stops the downstream load. `verify_analitica.py` builds a synthetic database with both sources, runs dbt on it, compares every career with the API's own computation, and damages the Parquet on purpose to check that the right dbt test fails. `verify_seguridad.py` boots the API in production mode and checks the rate limit, CORS and diagnostics. `verify_winprob.py` fails if anyone changes a transition probability.
 
 ## Deployment
 
@@ -209,16 +239,18 @@ src/
   scrapers/     League-portal table parser
   pipeline/     Season, box-score and history ingestors; cross-source checks
   validacion.py Cross-layer validation, shared by the tests and the asset checks
+  exportar.py   Database → Parquet, with the Python business rules exported as tables
   live/         Live feed parser, poller, in-memory cache, replay
   models/       SQLAlchemy models and SQL views
   *.py          Domain logic: career totals, win probability, daily slate,
                 pennant race, qualification minimums, name display
-orquestacion/   Dagster assets, checks, job and schedule
+orquestacion/   Dagster assets, checks, jobs and schedules (ingestion and analytics)
+analitica/      dbt project on DuckDB: season and career facts, best seasons ever
 frontend/       Next.js web app
 mobile/         Expo / React Native app
 deploy/oracle/  Production deployment (installer, systemd, Caddy, backups)
 verify_*.py     Verification suites
-main.py         Pipeline CLI (ingest, ingest-games, ingest-game, ingest-historia, …)
+main.py         Pipeline CLI (ingest, ingest-games, ingest-game, ingest-historia, exportar-parquet, …)
 ```
 
 ## Data sources and disclaimer

@@ -1,0 +1,36 @@
+version: 2
+
+sources:
+  - name: base
+    description: >
+      La base SQLite exportada a Parquet por `python main.py exportar-parquet`
+      (src/exportar.py). Un archivo por tabla. En Dagster, cada una es el
+      asset `parquet/<tabla>` (orquestacion/analitica.py).
+    meta:
+      external_location: "{{ env_var('LIDOM_PARQUET_DIR', '../data/parquet') }}/{name}.parquet"
+    tables:
+      - name: games
+        description: Un juego por fila (esquema de juego, MLB API, desde 2012-13).
+      - name: batting_lines
+        description: La línea de bateo de un jugador en un juego.
+      - name: pitching_lines
+        description: La línea de pitcheo de un jugador en un juego.
+      - name: players
+        description: Los jugadores de la MLB API; `player_id` es el slug nombre-fechanacimiento.
+      - name: hist_bateo
+        description: DIGIMETRICS, bateo por temporada, etapa, equipo y miembro (1951-2019).
+      - name: hist_pitcheo
+        description: DIGIMETRICS, pitcheo por temporada, etapa, equipo y miembro (1951-2019).
+      - name: hist_enlaces
+        description: idMiembro de DIGIMETRICS → player_id de la MLB API.
+      - name: nombres_historicos
+        description: El nombre para mostrar de cada miembro, calculado en Python (src/nombres.py).
+      - name: minimos_temporada
+        description: >
+          Juegos del equipo que más jugó y mínimos de calificación por temporada,
+          calculados en Python (src/qualification.py) para que la app y esta
+          capa califiquen igual.
+      - name: categorias
+        description: Las categorías de récords (src/historia.py), con su etiqueta, sentido y si son tasa.
+      - name: constantes
+        description: ANIO_CORTE y los mínimos de carrera de src/historia.py. Una sola fila.

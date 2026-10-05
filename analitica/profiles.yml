@@ -1,0 +1,10 @@
+# El perfil vive en el proyecto (dbt lo busca primero en la carpeta actual):
+# no hay nada secreto, y así nadie tiene que tocar ~/.dbt.
+analitica:
+  target: local
+  outputs:
+    local:
+      type: duckdb
+      # Relativa a esta carpeta. Dagster pasa una ruta absoluta.
+      path: "{{ env_var('LIDOM_DUCKDB_PATH', '../data/analitica.duckdb') }}"
+      threads: 4

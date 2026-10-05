@@ -30,6 +30,8 @@ Modos:
                                   en las temporadas que tienen las dos
   enlazar-historia                Enlaza los jugadores de DIGIMETRICS con los
                                   de la MLB API (ingest-historia ya lo hace)
+  exportar-parquet                La base a Parquet (data/parquet/), para la
+                                  capa analítica de dbt (analitica/)
 
 La temporada va en el formato crudo de la MLB API y se nombra por el año en
 que EMPIEZA la campaña: "2025" es la 2025-26. Por defecto, "2025".
@@ -165,6 +167,17 @@ def main():
             print("No hay temporadas en las dos capas. Corre antes: python main.py ingest-historia 2012 2019")
             sys.exit(1)
         print(informe(r))
+
+    # ── La base a Parquet, para dbt ───────────────────────────────────────────
+    elif mode == "exportar-parquet":
+        try:
+            from src.exportar import DIRECTORIO, exportar
+        except ImportError:
+            logger.error("Falta pyarrow. Instala: pip install -r requirements-analitica.txt")
+            sys.exit(1)
+        filas = exportar("sqlite:///data/lidom_stats.db")
+        logger.success(f"✅ {len(filas)} archivos en {DIRECTORIO}/: " + ", ".join(
+            f"{t} {n}" for t, n in filas.items()))
 
     else:
         logger.error(f"Modo desconocido: {mode!r}")

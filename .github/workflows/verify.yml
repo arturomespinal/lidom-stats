@@ -2,7 +2,8 @@
 #
 # Four jobs in parallel:
 #   - pipeline:      the eight verification suites that need no database
-#   - orchestration: the Dagster definitions and verify_orquestacion.py
+#   - orchestration: the Dagster definitions, verify_orquestacion.py and the
+#                    analytics layer (Parquet + dbt), verify_analitica.py
 #   - web:           type check, lint and production build of the Next.js app
 #   - mobile:        type check of the Expo app
 #
@@ -89,9 +90,9 @@ jobs:
         run: python verify_live_poller.py
 
   orchestration:
-    name: Orchestration (Dagster)
+    name: Orchestration and analytics (Dagster, dbt)
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -102,11 +103,13 @@ jobs:
           cache-dependency-path: requirements*.txt
 
       - name: Install dependencies
-        run: pip install -r requirements-orquestacion.txt
+        run: pip install -r requirements-orquestacion.txt   # includes requirements-analitica.txt
 
       - name: Prepare data directory
         run: mkdir -p data
 
+      # Loading the definitions also runs `dbt parse`: the dbt manifest is
+      # not versioned, and the dbt models are Dagster assets.
       - name: Definitions load
         run: dagster definitions validate -m orquestacion
 
@@ -114,6 +117,13 @@ jobs:
       # replaced by doubles. The real-database section skips itself here.
       - name: Assets, checks and schedule
         run: python verify_orquestacion.py
+
+      # Export to Parquet, `dbt build` and the dbt tests, against a synthetic
+      # database with both sources; career totals compared person by person
+      # with the API's own computation; corrupted Parquet must fail the
+      # right dbt test. The real-database section skips itself here.
+      - name: Analytics layer (Parquet, dbt, Dagster)
+        run: python verify_analitica.py
 
   web:
     name: Web (Next.js)

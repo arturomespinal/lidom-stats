@@ -56,6 +56,10 @@ flowchart LR
 
 **Orchestration.** [Dagster](orquestacion/) runs the ingestion as software-defined assets partitioned by season. Every load validates itself with asset checks. If a game's lines don't add up to its score, the check blocks the downstream load. If the two layers disagree beyond the known differences, the check fails and shows which team or player. The checks call the same functions as `verify_capas.py` (`src/validacion.py`), so tests and production share one definition of "correct".
 
+![Dagster asset lineage: the 2025-26 season loaded from the MLB API, with both asset checks passing](docs/img/dagster-lineage.png)
+
+*The 2025-26 partition of `juegos` and `tablas_planas`, loaded from the MLB API with both checks passing. The `historia` group is collapsed.*
+
 ```mermaid
 flowchart LR
     J[juegos<br/>per season] -- "juegos_cuadran (blocking)" --> T[tablas_planas<br/>per season]
@@ -129,6 +133,8 @@ Note on seasons: the MLB API labels a winter season by the year it **starts**, s
 pip install -r requirements-orquestacion.txt
 dagster dev -m orquestacion          # http://localhost:3000, from the repository root
 ```
+
+On Windows with the Microsoft Store Python, the `dagster` command is not on the PATH. Use `python -m dagster dev -m orquestacion` instead.
 
 The UI shows the asset graph, one partition per season, the history of every load and its checks. To keep that history between sessions, point `DAGSTER_HOME` at a folder first. The `cada_madrugada` schedule refreshes the current season every morning during the season; it ships turned off.
 

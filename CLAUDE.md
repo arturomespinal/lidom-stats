@@ -80,6 +80,7 @@ python verify_orquestacion.py        # assets y checks de Dagster (pide requirem
 # La orquestación con Dagster (ver "La orquestación con Dagster")
 pip install -r requirements-orquestacion.txt
 dagster dev -m orquestacion          # UI en http://localhost:3000, desde la raíz del repo
+python -m dagster dev -m orquestacion  # lo mismo, si `dagster` no está en el PATH (Python de la Store)
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -1983,6 +1984,13 @@ carga se valida sola al terminar**. `main.py` sigue funcionando igual.
   construcción. Después la daña a propósito: un juego descuadrado, un ganado
   de más, un hit de más, las planas borradas. Con la base real, compara su
   check contra `verify_capas.py`.
+- **En la PC de Arturo el comando es `python -m dagster dev -m orquestacion`.**
+  Con el Python de la Microsoft Store, `pip` deja `dagster.exe` en una carpeta
+  que no está en el PATH ("'dagster' is not recognized"). `dagster dev` lanza
+  la UI y el daemon con `sys.executable -m`, así que con `python -m` alcanza.
+- **Primera carga real (5-oct-2026)**, desde la PC de Arturo contra la MLB
+  API: la partición 2025 de `juegos` y `tablas_planas`, los dos checks en
+  verde. La captura está en `docs/img/dagster-lineage.png` y en el README.
 - **`conectar()` usa `Path.as_uri()`** para la URI de solo lectura de SQLite:
   armada a mano se rompía con las barras de Windows o con espacios en la ruta.
 
@@ -1994,7 +2002,8 @@ definiciones de Dagster y `verify_orquestacion.py`), la web (tsc, lint y
 `next build`) y el móvil (tsc). La orquestación va en su propio trabajo para
 que las suites de siempre no carguen con instalar Dagster.
 
-- **Corren 8 de las 11 suites.** `verify_game_routes`, `verify_capas` y
+- **Corren 9 de las 12 suites** (las 8 de siempre y `verify_orquestacion`, en
+  su propio trabajo). `verify_game_routes`, `verify_capas` y
   `verify_winprob` necesitan la base REAL, que no se versiona (se arma desde
   la MLB API y redistribuirla choca con sus términos). Esas siguen corriendo
   a mano antes de cada entrega. `verify_historia` y `verify_digimetrics`

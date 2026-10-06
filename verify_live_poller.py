@@ -297,7 +297,9 @@ r = c.get(f"/live/games/{GAME_PK}/detail")
 sit = r.json().get("situation") or {}
 check("/detail trae la situación del juego en curso: outs, cuenta, bases, bateador y lanzador",
       (r.status_code, sorted(sit), sit.get("runners", {}).get("third") is not None),
-      (200, ["balls", "batter", "is_top_inning", "on_deck", "outs", "pitcher", "runners", "strikes"], True))
+      (200, ["balls", "batter", "half_over_label", "is_top_inning", "on_deck", "outs", "pitcher",
+             "runners", "strikes"], True))
+check("en pleno turno no hay fin de media entrada", sit.get("half_over_label"), None)
 check("…con los mismos datos que la tarjeta", (sit.get("outs"), sit.get("batter")), (d["outs"], d["batter"]))
 r = c.get("/day")
 check("/day: un juego en vivo de la caché abre la puerta a los marcadores aunque la base no lo tenga",

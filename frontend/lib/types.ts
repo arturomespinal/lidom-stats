@@ -139,6 +139,8 @@ export interface LiveGameState {
   last_play: string | null;
   last_play_event: string | null;
   last_play_is_scoring: boolean;
+  /** "Fin de la alta del 5to" entre medias entradas; null durante el juego. */
+  half_over_label: string | null;
   plays_count: number;
 
   decisions: LiveDecisions | null;
@@ -263,6 +265,9 @@ export interface LiveGameDetail {
 
 /** Lo que está pasando ahora mismo. Solo con el juego en curso. */
 export interface LiveSituation {
+  /** "Fin de la alta del 5to" entre medias entradas, compuesto en el
+   *  backend. La cuenta es la del último turno y el bateador, el que abrirá. */
+  half_over_label: string | null;
   outs: number;
   balls: number;
   strikes: number;

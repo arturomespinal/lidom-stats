@@ -141,6 +141,29 @@ print(f"  GUMBO original: {orig // 1024} KB → estado reducido: {len(raw)} byte
 check("el estado cabe holgado en un evento SSE", len(raw) < 8192, True)
 
 print("\n━━━ Progresión completa ━━━")
+print("\n━━━ Entre medias entradas ━━━")
+# La MLB deja los 3 outs y la cuenta del último turno con el bateador de la
+# mitad que viene (Dodgers-Braves, 6-oct). La mitad que terminó la dice
+# inningState, aunque isTopInning ya haya cambiado.
+from src.live.gumbo import fin_de_mitad  # noqa: E402
+check("Middle: terminó la alta, aunque isTopInning ya diga baja",
+      fin_de_mitad({"inningState": "Middle", "isTopInning": False, "currentInning": 5, "outs": 3}),
+      "Fin de la alta del 5to")
+check("End: terminó la baja", fin_de_mitad({"inningState": "End", "currentInning": 7, "outs": 3}),
+      "Fin de la baja del 7mo")
+check("sin inningState, con 3 outs: la mitad vigente es la que terminó",
+      fin_de_mitad({"isTopInning": True, "currentInning": 2, "outs": 3}), "Fin de la alta del 2do")
+check("en pleno turno, nada", fin_de_mitad({"inningState": "Top", "isTopInning": True, "currentInning": 5, "outs": 2}),
+      None)
+import copy  # noqa: E402
+_vivo = copy.deepcopy(json.load(open(files[4], encoding="utf-8")))
+_vivo["liveData"]["linescore"].update({"inningState": "Middle", "outs": 3})
+check("en el estado del juego en vivo", parse_live_feed(_vivo).half_over_label,
+      f"Fin de la alta del {states[4].inning_ordinal_es}")
+check("durante el juego no hay etiqueta", [s.half_over_label for s in states if s.status == "live"],
+      [None] * sum(1 for s in states if s.status == "live"))
+check("un juego terminado no la lleva, aunque tenga 3 outs", (states[-1].outs, states[-1].half_over_label), (3, None))
+
 for s in states:
     print(f"  {s.timestamp}  {s.status:8} {s.score_line:14} {s.situation}")
 

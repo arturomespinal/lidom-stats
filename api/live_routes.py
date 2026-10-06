@@ -167,7 +167,12 @@ def _situacion(state) -> Optional[dict]:
     situación que mostrar."""
     if state is None or not state.is_live:
         return None
+    # Entre una media entrada y la siguiente la MLB deja los 3 outs y la
+    # cuenta del último turno, pero ya pone al bateador y al lanzador de la
+    # mitad que viene. Sin avisarlo, la pantalla mezclaba las dos: "3 outs,
+    # 2-2, al bate Dubón (que todavía no ha bateado)".
     return {
+        "half_over_label": state.half_over_label,
         "outs": state.outs,
         "balls": state.balls,
         "strikes": state.strikes,

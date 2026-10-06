@@ -116,6 +116,9 @@ function LineScore({ state }: { state: LiveGameState }) {
 }
 
 function Situation({ state }: { state: LiveGameState }) {
+  // Entre medias entradas la MLB deja los 3 outs y la cuenta del último
+  // turno, con el bateador que abre la otra mitad (ver game/Situacion.tsx).
+  const fin = state.half_over_label;
   return (
     <div className="flex items-center gap-4">
       <BaseDiamond runners={state.runners} />
@@ -134,20 +137,24 @@ function Situation({ state }: { state: LiveGameState }) {
             />
           ))}
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] uppercase tracking-wide text-dim w-12 shrink-0">
-            Cuenta
-          </span>
-          <span className="text-sm font-bold tabular-nums text-fg">
-            {state.balls}-{state.strikes}
-          </span>
-        </div>
+        {fin ? (
+          <p className="text-[11px] font-semibold text-fg2">{fin}</p>
+        ) : (
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] uppercase tracking-wide text-dim w-12 shrink-0">
+              Cuenta
+            </span>
+            <span className="text-sm font-bold tabular-nums text-fg">
+              {state.balls}-{state.strikes}
+            </span>
+          </div>
+        )}
       </div>
 
       <div className="flex-1 min-w-0 space-y-1 text-xs">
         {state.batter && (
           <div className="truncate">
-            <span className="text-dim">Al bate </span>
+            <span className="text-dim">{fin ? "Abre " : "Al bate "}</span>
             <span className="text-fg font-medium">{state.batter}</span>
           </div>
         )}

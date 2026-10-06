@@ -81,6 +81,9 @@ export default function Situacion({
   }, [jugada?.index, bases, duracion]);
 
   const outs = situacion.outs;
+  // Entre medias entradas: la cuenta es del turno que ya terminó y el
+  // bateador es el que abre la otra mitad. Se dice, en vez de mezclarlas.
+  const fin = situacion.half_over_label;
   return (
     <section
       aria-label="Situación del juego"
@@ -111,18 +114,22 @@ export default function Situacion({
             ))}
             <span className="sr-only">{outs} outs</span>
           </div>
-          <div className="flex items-center gap-1.5">
-            <span className="w-14 text-[10px] uppercase tracking-wide text-dim">Cuenta</span>
-            <span className="num font-cond text-2xl leading-none text-fg">
-              {situacion.balls}-{situacion.strikes}
-            </span>
-          </div>
+          {fin ? (
+            <p className="text-xs font-semibold text-fg2">{fin}</p>
+          ) : (
+            <div className="flex items-center gap-1.5">
+              <span className="w-14 text-[10px] uppercase tracking-wide text-dim">Cuenta</span>
+              <span className="num font-cond text-2xl leading-none text-fg">
+                {situacion.balls}-{situacion.strikes}
+              </span>
+            </div>
+          )}
         </div>
 
         <div className="w-full min-w-0 space-y-1 text-sm sm:w-auto sm:flex-1">
           {situacion.batter && (
             <p className="truncate">
-              <span className="text-dim">Al bate </span>
+              <span className="text-dim">{fin ? "Abre " : "Al bate "}</span>
               <span className="font-semibold text-fg">{situacion.batter}</span>
             </p>
           )}

@@ -77,6 +77,32 @@ def ordinal_es(inning: Optional[int]) -> Optional[str]:
     return f"{inning}{sufijo}"
 
 
+def fin_de_mitad(linescore: dict) -> Optional[str]:
+    """
+    "Fin de la alta del 5to" entre una media entrada y la siguiente; None si
+    no.
+
+    En ese momento la MLB deja los 3 outs y la cuenta del último turno, pero ya
+    pone al bateador y al lanzador de la mitad que viene: sin decirlo, la
+    tarjeta mezclaba las dos (Arturo, 6-oct, Dodgers-Braves: "3 outs, 2-2, al
+    bate Dubón"). Qué mitad terminó lo dice `inningState`: "Middle" después de
+    la alta, "End" después de la baja. Si no viene, con 3 outs la mitad
+    vigente es la que terminó.
+    """
+    estado = (linescore.get("inningState") or "").lower()
+    outs = linescore.get("outs") or 0
+    if estado == "middle":
+        mitad = "alta"
+    elif estado == "end":
+        mitad = "baja"
+    elif outs >= 3:
+        mitad = "alta" if linescore.get("isTopInning") else "baja"
+    else:
+        return None
+    ordinal = ordinal_es(linescore.get("currentInning"))
+    return f"Fin de la {mitad}" + (f" del {ordinal}" if ordinal else "")
+
+
 def _team_code(team: dict) -> str:
     """
     MLB team id → nuestro código de 3 letras.
@@ -188,6 +214,9 @@ class LiveGameState(BaseModel):
     last_play: Optional[str] = None
     last_play_event: Optional[str] = None
     last_play_is_scoring: bool = False
+    # Entre una media entrada y la siguiente: "Fin de la alta del 5to". None
+    # durante el juego. Ver `fin_de_mitad()`.
+    half_over_label: Optional[str] = None
     plays_count: int = 0
 
     decisions: Optional[Decisions] = None
@@ -293,6 +322,7 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
     ]
 
     half = linescore.get("inningHalf") or linescore.get("inningState")
+    abstracto = ABSTRACT_STATE.get(status.get("abstractGameState", ""), "other")
 
     estado = LiveGameState(
         game_pk=payload.get("gamePk") or game_data.get("game", {}).get("pk"),
@@ -315,6 +345,7 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
         outs=linescore.get("outs") or 0,
         balls=linescore.get("balls") or 0,
         strikes=linescore.get("strikes") or 0,
+        half_over_label=fin_de_mitad(linescore) if abstracto == "live" else None,
 
         home=TeamLine(
             team_code=_team_code(home_team), team_name=_team_name(home_team),

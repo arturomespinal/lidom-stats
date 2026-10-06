@@ -764,6 +764,15 @@ la tarjeta; el detalle no los tenía), en el mismo sondeo.
   sin deslizarse.
 - En el teléfono los nombres bajan a su propia fila (al lado del diamante
   quedaban cortados) y las carreras van en su línea dentro de la franja.
+- **Entre medias entradas** la MLB deja los 3 outs y la cuenta del último
+  turno, pero ya pone al bateador y al lanzador de la mitad que viene: la
+  tarjeta decía "3 outs, 2-2, al bate Dubón" con Dubón sin haber bateado
+  (captura de Arturo, Dodgers-Braves). El parser compone `half_over_label`
+  ("Fin de la alta del 5to") con `fin_de_mitad()`: qué mitad terminó lo dice
+  `inningState` ("Middle" tras la alta, "End" tras la baja), no
+  `isTopInning`, que puede haber cambiado ya. Con la etiqueta, la tarjeta del
+  listado y la del juego cambian la cuenta por esa frase y "Al bate" por
+  "Abre". Un juego terminado no la lleva aunque tenga 3 outs.
 - Llega con el sondeo de 12 s, así que la animación va hasta unos 20 s detrás
   del juego (10 s de la MLB más el sondeo). Es el ritmo de toda la pantalla.
 

@@ -103,6 +103,19 @@ def fin_de_mitad(linescore: dict) -> Optional[str]:
     return f"Fin de la {mitad}" + (f" del {ordinal}" if ordinal else "")
 
 
+def siguiente_mitad(linescore: dict) -> tuple[int, bool]:
+    """La mitad que empieza después de un cambio: (entrada, es_alta)."""
+    entrada = linescore.get("currentInning") or 1
+    estado = (linescore.get("inningState") or "").lower()
+    if estado == "middle":
+        termino_alta = True
+    elif estado == "end":
+        termino_alta = False
+    else:
+        termino_alta = bool(linescore.get("isTopInning"))
+    return (entrada, False) if termino_alta else (entrada + 1, True)
+
+
 def _team_code(team: dict) -> str:
     """
     MLB team id → nuestro código de 3 letras.
@@ -379,17 +392,28 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
     # está memoizado: el mismo estado no se vuelve a simular.
     if estado.status == "live" and estado.inning:
         from src.winprob import Estado, prob_gana_local_cached
-        estado.win_prob_home = round(prob_gana_local_cached(Estado(
-            entrada=estado.inning,
-            es_alta=bool(estado.is_top_inning),
-            outs=min(estado.outs, 2),
-            bases=(
-                estado.runners.first is not None,
-                estado.runners.second is not None,
-                estado.runners.third is not None,
-            ),
-            dif_local=estado.home.runs - estado.away.runs,
-        )), 3)
+        if estado.half_over_label:
+            # Entre medias entradas la situación que cuenta es el comienzo de
+            # la mitad que viene: 0 outs y bases limpias. Con los 3 outs y los
+            # corredores de la que terminó, el modelo simulaba una mitad que
+            # ya no existe.
+            entrada, es_alta = siguiente_mitad(linescore)
+            situacion = Estado(entrada=entrada, es_alta=es_alta, outs=0,
+                               bases=(False, False, False),
+                               dif_local=estado.home.runs - estado.away.runs)
+        else:
+            situacion = Estado(
+                entrada=estado.inning,
+                es_alta=bool(estado.is_top_inning),
+                outs=min(estado.outs, 2),
+                bases=(
+                    estado.runners.first is not None,
+                    estado.runners.second is not None,
+                    estado.runners.third is not None,
+                ),
+                dif_local=estado.home.runs - estado.away.runs,
+            )
+        estado.win_prob_home = round(prob_gana_local_cached(situacion), 3)
 
     return estado
 

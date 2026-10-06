@@ -163,6 +163,17 @@ check("en el estado del juego en vivo", parse_live_feed(_vivo).half_over_label,
 check("durante el juego no hay etiqueta", [s.half_over_label for s in states if s.status == "live"],
       [None] * sum(1 for s in states if s.status == "live"))
 check("un juego terminado no la lleva, aunque tenga 3 outs", (states[-1].outs, states[-1].half_over_label), (3, None))
+# Y la probabilidad, en ese momento, es la del comienzo de la mitad que viene.
+from src.winprob import Estado, prob_gana_local_cached  # noqa: E402
+_m = parse_live_feed(_vivo)
+check("entre medias entradas la probabilidad es la de la mitad que empieza (0 outs, bases limpias)",
+      _m.win_prob_home,
+      round(prob_gana_local_cached(Estado(_m.inning, False, 0, (False,) * 3, _m.home.runs - _m.away.runs)), 3))
+_e = copy.deepcopy(_vivo)
+_e["liveData"]["linescore"].update({"inningState": "End", "isTopInning": False})
+_pe = parse_live_feed(_e)
+check("tras la baja, la de la alta de la entrada siguiente", _pe.win_prob_home,
+      round(prob_gana_local_cached(Estado(_pe.inning + 1, True, 0, (False,) * 3, _pe.home.runs - _pe.away.runs)), 3))
 
 for s in states:
     print(f"  {s.timestamp}  {s.status:8} {s.score_line:14} {s.situation}")

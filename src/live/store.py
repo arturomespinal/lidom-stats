@@ -35,10 +35,11 @@ class WinProbPoint:
     """Un punto del recorrido de la probabilidad de ganar.
 
     Este es el único dato ACUMULATIVO de la caché — todo lo demás es el estado
-    de ahora mismo y se reemplaza. La excepción se justifica porque el recorrido
-    no se puede reconstruir: la probabilidad es función de un estado que ya
-    pasó, y cuando el juego avanza ese estado desaparece del feed. O se guarda
-    cuando ocurre, o se pierde para siempre.
+    de ahora mismo y se reemplaza. Mientras el juego corre, cada punto se
+    guarda cuando ocurre. Lo que pasó ANTES de que el poller viera el juego (lo
+    encendieron en la 4ta, o la API se reinició) se reconstruye del relato con
+    `recorrido_de_jugadas()`: cada jugada terminada trae la entrada, los outs,
+    los corredores y el marcador con que quedó.
 
     Lleva el marcador y la entrada, no solo el número, porque una gráfica sin
     contexto no dice nada: el pico interesante es el que coincide con una
@@ -125,6 +126,82 @@ UMBRAL_WP = 0.005
 MAX_PUNTOS_WP = 400
 
 
+def _agrega(track: list, p: "WinProbPoint") -> None:
+    """Añade el punto si la probabilidad se movió. La misma regla para lo que
+    se ve en vivo y para lo que se reconstruye del relato."""
+    if track:
+        ultimo = track[-1]
+        # El marcador cambiando SIEMPRE merece punto aunque la probabilidad se
+        # mueva poco: es el momento que la gráfica tiene que poder etiquetar.
+        marcador_igual = ultimo.away == p.away and ultimo.home == p.home
+        if marcador_igual and abs(p.wp - ultimo.wp) < UMBRAL_WP:
+            return
+        if len(track) >= MAX_PUNTOS_WP:
+            return
+    track.append(p)
+
+
+def _juego_terminado(entrada: int, es_alta: bool, dif_local: int) -> bool:
+    """Si con esa situación el juego ya se acabó: el local adelante al llegar
+    (o durante) la baja del 9no o después, o un extrainning que empieza sin
+    empate."""
+    return ((not es_alta and entrada >= 9 and dif_local > 0)
+            or (es_alta and entrada >= 10 and dif_local != 0))
+
+
+def recorrido_de_jugadas(raw: dict) -> list["WinProbPoint"]:
+    """
+    El recorrido de la probabilidad reconstruido del relato, desde el primer
+    lanzamiento.
+
+    Un punto al empezar (alta del 1ro, 0-0) y uno tras cada jugada terminada,
+    con la situación en que quedó: outs y corredores (`count.outs`,
+    `matchup.postOnFirst`…) y el marcador (`result.awayScore`). Con 3 outs la
+    situación es el comienzo de la mitad que viene. Mismo umbral que en vivo,
+    así que la curva reconstruida y la vista en directo tienen la misma
+    densidad. La jugada que termina el juego no lleva punto: el cierre con el
+    resultado real lo pone `drop()`.
+    """
+    from src.winprob import Estado, prob_gana_local_cached
+
+    plays = ((raw.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
+    terminadas = [p for p in plays if (p.get("about") or {}).get("isComplete")]
+    if not terminadas:
+        return []
+
+    def momento(p: dict) -> float:
+        t = (p.get("about") or {}).get("endTime") or ""
+        try:
+            from datetime import datetime
+            return datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
+        except ValueError:
+            return 0.0
+
+    track: list[WinProbPoint] = []
+    _agrega(track, WinProbPoint(inning=1, is_top=True, away=0, home=0,
+                                wp=round(prob_gana_local_cached(Estado(1, True, 0, (False,) * 3, 0)), 3),
+                                at=momento(terminadas[0])))
+    for p in terminadas:
+        about, res, matchup = p.get("about") or {}, p.get("result") or {}, p.get("matchup") or {}
+        entrada, es_alta = about.get("inning") or 1, bool(about.get("isTopInning"))
+        outs = (p.get("count") or {}).get("outs") or 0
+        away, home = res.get("awayScore") or 0, res.get("homeScore") or 0
+        bases = tuple(bool(matchup.get(k)) for k in ("postOnFirst", "postOnSecond", "postOnThird"))
+        if outs >= 3:
+            entrada, es_alta = (entrada, False) if es_alta else (entrada + 1, True)
+            outs, bases = 0, (False, False, False)
+        if _juego_terminado(entrada, es_alta, home - away):
+            break
+        wp = prob_gana_local_cached(Estado(entrada=entrada, es_alta=es_alta, outs=outs,
+                                           bases=bases, dif_local=home - away))
+        # El punto se ubica en la mitad donde ocurrió la jugada: así el eje de
+        # la franja lo pone en su entrada.
+        _agrega(track, WinProbPoint(inning=about.get("inning") or 1,
+                                    is_top=bool(about.get("isTopInning")),
+                                    away=away, home=home, wp=round(wp, 3), at=momento(p)))
+    return track
+
+
 class LiveEntry:
     """Lo que sabemos de un juego que estamos siguiendo."""
 
@@ -176,8 +253,22 @@ class LiveStore:
             return e
 
     def update(self, game_pk: int, raw: dict, state: LiveGameState) -> None:
+        # La primera vez que se ve un juego ya empezado, su recorrido se
+        # reconstruye del relato. Se calcula FUERA del candado: la primera vez
+        # son unos segundos de simulación (cada situación nueva, ~0,2 s; después
+        # quedan en caché) y los lectores HTTP no deben esperarlos.
+        previo: list[WinProbPoint] = []
+        with self._lock:
+            vacio = not self.entry(game_pk).win_prob_track
+        if vacio and state.status in ("live", "final"):
+            try:
+                previo = recorrido_de_jugadas(raw)
+            except Exception:
+                previo = []   # sin relato legible, la curva empieza ahora
         with self._lock:
             e = self.entry(game_pk)
+            if previo and not e.win_prob_track:
+                e.win_prob_track.extend(previo)
             e.raw = raw
             e.timecode = state.timestamp
             e.state = state
@@ -192,19 +283,7 @@ class LiveStore:
         wp = state.win_prob_home
         if wp is None or not state.inning:
             return
-        track = e.win_prob_track
-        if track:
-            ultimo = track[-1]
-            # El marcador cambiando SIEMPRE merece punto aunque la
-            # probabilidad se mueva poco: es el momento que la gráfica
-            # tiene que poder etiquetar.
-            marcador_igual = (ultimo.away == state.away.runs and
-                              ultimo.home == state.home.runs)
-            if marcador_igual and abs(wp - ultimo.wp) < UMBRAL_WP:
-                return
-            if len(track) >= MAX_PUNTOS_WP:
-                return
-        track.append(WinProbPoint(
+        _agrega(e.win_prob_track, WinProbPoint(
             inning=state.inning,
             is_top=bool(state.is_top_inning),
             away=state.away.runs,

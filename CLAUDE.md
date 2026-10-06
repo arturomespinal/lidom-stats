@@ -991,6 +991,25 @@ Tres detalles que no son obvios:
 - **`drop()` cierra la curva con el resultado real**, 1.0 ó 0.0. Sin eso la
   gráfica de un juego terminado acabaría en el último estado simulado —un 97 %—
   en lugar del 100 % que de hecho ocurrió.
+- **La curva empieza en el primer lanzamiento aunque el poller llegue tarde**
+  (6-oct, pedido de Arturo: la arrancó en la 4ta de un Dodgers-Braves y la
+  curva salía cortada). La primera vez que la caché ve un juego ya empezado,
+  `recorrido_de_jugadas()` (`src/live/store.py`) la reconstruye del relato:
+  un punto en la alta del 1ro 0-0 y uno por jugada terminada, con la
+  situación en que quedó (`count.outs`, `matchup.postOnFirst/Second/Third`,
+  `result.awayScore/homeScore`; con 3 outs, el comienzo de la mitad que
+  viene). Mismo umbral que en vivo (`_agrega()`, una sola regla). Vale igual
+  tras reiniciar la API.
+  - **Se calcula fuera del candado de la caché**: cada situación nueva cuesta
+    unos 0,2 s de simulación (después queda en caché), así que un juego
+    entero la primera vez son 8-12 s del hilo del poller. Los lectores HTTP
+    no esperan.
+  - La jugada que termina el juego no lleva punto: el cierre lo pone `drop()`.
+  - El punto reconstruido de la situación actual es idéntico al que da el
+    estado en vivo (la suite lo compara).
+- **Entre medias entradas la probabilidad es la de la mitad que empieza**
+  (0 outs, bases limpias; `siguiente_mitad()` en `gumbo.py`), no la de la que
+  terminó con 3 outs y sus corredores.
 
 El endpoint va **aparte de `/detail`** y no dentro. Tienen ritmos distintos: el
 detalle se pide al abrir la pantalla y pesa 19 KB; esto son unos cientos de

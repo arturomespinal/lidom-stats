@@ -115,7 +115,11 @@ for f in sorted(glob.glob("fixtures/826343_*.json")):
 
 track = st.win_prob_track(826343)
 check("acumuló puntos del juego real", len(track) > 4, True)
-check("el umbral descarta repetidos", len(track) < instantaneas, True)
+# Con el mismo marcador, dos puntos seguidos nunca están a menos del umbral:
+# sin eso se guardaría uno por sondeo, casi todos iguales.
+mismos = [(track[i - 1], track[i]) for i in range(1, len(track))
+          if (track[i - 1]["away"], track[i - 1]["home"]) == (track[i]["away"], track[i]["home"])]
+check("el umbral descarta repetidos", all(abs(b["wp"] - a["wp"]) >= UMBRAL_WP for a, b in mismos[:-1]), True)
 print(f"    {len(track)} puntos de {instantaneas} instantáneas")
 check("la curva cierra en el resultado real, no en la simulación",
       track[-1]["wp"], 1.0)
@@ -124,9 +128,28 @@ check("cada punto trae marcador y entrada",
       all({"inning", "is_top", "away", "home", "wp"} <= set(p) for p in track), True)
 
 # Un cambio de marcador entra aunque la probabilidad se mueva menos que el umbral.
-subidas = [abs(track[i]["wp"] - track[i - 1]["wp"]) for i in range(1, len(track))]
-check("ningún salto guardado es menor que el umbral, salvo el cierre",
-      all(d >= UMBRAL_WP for d in subidas[:-1]), True)
+chicos = [(track[i - 1], track[i]) for i in range(1, len(track) - 1)
+          if abs(track[i]["wp"] - track[i - 1]["wp"]) < UMBRAL_WP]
+check("un salto menor que el umbral solo entra si cambió el marcador",
+      all((a["away"], a["home"]) != (b["away"], b["home"]) for a, b in chicos), True)
+
+print("\n━━━ el recorrido desde el primer inning, aunque el poller llegue tarde ━━━")
+from src.live.store import recorrido_de_jugadas  # noqa: E402
+_archivos = sorted(glob.glob("fixtures/826343_2025*.json"))
+_cuarta = json.load(open(_archivos[4]))
+_est = parse_live_feed(_cuarta, game_id="826343")
+_tarde = LiveStore()
+_tarde.update(826343, _cuarta, _est)
+_rec = _tarde.win_prob_track(826343)
+check("llegando en la baja del 4to, la curva empieza en la alta del 1ro, 0-0",
+      (_rec[0]["label"], _rec[0]["away"], _rec[0]["home"]), ("Alta del 1ro", 0, 0))
+check("y llega hasta el marcador de ahora", (_rec[-1]["away"], _rec[-1]["home"]), (_est.away.runs, _est.home.runs))
+check("pasa por cada entrada jugada", sorted({p["inning"] for p in _rec}), list(range(1, _est.inning + 1)))
+_tarde.update(826343, _cuarta, _est)
+check("no se reconstruye dos veces", len(_tarde.win_prob_track(826343)), len(_rec))
+check("el último punto reconstruido coincide con la probabilidad en vivo de ese estado",
+      _rec[-1]["wp"], _est.win_prob_home)
+check("sin relato no inventa nada", recorrido_de_jugadas({"liveData": {"plays": {"allPlays": []}}}), [])
 check("el tope está por encima de cualquier juego real", MAX_PUNTOS_WP > len(track) * 10, True)
 
 # La etiqueta de cada punto la compone el backend con ordinal_es(): la franja

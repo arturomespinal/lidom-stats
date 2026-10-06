@@ -25,6 +25,10 @@ MLB_API_V11_BASE_URL = f"{MLB_API_HOST}/api/v1.1"
 LIDOM_LEAGUE_ID = 131
 LIDOM_SPORT_ID = 17  # "WIN" = Winter Leagues
 
+# Grandes Ligas. Solo para probar el motor en vivo con juegos reales fuera de
+# la temporada de LIDOM (LIDOM_LIVE_MLB=1); nada de la MLB llega a la base.
+MLB_SPORT_ID = 1
+
 # ─────────────────────────────────────────────────────────────────────────────
 # Catálogo canónico de equipos LIDOM
 #

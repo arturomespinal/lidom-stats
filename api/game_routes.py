@@ -1322,7 +1322,10 @@ def get_day(
             "games": juegos_prox,
         }
 
-    hay_vivo = any(j["status"] == "live" for j in juegos)
+    # La caché también cuenta: en el modo de prueba con la MLB sus juegos no
+    # están en la base, y sin esto la portada no mostraría la puerta a los
+    # marcadores en vivo.
+    hay_vivo = any(j["status"] == "live" for j in juegos) or bool(live_store.states(only_live=True))
     return {
         "requested_date": pedida.isoformat(),
         "date": dia.isoformat(),

@@ -259,8 +259,13 @@ class LiveGameDetail(BaseModel):
 
 
 def _team_code(team: dict) -> Optional[str]:
+    """Nuestro código; fuera de LIDOM (el modo de prueba con la MLB), la
+    abreviatura de la API, igual que en gumbo.py."""
     info = LIDOM_TEAMS.get(team.get("id"))
-    return info["team_code"] if info else None
+    if info:
+        return info["team_code"]
+    abrev = team.get("abbreviation")
+    return abrev.upper()[:3] if abrev else None
 
 
 def _team_name(team: dict) -> Optional[str]:
@@ -405,7 +410,7 @@ def _arms(side: dict, ids: list) -> list[BullpenArm]:
     return out
 
 
-def _side(side: dict, ls_side: dict) -> TeamDetail:
+def _side(side: dict, ls_side: dict, gd_team: Optional[dict] = None) -> TeamDetail:
     players = side.get("players") or {}
 
     batters: list[BatterLine] = []
@@ -428,7 +433,9 @@ def _side(side: dict, ls_side: dict) -> TeamDetail:
         if f"ID{pid}" in players
     ]
 
-    team = side.get("team") or {}
+    # El equipo del boxscore no trae abreviatura; la de gameData sí. Hace
+    # falta para los equipos que no son de LIDOM (el modo de prueba con la MLB).
+    team = {**(gd_team or {}), **(side.get("team") or {})}
     return TeamDetail(
         team_code=_team_code(team),
         team_name=_team_name(team),
@@ -488,8 +495,10 @@ def parse_game_detail(
         plays=plays,
         plays_total=total,
         plays_returned=len(plays),
-        home=_side(bx_teams.get("home") or {}, ls_teams.get("home") or {}),
-        away=_side(bx_teams.get("away") or {}, ls_teams.get("away") or {}),
+        home=_side(bx_teams.get("home") or {}, ls_teams.get("home") or {},
+                   (game_data.get("teams") or {}).get("home")),
+        away=_side(bx_teams.get("away") or {}, ls_teams.get("away") or {},
+                   (game_data.get("teams") or {}).get("away")),
     )
 
 

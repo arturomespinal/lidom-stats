@@ -19,6 +19,10 @@ Preferimos ese valor a uno fijo nuestro.
 
 Corre en su propio hilo para no bloquear a FastAPI. La caché es el único punto
 de contacto entre ambos.
+
+Con `liga="mlb"` sigue los juegos de Grandes Ligas del día: es para probar el
+motor con juegos reales cuando LIDOM no juega (LIDOM_LIVE_MLB=1). En ese modo
+`on_final` se ignora siempre, para que ningún juego de la MLB llegue a la base.
 """
 
 from __future__ import annotations
@@ -30,7 +34,7 @@ from typing import Callable, Optional
 import jsonpatch
 
 from src.clients.mlb_api import MLBAPIClient
-from src.constants import LIDOM_TEAMS
+from src.constants import LIDOM_TEAMS, MLB_SPORT_ID
 from src.jornada import hoy_rd
 from src.live.gumbo import parse_live_feed
 from src.live.store import LiveStore, store as default_store
@@ -66,11 +70,18 @@ class LivePoller:
         client: Optional[MLBAPIClient] = None,
         on_final: Optional[Callable[[int, object], None]] = None,
         game_date: Optional[str] = None,
+        liga: str = "lidom",
     ):
+        if liga not in ("lidom", "mlb"):
+            raise ValueError(f"liga desconocida: {liga!r}")
+        self.liga = liga
         self.store = store or default_store
         self._client = client
         self._owns_client = client is None
-        self.on_final = on_final
+        # Con la MLB no hay nada que ingestar: la base es de LIDOM, y el
+        # ingestor rechazaría a esos equipos de todos modos. Se descarta aquí
+        # y no solo donde se arma el poller, para que sea imposible.
+        self.on_final = on_final if liga == "lidom" else None
         # None = el día de hoy, recalculado en cada refresco del calendario.
         self.game_date = game_date
 
@@ -163,6 +174,8 @@ class LivePoller:
         # corre en UTC, y desde las 8 de la noche de aquí (medianoche UTC)
         # date.today() ya daría el día siguiente, justo a la hora de los juegos.
         target = self.game_date or hoy_rd().isoformat()
+        if self.liga == "mlb":
+            return self._discover_mlb(target)
         season = str(int(target[:4]) if int(target[5:7]) >= 9 else int(target[:4]) - 1)
 
         raw = self.client.get_schedule(season=season, game_type=None)
@@ -189,6 +202,28 @@ class LivePoller:
 
         if not found:
             logger.debug(f"Poller: no hay juegos LIDOM el {target}")
+        return found
+
+    def _discover_mlb(self, target: str) -> list[int]:
+        """Modo de prueba: todos los juegos de Grandes Ligas de ese día. Sin
+        game_id: no existen en nuestro esquema."""
+        raw = self.client.get_schedule(season=None, league_id=None, sport_id=MLB_SPORT_ID, date=target)
+        found: list[int] = []
+        for date_entry in raw.get("dates", []):
+            if date_entry.get("date") != target:
+                continue
+            for g in date_entry.get("games", []):
+                game_pk = g.get("gamePk")
+                found.append(game_pk)
+                if game_pk not in self._tracking:
+                    self._tracking[game_pk] = None
+                    teams = g.get("teams", {})
+                    logger.info(
+                        f"  [MLB, prueba] siguiendo {teams.get('away', {}).get('team', {}).get('name')} @ "
+                        f"{teams.get('home', {}).get('team', {}).get('name')} (gamePk {game_pk})"
+                    )
+        if not found:
+            logger.debug(f"Poller: no hay juegos de la MLB el {target}")
         return found
 
     @staticmethod

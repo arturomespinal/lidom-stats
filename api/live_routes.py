@@ -51,12 +51,16 @@ def get_poller() -> Optional[LivePoller]:
     return _poller
 
 
-def start_poller(game_date: Optional[str] = None) -> LivePoller:
-    """Arranca el poller. Idempotente: si ya corre, devuelve el que hay."""
+def start_poller(game_date: Optional[str] = None, liga: str = "lidom") -> LivePoller:
+    """Arranca el poller. Idempotente: si ya corre, devuelve el que hay.
+
+    Con `liga="mlb"` sigue los juegos de Grandes Ligas, solo para probar; el
+    poller ignora `on_final` en ese modo y nada se ingesta.
+    """
     global _poller
     if _poller is None:
         _poller = LivePoller(store=store, on_final=_ingest_finished_game,
-                             game_date=game_date)
+                             game_date=game_date, liga=liga)
         _poller.start()
     return _poller
 
@@ -126,6 +130,7 @@ def live_status(request: Request):
     return {
         "poller_running": _poller is not None,
         "game_date": _poller.game_date if _poller else None,
+        "league": getattr(_poller, "liga", None),
         "tracked_game_pks": store.tracked(),
         **stats,
     }
@@ -328,6 +333,20 @@ def maybe_start_poller() -> None:
                 interval=int(os.environ.get("LIDOM_REPLAY_INTERVAL", 2)),
             )
             logger.info(f"Modo repetición del juego {replay}")
+        elif os.environ.get("LIDOM_LIVE_MLB", "").lower() in ("1", "true", "yes"):
+            from api.seguridad import leer_config
+            try:
+                produccion = leer_config().produccion
+            except Exception:
+                produccion = True   # una configuración inválida no es un entorno de pruebas
+            if produccion:
+                # Una prueba olvidada en el servidor llenaría la portada de
+                # juegos de Grandes Ligas. En producción, se queda apagado.
+                logger.error("LIDOM_LIVE_MLB no se admite en producción: motor en vivo apagado")
+                return
+            start_poller(game_date=os.environ.get("LIDOM_LIVE_DATE") or None, liga="mlb")
+            logger.warning("Poller en vivo en MODO PRUEBA con la MLB (LIDOM_LIVE_MLB): "
+                           "sigue juegos de Grandes Ligas y no ingesta nada")
         else:
             start_poller(game_date=os.environ.get("LIDOM_LIVE_DATE") or None)
             logger.info("Poller en vivo activado por LIDOM_LIVE_POLLER")

@@ -623,6 +623,41 @@ set LIDOM_LIVE_POLLER=1
 python -m uvicorn api.main:app --reload
 ```
 
+### Probar con juegos de la MLB (6-oct-2026)
+
+Fuera de la temporada de LIDOM, el motor en vivo se puede probar con juegos
+**reales** de Grandes Ligas (los playoffs de octubre):
+
+```bash
+set LIDOM_LIVE_POLLER=1
+set LIDOM_LIVE_MLB=1
+python -m uvicorn api.main:app --host 0.0.0.0
+```
+
+La web, en `/live`; el móvil, en Hoy → "Marcadores en vivo". La portada sale
+vacía (el día no tiene juegos de LIDOM), pero la puerta a los marcadores
+aparece: `any_live` de `/day` cuenta también los juegos en vivo de la caché.
+
+- **Nada de la MLB llega a la base.** El poller con `liga="mlb"` descarta
+  `on_final` en su propio constructor, no solo donde se arma: es imposible
+  que un juego de Grandes Ligas dispare la ingesta. Y en producción
+  (`LIDOM_ENTORNO=produccion`) la variable se rechaza y el motor queda
+  apagado: una prueba olvidada en el servidor llenaría la portada de juegos
+  de otra liga.
+- **El calendario se pide por día** (`get_schedule(date=…)`, `sportId=1`, sin
+  liga): el de la temporada de la MLB son unos 2.400 juegos.
+- **Los equipos llevan la abreviatura de la API** ("MIL", "SD"). La tarjeta ya
+  caía a ella; el detalle no, porque el equipo del boxscore no trae
+  abreviatura: ahora la toma de `gameData.teams`. Los clientes pintan esos
+  códigos con el gris de respaldo de `TeamBadge`.
+- Lo que no aplica, y es normal: tocar un equipo abre una ficha que no
+  existe, los jugadores no enlazan a fichas, y la probabilidad de ganar usa
+  las tasas de LIDOM (es la prueba del cableado, no del modelo).
+- `/live/status` dice la liga (`league`). `verify_live_poller.py` lo prueba
+  con un calendario simulado: los juegos del día y no los de otra fecha,
+  `on_final` descartado, el modo de siempre ignorándolos, el detalle con los
+  códigos y el rechazo en producción.
+
 ### El detalle de un juego
 
 `src/live/detail.py` — **segundo** parser sobre el mismo GUMBO, deliberadamente

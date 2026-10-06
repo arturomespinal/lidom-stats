@@ -100,6 +100,87 @@ try:
 finally:
     _pl.hoy_rd = _original
 
+print("\n━━━ 1b. Modo de prueba con la MLB (LIDOM_LIVE_MLB) ━━━")
+
+
+class FakeMLB(FakeClient):
+    """El calendario del día de Grandes Ligas: dos juegos de playoff y uno de
+    otra fecha que no debe seguirse."""
+
+    def __init__(self):
+        super().__init__()
+        self.pedidos = []
+
+    def get_schedule(self, season=None, game_type=None, **kw):
+        self.pedidos.append({"season": season, **kw})
+        juego = lambda pk, h, a: {"gamePk": pk, "officialDate": "2026-10-06", "gameNumber": 1, "teams": {
+            "home": {"team": {"id": h, "name": f"equipo {h}"}}, "away": {"team": {"id": a, "name": f"equipo {a}"}}}}
+        return {"dates": [{"date": "2026-10-06", "games": [juego(813001, 158, 135), juego(813002, 147, 111)]},
+                          {"date": "2026-10-07", "games": [juego(813003, 158, 135)]}]}
+
+
+fm = FakeMLB()
+pm = LivePoller(store=LiveStore(), client=fm, game_date="2026-10-06", liga="mlb",
+                on_final=lambda pk, s: None)
+check("sigue los juegos de Grandes Ligas del día, no los de otra fecha", pm.discover(), [813001, 813002])
+check("pide solo ese día y a las Grandes Ligas (sportId 1, sin liga)",
+      fm.pedidos[0], {"season": None, "league_id": None, "sport_id": 1, "date": "2026-10-06"})
+check("sin game_id: no existen en nuestro esquema", set(pm._tracking.values()), {None})
+check("on_final se descarta: nada de la MLB llega a la base", pm.on_final, None)
+check("el modo de siempre ignora a los equipos que no son de LIDOM",
+      LivePoller(store=LiveStore(), client=FakeMLB(), game_date="2026-10-06").discover(), [])
+try:
+    LivePoller(store=LiveStore(), client=fm, liga="nba")
+    check("una liga desconocida se rechaza", False, True)
+except ValueError:
+    check("una liga desconocida se rechaza", True, True)
+
+# Un juego terminado en modo MLB: el estado queda, pero on_final no corre.
+avisos_mlb = []
+pf = LivePoller(store=LiveStore(), client=FakeClient(full_feeds=[snapshots[-1]], diffs=[]),
+                game_date="2026-10-06", liga="mlb", on_final=lambda pk, s: avisos_mlb.append(pk))
+pf._tracking[GAME_PK] = None
+pf._poll_game(GAME_PK)
+check("al terminar un juego en modo MLB no se ingesta nada", (pf.store.get(GAME_PK).state.is_final, avisos_mlb),
+      (True, []))
+
+# Equipos que no son de LIDOM: la tarjeta y el detalle usan la abreviatura.
+import copy
+from src.live.detail import parse_game_detail
+mlb_feed = copy.deepcopy(snapshots[-1])
+for lado, (tid, abrev) in (("home", (158, "MIL")), ("away", (135, "SD"))):
+    mlb_feed["gameData"]["teams"][lado].update({"id": tid, "abbreviation": abrev})
+    # Como en el feed real: el equipo del boxscore trae el id, no la abreviatura.
+    mlb_feed["liveData"]["boxscore"]["teams"][lado]["team"]["id"] = tid
+est = parse_live_feed(mlb_feed)
+check("la tarjeta: los códigos de la MLB", (est.away.team_code, est.home.team_code), ("SD", "MIL"))
+det = parse_game_detail(mlb_feed)
+det = det if isinstance(det, dict) else det.model_dump() if hasattr(det, "model_dump") else det.__dict__
+codigos = json.dumps(det, default=lambda o: getattr(o, "__dict__", str(o)))
+check("el detalle también (no queda en null)", ('"team_code": "MIL"' in codigos, '"team_code": "SD"' in codigos),
+      (True, True))
+
+# Arranque: el modo MLB se enciende con la variable y NUNCA en producción.
+import api.live_routes as _lr_mlb
+_arranques = []
+_start_original = _lr_mlb.start_poller
+_lr_mlb.start_poller = lambda **kw: _arranques.append(kw)
+_env_original = dict(os.environ)
+try:
+    os.environ.update({"LIDOM_LIVE_POLLER": "1", "LIDOM_LIVE_MLB": "1"})
+    os.environ.pop("LIDOM_LIVE_REPLAY", None)
+    os.environ.pop("LIDOM_ENTORNO", None)
+    _lr_mlb.maybe_start_poller()
+    check("LIDOM_LIVE_MLB=1 arranca el poller con la MLB", [k.get("liga") for k in _arranques], ["mlb"])
+    _arranques.clear()
+    os.environ.update({"LIDOM_ENTORNO": "produccion", "LIDOM_CORS_ORIGINS": "https://deportiv.example"})
+    _lr_mlb.maybe_start_poller()
+    check("en producción LIDOM_LIVE_MLB no arranca nada", _arranques, [])
+finally:
+    os.environ.clear()
+    os.environ.update(_env_original)
+    _lr_mlb.start_poller = _start_original
+
 print("\n━━━ 2. Primer sondeo: feed completo ━━━")
 p._poll_game(GAME_PK)
 e = st.get(GAME_PK)
@@ -212,6 +293,9 @@ r = c.get(f"/live/games/{GAME_PK}")
 check(f"/live/games/{GAME_PK} responde", r.status_code, 200)
 check("informa la antigüedad del dato", "age_seconds" in r.json(), True)
 check("juego no seguido → 404", c.get("/live/games/999999").status_code, 404)
+r = c.get("/day")
+check("/day: un juego en vivo de la caché abre la puerta a los marcadores aunque la base no lo tenga",
+      (r.status_code, r.json().get("any_live")), (200, True))
 
 print("\n━━━ 9. Flujo SSE ━━━")
 

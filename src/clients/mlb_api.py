@@ -256,6 +256,7 @@ class MLBAPIClient:
         sport_id: int = LIDOM_SPORT_ID,
         game_type: Optional[str] = None,
         game_pk: Optional[int] = None,
+        date: Optional[str] = None,
     ) -> dict:
         """
         Lista de juegos de una temporada.
@@ -269,6 +270,10 @@ class MLBAPIClient:
         Con `game_pk` devuelve solo ese juego, con la misma forma: es lo que
         usa la ingesta de un juego recién terminado (`ingest_game`), que así
         no baja el calendario entero de la temporada cada vez.
+
+        Con `date` ("YYYY-MM-DD"), solo los juegos de ese día. Lo usa el modo
+        de prueba con la MLB: su calendario de temporada son unos 2.400
+        juegos.
         """
         params = {
             "leagueId": league_id,
@@ -276,6 +281,7 @@ class MLBAPIClient:
             "season": season,
             "gameType": game_type,
             "gamePk": game_pk,
+            "date": date,
         }
         return self._get("/schedule", params=params)
 

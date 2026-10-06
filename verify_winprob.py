@@ -40,6 +40,16 @@ cpj = sum(runs) / N * INNINGS
 check("carreras por equipo por juego", round(cpj, 3), REAL_CPJ, tol=0.15)
 check("proporción de entradas en blanco", round(runs.count(0) / N, 3), 0.75, tol=0.04)
 
+# El cálculo exacto (src/winprob.py) es el mismo modelo sin simular: su
+# distribución de carreras por media entrada tiene que dar lo que dio la
+# simulación de arriba.
+from src.winprob import distribucion_carreras, prob_gana_local_exacta  # noqa: E402
+_limpia = distribucion_carreras((False, False, False), 0, local=False)
+check("exacto: la distribución de una media entrada suma 1", round(sum(_limpia), 9), 1.0)
+check("exacto: las mismas carreras por juego que la simulación",
+      round(sum(k * p for k, p in enumerate(_limpia)) * INNINGS, 3), round(cpj, 3), tol=0.03)
+check("exacto: las mismas entradas en blanco", round(_limpia[0], 3), round(runs.count(0) / N, 3), tol=0.005)
+
 print("\n━━━ la distribución completa cuadra, y a eso no se ajustó nada ━━━")
 real = Counter()
 for h, a in con.execute(
@@ -91,6 +101,26 @@ print("\n━━━ el mismo estado da el mismo número ━━━")
 a = prob_gana_local_cached(Estado(5, True, 1, (True, False, False), 2))
 b = prob_gana_local_cached(Estado(5, True, 1, (True, False, False), 2))
 check("la caché no deja temblar la barra", a, b)
+
+print("\n━━━ el cálculo exacto coincide con la simulación ━━━")
+import time  # noqa: E402
+# 20.000 juegos simulados tienen un error de ±0,35 puntos: la tolerancia es
+# de unos cuatro de esos. Si alguien cambia una probabilidad del modelo en la
+# simulación y no en el cálculo (o al revés), esto falla.
+for _e in (Estado(1, True, 0, (False,) * 3, 0), Estado(5, True, 1, (True, False, False), 2),
+           Estado(7, False, 2, (True, True, True), -1), Estado(9, False, 0, (False, True, False), -1),
+           Estado(9, True, 2, (False,) * 3, 1), Estado(11, True, 0, (False,) * 3, 0),
+           Estado(3, False, 1, (False, True, True), 0)):
+    check(f"exacto contra 20.000 simulaciones en {_e.entrada}{'a' if _e.es_alta else 'b'}, {_e.outs} out, "
+          f"dif {_e.dif_local:+d}", round(prob_gana_local_exacta(_e), 3),
+          round(prob_gana_local(_e, random.Random(5), sims=20_000), 3), tol=0.015)
+_t = time.time()
+for _i in range(1, 10):
+    for _o in range(3):
+        prob_gana_local_exacta(Estado(_i, _i % 2 == 0, _o, (True, _o == 1, False), _i % 3 - 1))
+_ms = (time.time() - _t) / 27 * 1000
+check("rápido: menos de 50 ms por situación (simular eran ~175)", _ms < 50, True)
+print(f"    {_ms:.1f} ms por situación")
 
 print("\n━━━ el store acumula el recorrido ━━━")
 import glob  # noqa: E402

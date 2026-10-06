@@ -322,34 +322,202 @@ def recalibrar(conn) -> Dict[str, float]:
     return t
 
 
+# ── El cálculo exacto ────────────────────────────────────────────────────────
+# El modelo es una cadena de Markov con todas sus probabilidades escritas:
+# robos, avances regalados, el evento de cada aparición y las ramas de cada
+# avance. No hace falta simularlo: se puede calcular.
+#
+# 1. Para cada una de las 24 situaciones de bases y outs, la distribución de
+#    carreras de lo que queda de la media entrada (una vez, para el visitante
+#    y para el local). Dentro de un mismo número de outs hay ciclos —un boleto
+#    deja los mismos outs— así que se resuelve por iteración de valor hasta
+#    que no cambia nada.
+# 2. Para una situación de juego, se recorre lo que falta media entrada por
+#    media entrada sobre la DISTRIBUCIÓN de la diferencia de carreras, con las
+#    mismas reglas que la simulación (el local no batea la baja del último si
+#    va arriba; los extras se repiten hasta desempatar).
+#
+# La simulación de 4.000 juegos tardaba ~0,2 s por situación nueva y tenía
+# ruido de ±0,8 puntos; esto tarda milisegundos y da el valor exacto del
+# mismo modelo. La simulación se queda: es la que se valida contra las
+# carreras reales (verify_winprob.py), y la suite exige que las dos coincidan.
+
+_MAX_CARRERAS = 25          # por media entrada; más allá la masa es despreciable
+_BASES = [(a, b, c) for a in (False, True) for b in (False, True) for c in (False, True)]
+
+
+def _prob_eventos(local: bool) -> list:
+    """(probabilidad, evento) de una aparición: el embasado por error primero,
+    después la tabla, igual que `_muestrea`."""
+    tabla = _TABLA_LOCAL if local else _TABLA_VISITANTE
+    out, previo = [(PROB_EMBASA_POR_ERROR, "ROE")], 0.0
+    for corte, ev in tabla:
+        out.append(((1 - PROB_EMBASA_POR_ERROR) * (corte - previo), ev))
+        previo = corte
+    return out
+
+
+def _ramas_avance(bases, outs, ev) -> list:
+    """Las ramas de `_avanza`, con su probabilidad: (p, bases, outs, carreras)."""
+    p1, p2, p3 = bases
+    if ev == "2B" and p1:
+        r = p2 + p3
+        return [(PROB_ANOTA_DESDE_1RA_EN_DOBLE, (False, True, False), outs, r + 1),
+                (1 - PROB_ANOTA_DESDE_1RA_EN_DOBLE, (False, True, True), outs, r)]
+    if ev == "1B" and (p1 or p2):
+        ramas = []
+        for p_2da, anota_2da in (((PROB_ANOTA_DESDE_2DA_EN_SENCILLO, True),
+                                  (1 - PROB_ANOTA_DESDE_2DA_EN_SENCILLO, False)) if p2 else ((1.0, False),)):
+            r = p3 + anota_2da
+            nueva_3ra = p2 and not anota_2da
+            if p1:
+                if nueva_3ra:
+                    ramas.append((p_2da, (True, True, True), outs, r))
+                else:
+                    ramas.append((p_2da * PROB_1RA_A_3RA_EN_SENCILLO, (True, False, True), outs, r))
+                    ramas.append((p_2da * (1 - PROB_1RA_A_3RA_EN_SENCILLO), (True, True, False), outs, r))
+            else:
+                ramas.append((p_2da, (True, False, nueva_3ra), outs, r))
+        return ramas
+    if ev == "OUT" and outs < 2 and any(bases):
+        b1, b2, b3 = bases
+        return [(PROB_OUT_PRODUCTIVO, (False, b1, b2), outs + 1, int(b3)),
+                (1 - PROB_OUT_PRODUCTIVO, bases, outs + 1, 0)]
+    # El resto no tiene azar: se reusa `_avanza` con un generador que nunca
+    # se consulta.
+    b, o, r = _avanza(bases, outs, ev, None)  # type: ignore[arg-type]
+    return [(1.0, b, o, int(r))]
+
+
+def _transiciones(bases, outs, local: bool) -> Dict[Tuple, float]:
+    """Un paso del bucle de `simula_resto_entrada` —robo, avance regalado y
+    aparición— como {(bases, outs, carreras): probabilidad}. Outs ≥ 3 es el
+    final de la media entrada."""
+    pasos = [(1.0, bases, outs, 0)]
+    if bases[0] and not bases[1]:
+        intento = PROB_INTENTO_ROBO
+        pasos = [((1 - intento), bases, outs, 0),
+                 (intento * PROB_ROBO_EXITOSO, (False, True, bases[2]), outs, 0),
+                 (intento * (1 - PROB_ROBO_EXITOSO), (False, False, bases[2]), outs + 1, 0)]
+    tras_regalo = []
+    for p, b, o, r in pasos:
+        if o >= 3:
+            tras_regalo.append((p, b, o, r))
+            continue
+        if any(b):
+            b1, b2, b3 = b
+            tras_regalo.append((p * PROB_AVANCE_REGALADO, (False, b1, b2), o, r + int(b3)))
+            tras_regalo.append((p * (1 - PROB_AVANCE_REGALADO), b, o, r))
+        else:
+            tras_regalo.append((p, b, o, r))
+    final: Dict[Tuple, float] = {}
+    for p, b, o, r in tras_regalo:
+        if o >= 3:
+            clave = ((False, False, False), 3, r)
+            final[clave] = final.get(clave, 0.0) + p
+            continue
+        for pe, ev in _prob_eventos(local):
+            for pa, b2, o2, r2 in _ramas_avance(b, o, ev):
+                clave = (b2, min(o2, 3), r + r2)
+                final[clave] = final.get(clave, 0.0) + p * pe * pa
+    return final
+
+
+_DIST_ENTRADA: Dict[bool, Dict[Tuple, list]] = {}
+
+
+def distribucion_carreras(bases, outs: int, local: bool) -> list:
+    """P(carreras = k) de lo que queda de la media entrada, k = 0.._MAX_CARRERAS."""
+    if local not in _DIST_ENTRADA:
+        estados = [(b, o) for b in _BASES for o in range(3)]
+        trans = {s: _transiciones(s[0], s[1], local) for s in estados}
+        dist = {s: [0.0] * (_MAX_CARRERAS + 1) for s in estados}
+        for _ in range(400):
+            cambio = 0.0
+            for s in estados:
+                nuevo = [0.0] * (_MAX_CARRERAS + 1)
+                for (b2, o2, r), p in trans[s].items():
+                    if r > _MAX_CARRERAS:
+                        continue
+                    if o2 >= 3:
+                        nuevo[r] += p
+                    else:
+                        resto = dist[(b2, o2)]
+                        for k in range(_MAX_CARRERAS + 1 - r):
+                            nuevo[k + r] += p * resto[k]
+                cambio = max(cambio, max(abs(x - y) for x, y in zip(nuevo, dist[s])))
+                dist[s] = nuevo
+            if cambio < 1e-14:
+                break
+        _DIST_ENTRADA[local] = dist
+    return _DIST_ENTRADA[local][(tuple(bases), outs)]
+
+
+def _media_entrada(dist: Dict[int, float], carreras: list, signo: int,
+                   salta=lambda d: False) -> Dict[int, float]:
+    """Suma (o resta) las carreras de una media entrada a la distribución de
+    la diferencia. `salta(d)`: con esa diferencia esta media entrada no se
+    juega (el local que ya ganó)."""
+    nueva: Dict[int, float] = {}
+    for d, p in dist.items():
+        if salta(d):
+            nueva[d] = nueva.get(d, 0.0) + p
+            continue
+        for k, pk in enumerate(carreras):
+            if pk:
+                nueva[d + signo * k] = nueva.get(d + signo * k, 0.0) + p * pk
+    return {d: p for d, p in nueva.items() if p > 1e-16}
+
+
+def prob_gana_local_exacta(est: Estado) -> float:
+    """Probabilidad de que gane el LOCAL, sin simular. Mismas reglas que
+    `prob_gana_local`."""
+    limpia_v = distribucion_carreras((False, False, False), 0, local=False)
+    limpia_l = distribucion_carreras((False, False, False), 0, local=True)
+    dist = {est.dif_local: 1.0}
+    entrada = est.entrada
+    resto = distribucion_carreras(est.bases, est.outs, local=not est.es_alta)
+    dist = _media_entrada(dist, resto, -1 if est.es_alta else +1)
+    if est.es_alta:
+        e = entrada
+        dist = _media_entrada(dist, limpia_l, +1, salta=lambda d: e >= INNINGS and d > 0)
+    entrada += 1
+    while entrada <= INNINGS:
+        dist = _media_entrada(dist, limpia_v, -1)
+        e = entrada
+        dist = _media_entrada(dist, limpia_l, +1, salta=lambda d: e >= INNINGS and d > 0)
+        entrada += 1
+    # Extras: una entrada completa cada vez, hasta desempatar. Empatados al
+    # empezar una, el local gana con P(L > V) / (1 − P(L = V)).
+    p_mas = sum(pv * pl for v, pv in enumerate(limpia_v) for l, pl in enumerate(limpia_l) if l > v)
+    p_igual = sum(pv * limpia_l[v] for v, pv in enumerate(limpia_v))
+    extra = p_mas / (1 - p_igual)
+    return sum(p for d, p in dist.items() if d > 0) + dist.get(0, 0.0) * extra
+
+
 # ── Caché ────────────────────────────────────────────────────────────────────
-# Simular 4.000 juegos por cada sondeo, por cada juego en curso, no es viable:
-# el poller pregunta cada diez segundos. Pero el espacio de estados es chico y
-# se repite muchísimo — un juego entero toca unos pocos cientos de estados
-# distintos— así que memoizar resuelve el problema sin precalcular nada.
+# El poller pregunta cada diez segundos por cada juego en curso, y un juego
+# entero toca unos pocos cientos de situaciones distintas: memoizar evita
+# recalcular la misma.
 #
 # La diferencia de carreras se recorta a ±15: con quince arriba en cualquier
-# entrada la probabilidad ya es 1.000 y seguir simulando no cambia el número.
+# entrada la probabilidad ya es 1.000.
 _CACHE: Dict[Tuple, float] = {}
 TOPE_DIFERENCIA = 15
 
 
 def prob_gana_local_cached(est: Estado, sims: int = 4000) -> float:
-    """Igual que `prob_gana_local`, memoizada y con semilla fija.
+    """La probabilidad de que gane el local, exacta y memoizada.
 
-    La semilla fija importa para el producto, no para la estadística: sin ella
-    el mismo estado daría 61.2% y al siguiente sondeo 60.8%, y el usuario vería
-    la barra temblar sin que pasara nada en el juego.
+    Antes simulaba `sims` juegos con semilla fija (la semilla era para que la
+    barra no temblara entre sondeos); el cálculo exacto ya no tiene ruido.
+    `sims` se conserva para no romper a quien lo pase y no se usa.
     """
     dif = max(-TOPE_DIFERENCIA, min(TOPE_DIFERENCIA, est.dif_local))
     entrada = min(est.entrada, INNINGS + 3)
     clave = (entrada, est.es_alta, est.outs, est.bases, dif)
     if clave in _CACHE:
         return _CACHE[clave]
-    val = prob_gana_local(
-        Estado(entrada, est.es_alta, est.outs, est.bases, dif),
-        random.Random(hash(clave) & 0xFFFFFFFF),
-        sims=sims,
-    )
+    val = prob_gana_local_exacta(Estado(entrada, est.es_alta, est.outs, est.bases, dif))
     _CACHE[clave] = val
     return val

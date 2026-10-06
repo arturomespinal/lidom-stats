@@ -1000,10 +1000,9 @@ Tres detalles que no son obvios:
   `result.awayScore/homeScore`; con 3 outs, el comienzo de la mitad que
   viene). Mismo umbral que en vivo (`_agrega()`, una sola regla). Vale igual
   tras reiniciar la API.
-  - **Se calcula fuera del candado de la caché**: cada situación nueva cuesta
-    unos 0,2 s de simulación (después queda en caché), así que un juego
-    entero la primera vez son 8-12 s del hilo del poller. Los lectores HTTP
-    no esperan.
+  - **Se calcula fuera del candado de la caché**, por si acaso: con el
+    cálculo exacto un juego entero son ~0,3 s (con la simulación eran 8-12 s).
+    Los lectores HTTP no esperan.
   - La jugada que termina el juego no lleva punto: el cierre lo pone `drop()`.
   - El punto reconstruido de la situación actual es idéntico al que da el
     estado en vivo (la suite lo compara).
@@ -1113,12 +1112,41 @@ Carga las capturas de `fixtures/` en la caché por el mismo camino que el poller
 capturas —diez instantáneas, ocho puntos— y no con la del poller, que acumula
 40-80: la forma es real, la resolución no.
 
+### El cálculo exacto, no la simulación (6-oct-2026)
+
+`prob_gana_local_cached()` ya no simula 4.000 juegos: calcula el valor exacto
+del mismo modelo (`prob_gana_local_exacta()`). El modelo es una cadena de
+Markov con todas sus probabilidades escritas, así que:
+
+1. `distribucion_carreras()`: para las 24 situaciones de bases y outs, la
+   distribución de carreras de lo que queda de la media entrada, una vez
+   para el visitante y otra para el local (50 ms). `_transiciones()` repite
+   un paso de `simula_resto_entrada` —robo, avance regalado, aparición— con
+   las ramas de `_avanza` (`_ramas_avance()`); dentro de un mismo número de
+   outs hay ciclos (un boleto no suma out), y se resuelve por iteración de
+   valor.
+2. Con eso, el juego se recorre media entrada por media entrada sobre la
+   distribución de la diferencia de carreras, con las mismas reglas: el local
+   no batea la baja del último si va arriba, y empatados al empezar un
+   extrainning el local gana con P(L > V) / (1 − P(L = V)).
+
+- **De ~175 ms a ~3 ms por situación**, y sin ruido (la simulación tenía
+  ±0,8 puntos; la semilla fija estaba para esconderlo). Reconstruir la curva
+  de un juego entero pasó de 8-12 s a 0,3 s.
+- **La simulación se queda**: es la que se valida contra las carreras reales
+  de la base. `verify_winprob.py` exige que el cálculo dé las mismas carreras
+  por juego y entradas en blanco que la simulación, y la misma probabilidad
+  que 20.000 juegos simulados en siete situaciones (±1,5 puntos). Si alguien
+  toca una probabilidad en un lado y no en el otro, falla.
+- Comparado con la simulación vieja, los números se mueven unas décimas: es
+  el ruido que se fue.
+
 ### Dos decisiones de producto dentro del modelo
 
-- **La caché usa semilla fija.** Sin ella el mismo estado daría 61.2 % y al
-  siguiente sondeo 60.8 %, y el usuario vería la barra temblar sin que pasara
-  nada en el juego. Memoizar también es lo que hace viable simular 4.000 juegos:
-  un juego entero toca unos pocos cientos de estados distintos.
+- **El mismo estado da siempre el mismo número.** Con la simulación eso
+  pedía semilla fija (si no, 61.2 % y al siguiente sondeo 60.8 %, y la barra
+  temblaba); con el cálculo exacto sale solo. La caché sigue: un juego toca
+  unos pocos cientos de estados y no hay por qué recalcularlos.
 - **`recalibrar()` es explícito, no automático.** Que las tasas cambiaran solas
   al ingestar una temporada haría que la misma situación diera números distintos
   de un día para otro sin que nadie lo hubiera decidido.

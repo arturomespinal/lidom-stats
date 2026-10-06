@@ -261,10 +261,24 @@ export interface LiveGameDetail {
   away: TeamDetail;
 }
 
+/** Lo que está pasando ahora mismo. Solo con el juego en curso. */
+export interface LiveSituation {
+  outs: number;
+  balls: number;
+  strikes: number;
+  runners: LiveRunners;
+  batter: string | null;
+  on_deck: string | null;
+  pitcher: string | null;
+  is_top_inning: boolean | null;
+}
+
 export interface LiveDetailResponse {
   age_seconds: number;
   /** false = el juego terminó y esto ya no cambia. Deja de refrescar. */
   is_updating: boolean;
+  /** null en la previa y al final. */
+  situation: LiveSituation | null;
   data: LiveGameDetail;
 }
 

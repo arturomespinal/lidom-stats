@@ -293,6 +293,12 @@ r = c.get(f"/live/games/{GAME_PK}")
 check(f"/live/games/{GAME_PK} responde", r.status_code, 200)
 check("informa la antigüedad del dato", "age_seconds" in r.json(), True)
 check("juego no seguido → 404", c.get("/live/games/999999").status_code, 404)
+r = c.get(f"/live/games/{GAME_PK}/detail")
+sit = r.json().get("situation") or {}
+check("/detail trae la situación del juego en curso: outs, cuenta, bases, bateador y lanzador",
+      (r.status_code, sorted(sit), sit.get("runners", {}).get("third") is not None),
+      (200, ["balls", "batter", "is_top_inning", "on_deck", "outs", "pitcher", "runners", "strikes"], True))
+check("…con los mismos datos que la tarjeta", (sit.get("outs"), sit.get("batter")), (d["outs"], d["batter"]))
 r = c.get("/day")
 check("/day: un juego en vivo de la caché abre la puerta a los marcadores aunque la base no lo tenga",
       (r.status_code, r.json().get("any_live")), (200, True))

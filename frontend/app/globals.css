@@ -173,3 +173,43 @@ body {
     animation: none;
   }
 }
+
+/* La jugada en la pantalla de un juego (game/Situacion.tsx): la franja navy
+   entra desde la derecha, se queda y sale sola, 3,6 s en total. Se monta de
+   nuevo con cada jugada (key = su índice), así que no hace falta estado ni
+   temporizador. Con "reducir movimiento" no se desliza: aparece y se va. */
+@keyframes jugada {
+  0% {
+    opacity: 0;
+    transform: translateX(40%);
+  }
+  9% {
+    opacity: 1;
+    transform: none;
+  }
+  86% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(12%);
+  }
+}
+@keyframes jugada-quieta {
+  0%,
+  86% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+.jugada {
+  animation: jugada 3600ms cubic-bezier(0.33, 1, 0.68, 1) forwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .jugada {
+    animation: jugada-quieta 3600ms linear forwards;
+  }
+}

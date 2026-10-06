@@ -4,7 +4,7 @@ import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { fetchGameDetail, fetchWinProb } from "@/lib/api";
-import { LiveGameDetail, WinProbResponse } from "@/lib/types";
+import { LiveGameDetail, LiveSituation, WinProbResponse } from "@/lib/types";
 import TeamBadge from "@/components/TeamBadge";
 import StatusBadge from "@/components/StatusBadge";
 import PlayByPlay from "@/components/game/PlayByPlay";
@@ -12,6 +12,7 @@ import InningGrid from "@/components/game/InningGrid";
 import BoxScore from "@/components/game/BoxScore";
 import Lineups from "@/components/game/Lineups";
 import WinProbBand from "@/components/game/WinProbBand";
+import Situacion, { jugadaDestacada } from "@/components/game/Situacion";
 import Heroe from "@/components/ficha/Heroe";
 
 /**
@@ -50,6 +51,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
 
   const [detail, setDetail] = useState<LiveGameDetail | null>(null);
   const [wp, setWp] = useState<WinProbResponse | null>(null);
+  const [situacion, setSituacion] = useState<LiveSituation | null>(null);
   const [updating, setUpdating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [failed, setFailed] = useState(false);
@@ -87,6 +89,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
 
       if (res) {
         setDetail(res.data);
+        setSituacion(res.situation ?? null);
         setUpdating(res.is_updating);
         setFailed(false);
       } else {
@@ -187,6 +190,13 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
       {/* pb-24 en el teléfono: las pestañas van fijas al pie y no deben tapar
           la última fila. */}
       <main className="mx-auto max-w-5xl space-y-4 px-4 pb-24 sm:pb-10">
+        {/* Lo que está pasando ahora: bases, outs, cuenta, bateador y
+            lanzador, y la última jugada cuando es un batazo o un ponche.
+            Solo con el juego en curso. */}
+        {situacion && detail.status === "live" && (
+          <Situacion situacion={situacion} jugada={jugadaDestacada(detail.plays)} />
+        )}
+
         {/* La franja. Necesita al menos dos puntos para ser una curva; en la
             previa no hay estado que simular y no se pinta nada. */}
         {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (

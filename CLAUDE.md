@@ -740,6 +740,33 @@ diferencias con el listado que conviene no deshacer:
 En pantalla ancha el boxscore y las alineaciones van a dos columnas; en angosta
 se apilan.
 
+**La situación y la jugada que se mueve (6-oct-2026, pedido de Arturo viendo
+un juego de playoffs)**: `components/game/Situacion.tsx`, entre la cabecera y
+la franja, solo con el juego en curso. El diamante con los corredores, outs,
+cuenta, al bate, lanza y en espera: la tarjeta del listado, en grande. Los
+datos llegan en `situation` de `/live/games/{pk}/detail` (sale del estado de
+la tarjeta; el detalle no los tenía), en el mismo sondeo.
+
+- **Cuando la última jugada completa es sencillo, doble, triple, jonrón o
+  ponche**, entra una franja navy con corte en diagonal con la jugada en
+  Bebas, el bateador y las carreras impulsadas; sale sola a los 3,6 s. En los
+  batazos, un corredor recorre el diamante hasta su base (el jonrón da la
+  vuelta) y **la base se enciende cuando llega**, no antes: `BaseDiamond`
+  acepta `retrasoLlenado` y la transición la decide el estado nuevo, así que
+  al vaciarse no espera.
+- **Sin estado ni temporizadores**: la franja lleva `key` = el índice de la
+  jugada y su animación CSS (`.jugada` en `globals.css`) entra y sale sola; se
+  vuelve a montar solo con una jugada nueva. El corredor es una animación de
+  la Web Animations API en un efecto con la misma llave. Al abrir la página
+  se ve la última jugada si fue una de esas, y está bien: es lo último que
+  pasó.
+- Con "reducir movimiento" el corredor no corre y la franja aparece y se va
+  sin deslizarse.
+- En el teléfono los nombres bajan a su propia fila (al lado del diamante
+  quedaban cortados) y las carreras van en su línea dentro de la franja.
+- Llega con el sondeo de 12 s, así que la animación va hasta unos 20 s detrás
+  del juego (10 s de la MLB más el sondeo). Es el ritmo de toda la pantalla.
+
 La página no hace fetch en el servidor: el estado cambia cada diez segundos y cualquier cosa renderizada ahí nacería vieja. El componente cliente carga `/live/games` al montarse y abre un `EventSource` por juego que no esté terminado. Al recibir el evento `final` cierra la conexión — sin eso, `EventSource` reconecta solo y recibe el mismo par de eventos en bucle.
 
 Para verla en movimiento fuera de temporada, dos consolas:

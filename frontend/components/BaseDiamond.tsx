@@ -3,6 +3,24 @@ import { LiveRunners } from "@/lib/types";
 interface Props {
   runners: LiveRunners;
   size?: number;
+  /** Milisegundos que espera una base para encenderse al ocuparse: el tiempo
+   *  que tarda en llegar el corredor animado de la pantalla de juego. Al
+   *  vaciarse no espera. */
+  retrasoLlenado?: number;
+}
+
+/**
+ * Dónde cae cada base en un lienzo de `s` px. Una sola definición: el
+ * diamante la dibuja y el corredor animado de la pantalla de juego
+ * (`game/Situacion.tsx`) la recorre.
+ */
+export function posicionesDiamante(s: number) {
+  return {
+    home: { x: s / 2, y: s * 0.85 },
+    first: { x: s * 0.78, y: s * 0.52 },
+    second: { x: s / 2, y: s * 0.22 },
+    third: { x: s * 0.22, y: s * 0.52 },
+  };
 }
 
 /**
@@ -12,7 +30,7 @@ interface Props {
  * segunda arriba, tercera a la izquierda. Ocupada = rellena y con brillo;
  * vacía = solo contorno.
  */
-export default function BaseDiamond({ runners, size = 64 }: Props) {
+export default function BaseDiamond({ runners, size = 64, retrasoLlenado = 0 }: Props) {
   const s = size;
   const b = s * 0.20; // lado de cada base
   // Desde los tokens CSS, no literales: el SVG va en el DOM, así que
@@ -21,10 +39,11 @@ export default function BaseDiamond({ runners, size = 64 }: Props) {
   const empty = "rgb(var(--line))";
 
   // Centros de cada base dentro del lienzo.
+  const pos = posicionesDiamante(s);
   const bases = [
-    { key: "second", cx: s / 2, cy: s * 0.22, on: !!runners.second, label: "2ª" },
-    { key: "third", cx: s * 0.22, cy: s * 0.52, on: !!runners.third, label: "3ª" },
-    { key: "first", cx: s * 0.78, cy: s * 0.52, on: !!runners.first, label: "1ª" },
+    { key: "second", cx: pos.second.x, cy: pos.second.y, on: !!runners.second, label: "2ª" },
+    { key: "third", cx: pos.third.x, cy: pos.third.y, on: !!runners.third, label: "3ª" },
+    { key: "first", cx: pos.first.x, cy: pos.first.y, on: !!runners.first, label: "1ª" },
   ];
 
   return (
@@ -54,9 +73,14 @@ export default function BaseDiamond({ runners, size = 64 }: Props) {
           fill={base.on ? occupied : "transparent"}
           stroke={base.on ? occupied : empty}
           strokeWidth={1.5}
-          style={
-            base.on ? { filter: `drop-shadow(0 0 3px ${occupied}90)` } : undefined
-          }
+          // La base que se llena o se vacía lo hace con una transición corta:
+          // con el corredor de la pantalla de juego, se ve llegar.
+          // La transición la decide el estado NUEVO: al encenderse lleva el
+          // retraso; al apagarse, no.
+          style={{
+            transition: `fill 300ms ease-out ${base.on ? retrasoLlenado : 0}ms, stroke 300ms ease-out ${base.on ? retrasoLlenado : 0}ms`,
+            ...(base.on ? { filter: `drop-shadow(0 0 3px ${occupied}90)` } : {}),
+          }}
         />
       ))}
 

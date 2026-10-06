@@ -160,6 +160,25 @@ def live_game(game_pk: int):
     }
 
 
+def _situacion(state) -> Optional[dict]:
+    """Lo que está pasando ahora mismo: bases, outs, cuenta, quién batea y
+    quién lanza. Sale del estado de la tarjeta, que ya lo tiene; el detalle
+    no lo trae. Solo con el juego en curso: en la previa y al final no hay
+    situación que mostrar."""
+    if state is None or not state.is_live:
+        return None
+    return {
+        "outs": state.outs,
+        "balls": state.balls,
+        "strikes": state.strikes,
+        "runners": state.runners.model_dump(),
+        "batter": state.batter,
+        "on_deck": state.on_deck,
+        "pitcher": state.pitcher,
+        "is_top_inning": state.is_top_inning,
+    }
+
+
 @router.get("/games/{game_pk}/detail")
 def live_game_detail(
     game_pk: int,
@@ -195,6 +214,7 @@ def live_game_detail(
         # `false` avisa al cliente de que esto ya no va a cambiar y puede dejar
         # de refrescar.
         "is_updating": entry.raw is not None,
+        "situation": _situacion(entry.state),
         # Cada jugador sale con `profile_id`, el slug de su ficha, para que los
         # nombres del boxscore y las alineaciones lleven a ella. None si no
         # tiene: un debutante en su primer juego todavía no está en la base.

@@ -13,6 +13,8 @@ import BoxScore from "@/components/game/BoxScore";
 import Lineups from "@/components/game/Lineups";
 import WinProbBand from "@/components/game/WinProbBand";
 import Situacion, { jugadaDestacada } from "@/components/game/Situacion";
+import JugadasClave from "@/components/game/JugadasClave";
+import Comparativa from "@/components/game/Comparativa";
 import Heroe from "@/components/ficha/Heroe";
 
 /**
@@ -194,22 +196,39 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
             lanzador, y la última jugada cuando es un batazo o un ponche.
             Solo con el juego en curso. */}
         {situacion && detail.status === "live" && (
-          <Situacion situacion={situacion} jugada={jugadaDestacada(detail.plays)} />
+          <Situacion
+            situacion={situacion}
+            jugada={jugadaDestacada(detail.plays)}
+            turno={detail.at_bat}
+            duelo={detail.matchup}
+          />
         )}
 
         {/* La franja. Necesita al menos dos puntos para ser una curva; en la
             previa no hay estado que simular y no se pinta nada. */}
-        {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
-          <section className="max-w-2xl rounded-xl border border-line bg-card px-4 pb-3">
-            <WinProbBand
-              points={wp.points}
-              current={wp.current}
-              homeCode={detail.home.team_code}
-              awayCode={detail.away.team_code}
-              headline={wp.headline}
-            />
-          </section>
-        )}
+        {/* La franja con sus jugadas clave y, al lado en pantalla ancha, el
+            equipo contra equipo. */}
+        {/* grid-cols-1: sin una columna explícita, la del teléfono toma el
+            ancho del contenido y las tarjetas se salen por la derecha. */}
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:items-start">
+          {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
+            <section className="rounded-xl border border-line bg-card px-4 pb-3">
+              <WinProbBand
+                points={wp.points}
+                current={wp.current}
+                homeCode={detail.home.team_code}
+                awayCode={detail.away.team_code}
+                headline={wp.headline}
+              />
+              <JugadasClave
+                jugadas={wp.key_plays ?? []}
+                awayCode={detail.away.team_code}
+                homeCode={detail.home.team_code}
+              />
+            </section>
+          )}
+          <Comparativa away={detail.away} home={detail.home} />
+        </div>
 
         <article className="overflow-hidden rounded-lg border border-line bg-card">
           <PestanasJuego activa={tab} onCambio={setTab} />

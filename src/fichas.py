@@ -61,6 +61,10 @@ def anotar_fichas(detalle: dict[str, Any]) -> dict[str, Any]:
         for lista in _LISTAS
         for fila in (detalle.get(lado) or {}).get(lista, [])
     ]
+    # El bateador y el lanzador del turno, también (la tarjeta de situación).
+    for bloque in ("at_bat", "matchup"):
+        turno = detalle.get(bloque) or {}
+        filas += [turno[k] for k in ("batter", "pitcher") if turno.get(k)]
     slugs = slugs_por_mlb_id(f.get("player_id") for f in filas)
     for f in filas:
         f["profile_id"] = slugs.get(f.get("player_id"))

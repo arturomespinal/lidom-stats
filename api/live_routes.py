@@ -237,9 +237,8 @@ def live_win_prob(game_pk: int):
     sondeo para mover la gráfica. Meterlos juntos obligaría a rebajar 19 KB
     cada diez segundos para actualizar una curva.
 
-    El recorrido NO se puede reconstruir después: la probabilidad es función de
-    un estado que ya pasó y que desaparece del feed cuando el juego avanza. Por
-    eso el store lo acumula mientras ocurre — ver WinProbPoint.
+    El store lo acumula mientras ocurre y, si llegó tarde, lo reconstruye del
+    relato — ver WinProbPoint y recorrido_de_jugadas().
     """
     entry = store.get(game_pk)
     if not entry:
@@ -261,6 +260,9 @@ def live_win_prob(game_pk: int):
         ),
         "points": track,
         "points_count": len(track),
+        # Las tres jugadas que más la movieron, con el cambio desde el equipo
+        # que bateaba ("+18").
+        "key_plays": store.key_plays(game_pk),
     }
 
 

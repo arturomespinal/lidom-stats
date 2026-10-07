@@ -149,38 +149,21 @@ def _juego_terminado(entrada: int, es_alta: bool, dif_local: int) -> bool:
             or (es_alta and entrada >= 10 and dif_local != 0))
 
 
-def recorrido_de_jugadas(raw: dict) -> list["WinProbPoint"]:
+def _jugadas_con_probabilidad(raw: dict) -> list[tuple]:
     """
-    El recorrido de la probabilidad reconstruido del relato, desde el primer
-    lanzamiento.
-
-    Un punto al empezar (alta del 1ro, 0-0) y uno tras cada jugada terminada,
-    con la situación en que quedó: outs y corredores (`count.outs`,
-    `matchup.postOnFirst`…) y el marcador (`result.awayScore`). Con 3 outs la
-    situación es el comienzo de la mitad que viene. Mismo umbral que en vivo,
-    así que la curva reconstruida y la vista en directo tienen la misma
-    densidad. La jugada que termina el juego no lleva punto: el cierre con el
-    resultado real lo pone `drop()`.
+    Cada jugada terminada con la probabilidad del local ANTES y DESPUÉS de
+    ella: [(jugada, antes, después, terminó_el_juego)]. Empieza en la alta del
+    1ro 0-0. La situación de después sale de la propia jugada: outs y
+    corredores (`count.outs`, `matchup.postOnFirst`…) y el marcador
+    (`result.awayScore`); con 3 outs, el comienzo de la mitad que viene. La
+    jugada que termina el juego vale 1 ó 0, el resultado.
     """
     from src.winprob import Estado, prob_gana_local_cached
 
     plays = ((raw.get("liveData") or {}).get("plays") or {}).get("allPlays") or []
     terminadas = [p for p in plays if (p.get("about") or {}).get("isComplete")]
-    if not terminadas:
-        return []
-
-    def momento(p: dict) -> float:
-        t = (p.get("about") or {}).get("endTime") or ""
-        try:
-            from datetime import datetime
-            return datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
-        except ValueError:
-            return 0.0
-
-    track: list[WinProbPoint] = []
-    _agrega(track, WinProbPoint(inning=1, is_top=True, away=0, home=0,
-                                wp=round(prob_gana_local_cached(Estado(1, True, 0, (False,) * 3, 0)), 3),
-                                at=momento(terminadas[0])))
+    salida = []
+    antes = prob_gana_local_cached(Estado(1, True, 0, (False,) * 3, 0))
     for p in terminadas:
         about, res, matchup = p.get("about") or {}, p.get("result") or {}, p.get("matchup") or {}
         entrada, es_alta = about.get("inning") or 1, bool(about.get("isTopInning"))
@@ -191,15 +174,83 @@ def recorrido_de_jugadas(raw: dict) -> list["WinProbPoint"]:
             entrada, es_alta = (entrada, False) if es_alta else (entrada + 1, True)
             outs, bases = 0, (False, False, False)
         if _juego_terminado(entrada, es_alta, home - away):
+            salida.append((p, antes, 1.0 if home > away else 0.0, True))
             break
-        wp = prob_gana_local_cached(Estado(entrada=entrada, es_alta=es_alta, outs=outs,
-                                           bases=bases, dif_local=home - away))
+        despues = prob_gana_local_cached(Estado(entrada=entrada, es_alta=es_alta, outs=outs,
+                                                bases=bases, dif_local=home - away))
+        salida.append((p, antes, despues, False))
+        antes = despues
+    return salida
+
+
+def _momento(p: dict) -> float:
+    t = (p.get("about") or {}).get("endTime") or ""
+    try:
+        from datetime import datetime
+        return datetime.fromisoformat(t.replace("Z", "+00:00")).timestamp()
+    except ValueError:
+        return 0.0
+
+
+def recorrido_de_jugadas(raw: dict) -> list["WinProbPoint"]:
+    """
+    El recorrido de la probabilidad reconstruido del relato, desde el primer
+    lanzamiento: un punto al empezar (alta del 1ro, 0-0) y uno tras cada
+    jugada terminada. Mismo umbral que en vivo, así que la curva reconstruida
+    y la vista en directo tienen la misma densidad. La jugada que termina el
+    juego no lleva punto: el cierre con el resultado real lo pone `drop()`.
+    """
+    jugadas = _jugadas_con_probabilidad(raw)
+    if not jugadas:
+        return []
+    track: list[WinProbPoint] = []
+    _agrega(track, WinProbPoint(inning=1, is_top=True, away=0, home=0,
+                                wp=round(jugadas[0][1], 3), at=_momento(jugadas[0][0])))
+    for p, _antes, despues, fin in jugadas:
+        if fin:
+            break
+        about, res = p.get("about") or {}, p.get("result") or {}
         # El punto se ubica en la mitad donde ocurrió la jugada: así el eje de
         # la franja lo pone en su entrada.
         _agrega(track, WinProbPoint(inning=about.get("inning") or 1,
                                     is_top=bool(about.get("isTopInning")),
-                                    away=away, home=home, wp=round(wp, 3), at=momento(p)))
+                                    away=res.get("awayScore") or 0, home=res.get("homeScore") or 0,
+                                    wp=round(despues, 3), at=_momento(p)))
     return track
+
+
+def jugadas_clave(raw: dict, n: int = 3) -> list[dict]:
+    """
+    Las `n` jugadas que más movieron la probabilidad de ganar, de la que más a
+    la que menos. `swing` es en puntos y desde el equipo que bateaba: +18 =
+    le subió 18 puntos a su equipo. Menos de 2 puntos no es una jugada clave.
+    """
+    from src.live.detail import evento_es
+    from src.live.gumbo import _team_code
+
+    equipos = (raw.get("gameData") or {}).get("teams") or {}
+    visita, local = _team_code(equipos.get("away") or {}), _team_code(equipos.get("home") or {})
+    filas = []
+    for p, antes, despues, _fin in _jugadas_con_probabilidad(raw):
+        about, res, matchup = p.get("about") or {}, p.get("result") or {}, p.get("matchup") or {}
+        alta = bool(about.get("isTopInning"))
+        cambio_local = despues - antes
+        swing = round((-cambio_local if alta else cambio_local) * 100)
+        if abs(swing) < 2:
+            continue
+        filas.append({
+            "index": p.get("atBatIndex", 0),
+            "half_label": f"{'Alta' if alta else 'Baja'} del {ordinal_es(about.get('inning'))}",
+            "event_es": evento_es(res.get("event")),
+            "batter": (matchup.get("batter") or {}).get("fullName"),
+            "team_code": visita if alta else local,
+            "swing": swing,
+            "rbi": res.get("rbi") or 0,
+            "away": res.get("awayScore") or 0,
+            "home": res.get("homeScore") or 0,
+        })
+    filas.sort(key=lambda f: -abs(f["swing"]))
+    return filas[:n]
 
 
 class LiveEntry:
@@ -207,7 +258,7 @@ class LiveEntry:
 
     __slots__ = ("game_pk", "game_id", "raw", "timecode", "state", "detail",
                  "updated_at", "poll_count", "full_fetches", "patch_applications",
-                 "win_prob_track")
+                 "win_prob_track", "key_plays")
 
     def __init__(self, game_pk: int, game_id: Optional[str] = None):
         self.game_pk = game_pk
@@ -226,6 +277,9 @@ class LiveEntry:
         self.patch_applications = 0
         # Recorrido de la probabilidad. Ver WinProbPoint.
         self.win_prob_track: list[WinProbPoint] = []
+        # Las jugadas clave de un juego terminado, congeladas al soltar el
+        # crudo (drop). Mientras corre se calculan del crudo.
+        self.key_plays: Optional[list[dict]] = None
 
     @property
     def age_seconds(self) -> float:
@@ -292,6 +346,22 @@ class LiveStore:
             at=time.time(),
         ))
 
+    def key_plays(self, game_pk: int, n: int = 3) -> list[dict]:
+        """Las jugadas que más movieron la probabilidad. Del crudo mientras el
+        juego corre (con la probabilidad en caché, es rápido); congeladas
+        cuando terminó."""
+        with self._lock:
+            e = self._entries.get(game_pk)
+            if not e:
+                return []
+            if e.key_plays is not None:
+                return e.key_plays[:n]
+            raw = e.raw
+        try:
+            return jugadas_clave(raw, n) if raw else []
+        except Exception:
+            return []
+
     def win_prob_track(self, game_pk: int) -> list[dict]:
         """El recorrido completo, listo para servir."""
         with self._lock:
@@ -317,6 +387,11 @@ class LiveStore:
             e = self._entries.get(game_pk)
             if not e:
                 return
+            if e.raw is not None and e.key_plays is None:
+                try:
+                    e.key_plays = jugadas_clave(e.raw)
+                except Exception:
+                    e.key_plays = []
             if e.raw is not None and e.detail is None:
                 try:
                     e.detail = parse_game_detail(e.raw, e.game_id)

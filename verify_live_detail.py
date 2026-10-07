@@ -146,6 +146,49 @@ check("un documento vacío da un detalle vacío, no una excepción",
       parse_game_detail({}).plays_total, 0)
 
 
+print("\n━━━ El turno, sus lanzamientos y el batazo ━━━")
+import copy  # noqa: E402
+ab = mitad.at_bat
+check("a mitad de juego el turno es el que está en curso", (ab.is_current, ab.batter.name, ab.pitcher.name),
+      (True, "Nelson Velázquez", "Matt Dermody"))
+check("cada lanzamiento con tipo en español, velocidad, canto y la cuenta que dejó",
+      [(x.number, x.type_es, x.speed_mph, x.call_es, x.kind, x.balls, x.strikes) for x in ab.pitches],
+      [(1, "Recta", 89.3, "Foul", "strike", 0, 1), (2, "Slider", 80.0, "Strike tirándole", "strike", 0, 2)])
+check("la zona de strike es la del bateador, en pies", (ab.zone_top, ab.zone_bottom), (3.4, 1.56))
+check("cada lanzamiento trae dónde cruzó el plato", all(x.px is not None and x.pz is not None for x in ab.pitches), True)
+check("el lanzador: conteo y línea de hoy en español", (ab.pitcher.pitches, ab.pitcher.today),
+      (49, "3.0 IP · 4 H · 4 CL · 0 BB · 2 K"))
+check("el bateador: cómo va hoy, el promedio de temporada y cómo batea",
+      (ab.batter.today, ab.batter.avg, ab.batter.bats_label), ("0-1", ".000", "Derecho"))
+check("la mano del lanzador, traducida en el backend", ab.pitcher.throws_label, "Zurda")
+# Un turno nuevo, todavía sin lanzamientos: la zona muestra el anterior.
+sin = copy.deepcopy(medio)
+sin["liveData"]["plays"]["allPlays"][-1]["playEvents"] = []
+ant = parse_game_detail(sin).at_bat
+check("turno sin lanzamientos: la zona muestra el último que sí tuvo, con su resultado",
+      (ant.is_current, ant.result_es is not None, len(ant.pitches) > 0), (False, True, True))
+mu = parse_game_detail(sin).matchup
+check("…pero el duelo de ahora conserva al bateador del plato y sus números",
+      (mu.batter.name, mu.batter.today, mu.pitcher.pitches), ("Nelson Velázquez", "0-1", 49))
+check("sin turno abierto (juego terminado) no hay duelo", det.matchup, None)
+check("al final, el último turno del juego", (det.at_bat.is_current, det.at_bat.result_es), (False, "Elevado de out"))
+check("sin relato no hay turno", parse_game_detail({}).at_bat, None)
+
+con_batazo = [x for x in det.plays if x.hit]
+check("el batazo: velocidad de salida, ángulo, distancia y trayectoria",
+      det.plays[0].hit.model_dump(), {"speed_mph": 89.9, "angle": 35.0, "distance_ft": 346, "trajectory_es": "Elevado"})
+check("un ponche no tiene batazo", all(x.hit is None for x in det.plays if x.event == "Strikeout"), True)
+check("los batazos son de jugadas en juego", len(con_batazo) > 40, True)
+
+for lado in ("home", "away"):
+    t = getattr(det, lado)
+    check(f"los totales de {t.team_code} cuadran con su boxscore (H, BB, K, HR)",
+          (t.totals.hits, t.totals.walks, t.totals.strikeouts, t.totals.home_runs),
+          (sum(b.hits for b in t.batters), sum(b.walks for b in t.batters),
+           sum(b.strikeouts for b in t.batters), sum(b.home_runs for b in t.batters)))
+    check(f"y los lanzamientos de {t.team_code} son los de sus lanzadores", t.totals.pitches,
+          sum(x.pitches for x in t.pitchers))
+
 print("\n━━━ La caché sirve el detalle sin tocar la MLB ━━━")
 st = LiveStore()
 st.update(826343, final, parse_live_feed(final))

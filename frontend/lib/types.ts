@@ -174,6 +174,76 @@ export interface PlayLine {
   away_score: number;
   home_score: number;
   is_complete: boolean;
+  /** El batazo, si hubo y el parque lo midió. */
+  hit?: HitData | null;
+}
+
+/** Velocidad de salida (mph), ángulo, distancia (pies). */
+export interface HitData {
+  speed_mph: number | null;
+  angle: number | null;
+  distance_ft: number | null;
+  trajectory_es: string | null;
+}
+
+/** Un lanzamiento del turno. px/pz en pies: px desde el centro del plato
+ *  (positivo = derecha, vista del receptor), pz desde el suelo. */
+export interface PitchLine {
+  number: number;
+  type_es: string | null;
+  speed_mph: number | null;
+  call_es: string | null;
+  kind: "bola" | "strike" | "en_juego";
+  px: number | null;
+  pz: number | null;
+  balls: number;
+  strikes: number;
+}
+
+export interface MatchupBatter {
+  name: string | null;
+  player_id: number | null;
+  profile_id: string | null;
+  bats_label: string | null;
+  /** "1-3 · 2B, CI", compuesto en el backend. */
+  today: string | null;
+  avg: string | null;
+  ops: string | null;
+}
+
+export interface MatchupPitcher {
+  name: string | null;
+  player_id: number | null;
+  profile_id: string | null;
+  throws_label: string | null;
+  pitches: number;
+  strikes: number;
+  /** "4.0 IP · 4 H · 1 CL · 1 BB · 5 K". */
+  today: string | null;
+  era: string | null;
+}
+
+/** El turno en curso; o el último, si el que viene no tiene lanzamientos. */
+export interface AtBat {
+  index: number;
+  is_current: boolean;
+  half_label: string | null;
+  batter: MatchupBatter;
+  pitcher: MatchupPitcher;
+  pitches: PitchLine[];
+  zone_top: number;
+  zone_bottom: number;
+  result_es: string | null;
+}
+
+/** `pitches`: los que tiraron los lanzadores de ESTE equipo. */
+export interface TeamTotals {
+  hits: number;
+  walks: number;
+  strikeouts: number;
+  home_runs: number;
+  left_on_base: number;
+  pitches: number;
 }
 
 export interface DetailInning {
@@ -247,6 +317,7 @@ export interface TeamDetail {
   pitchers: PitcherLine[];
   bench: BullpenArm[];
   bullpen: BullpenArm[];
+  totals?: TeamTotals | null;
 }
 
 export interface LiveGameDetail {
@@ -261,6 +332,11 @@ export interface LiveGameDetail {
   plays_returned: number;
   home: TeamDetail;
   away: TeamDetail;
+  /** El turno que se dibuja en la zona de strike: el de ahora, o el anterior
+   *  si el de ahora no tiene lanzamientos todavía. */
+  at_bat?: AtBat | null;
+  /** El duelo de ahora, con sus números. null sin turno abierto. */
+  matchup?: { batter: MatchupBatter; pitcher: MatchupPitcher } | null;
 }
 
 /** Lo que está pasando ahora mismo. Solo con el juego en curso. */
@@ -318,6 +394,21 @@ export interface WinProbResponse {
   headline: string | null;
   points: WinProbPoint[];
   points_count: number;
+  /** Las que más movieron la probabilidad, de la que más a la que menos. */
+  key_plays?: KeyPlay[];
+}
+
+export interface KeyPlay {
+  index: number;
+  half_label: string;
+  event_es: string | null;
+  batter: string | null;
+  team_code: string | null;
+  /** Puntos, desde el equipo que bateaba: +18 = le subió 18. */
+  swing: number;
+  rbi: number;
+  away: number;
+  home: number;
 }
 
 /* ── Fichas: jugador y equipo ─────────────────────────────────────────────

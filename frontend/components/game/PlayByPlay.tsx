@@ -57,6 +57,18 @@ function Play({ play, away, home }: { play: PlayLine; away: string; home: string
             {play.pitcher}
           </p>
         )}
+        {/* El batazo, si el parque lo midió: velocidad de salida y distancia. */}
+        {!enCurso && play.hit && (play.hit.speed_mph != null || play.hit.distance_ft) && (
+          <p className="text-[11px] tabular-nums text-faint">
+            {[
+              play.hit.speed_mph != null ? `${Math.round(play.hit.speed_mph)} mph` : null,
+              play.hit.distance_ft ? `${play.hit.distance_ft} pies` : null,
+              play.hit.angle != null ? `${Math.round(play.hit.angle)}°` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+          </p>
+        )}
       </div>
 
       <div className="shrink-0 text-right">

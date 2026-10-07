@@ -2,7 +2,9 @@
 
 import { useEffect, useRef } from "react";
 import BaseDiamond, { posicionesDiamante } from "@/components/BaseDiamond";
-import { LiveSituation, PlayLine } from "@/lib/types";
+import NombreJugador from "@/components/game/NombreJugador";
+import ZonaStrike from "@/components/game/ZonaStrike";
+import { AtBat, LiveGameDetail, LiveSituation, PlayLine } from "@/lib/types";
 
 /**
  * Lo que está pasando ahora mismo, en la pantalla de un juego: el diamante
@@ -46,9 +48,15 @@ export function jugadaDestacada(plays: PlayLine[]): PlayLine | null {
 export default function Situacion({
   situacion,
   jugada,
+  turno,
+  duelo,
 }: {
   situacion: LiveSituation;
   jugada: PlayLine | null;
+  /** El turno que se dibuja en la zona de strike. */
+  turno?: AtBat | null;
+  /** El duelo de ahora, con sus números. */
+  duelo?: LiveGameDetail["matchup"];
 }) {
   const corredor = useRef<HTMLSpanElement | null>(null);
   const info = jugada?.event ? JUGADAS[jugada.event] : null;
@@ -84,11 +92,27 @@ export default function Situacion({
   // Entre medias entradas: la cuenta es del turno que ya terminó y el
   // bateador es el que abre la otra mitad. Se dice, en vez de mezclarlas.
   const fin = situacion.half_over_label;
+  // Los números del duelo, solo si son de quien está en el plato ahora: entre
+  // medias entradas el bateador de la situación es el que abrirá, y el duelo
+  // todavía no existe.
+  const bateador = duelo && duelo.batter.name === situacion.batter ? duelo.batter : null;
+  const lanzador = duelo && duelo.pitcher.name === situacion.pitcher ? duelo.pitcher : null;
+  const hit = jugada?.hit;
+  const datosBatazo = hit
+    ? [
+        hit.speed_mph != null ? `${Math.round(hit.speed_mph)} mph` : null,
+        hit.distance_ft ? `${hit.distance_ft} pies` : null,
+        hit.angle != null ? `${Math.round(hit.angle)}°` : null,
+      ].filter(Boolean)
+    : [];
   return (
     <section
       aria-label="Situación del juego"
-      className="relative max-w-2xl overflow-hidden rounded-xl border border-line bg-card px-4 py-3"
+      className="grid grid-cols-1 gap-4 overflow-hidden rounded-xl border border-line bg-card px-4 py-3 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center"
     >
+      {/* La franja de la jugada cubre esta parte y no la zona de strike: el
+          lanzamiento que acaba de pasar se sigue viendo. */}
+      <div className="relative min-w-0">
       {/* En el teléfono los nombres bajan a su propia fila: al lado del
           diamante quedaban cortados ("Al bate N…"). */}
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
@@ -128,16 +152,43 @@ export default function Situacion({
 
         <div className="w-full min-w-0 space-y-1 text-sm sm:w-auto sm:flex-1">
           {situacion.batter && (
-            <p className="truncate">
-              <span className="text-dim">{fin ? "Abre " : "Al bate "}</span>
-              <span className="font-semibold text-fg">{situacion.batter}</span>
-            </p>
+            <div>
+              <p className="truncate">
+                <span className="text-dim">{fin ? "Abre " : "Al bate "}</span>
+                <span className="font-semibold text-fg">
+                  <NombreJugador nombre={situacion.batter} profileId={bateador?.profile_id ?? null} />
+                </span>
+              </p>
+              {bateador && (
+                <p className="truncate text-xs tabular-nums text-dim">
+                  {[
+                    bateador.today ? `Hoy ${bateador.today}` : null,
+                    bateador.avg ? `${bateador.avg} AVG` : null,
+                    bateador.ops ? `${bateador.ops} OPS` : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                </p>
+              )}
+            </div>
           )}
           {situacion.pitcher && (
-            <p className="truncate">
-              <span className="text-dim">Lanza </span>
-              <span className="font-semibold text-fg">{situacion.pitcher}</span>
-            </p>
+            <div>
+              <p className="truncate">
+                <span className="text-dim">Lanza </span>
+                <span className="font-semibold text-fg">
+                  <NombreJugador nombre={situacion.pitcher} profileId={lanzador?.profile_id ?? null} />
+                </span>
+              </p>
+              {lanzador && (lanzador.pitches > 0 || lanzador.today || lanzador.era) && (
+                <p className="text-xs tabular-nums text-dim">
+                  {lanzador.pitches > 0 && (
+                    <span className="font-semibold text-fg2">{lanzador.pitches} lanzamientos · </span>
+                  )}
+                  {[lanzador.today, lanzador.era ? `EFE ${lanzador.era}` : null].filter(Boolean).join(" · ")}
+                </p>
+              )}
+            </div>
           )}
           {situacion.on_deck && (
             <p className="truncate text-xs">
@@ -155,15 +206,30 @@ export default function Situacion({
           className="jugada pointer-events-none absolute inset-y-0 right-0 flex w-[66%] flex-col justify-center bg-ink pl-10 pr-4 text-ink-fg sm:w-[55%] sm:pl-12"
           style={{ clipPath: "polygon(36px 0, 100% 0, 100% 100%, 0 100%)" }}
         >
-          <p className="font-cond text-[36px] uppercase leading-none tracking-wide sm:text-[44px]">
+          <p className="font-cond text-[36px] uppercase leading-none tracking-wide sm:text-[40px]">
             {info.titulo}
           </p>
           {jugada.batter && <p className="mt-1 truncate text-sm text-ink-dim">{jugada.batter}</p>}
-          {jugada.rbi > 0 && (
-            <p className="text-sm font-semibold text-ink-fg">
-              {jugada.rbi === 1 ? "1 carrera" : `${jugada.rbi} carreras`}
+          {/* Las carreras y el batazo en una línea: con tres la franja no
+              cabía en la parte de arriba de la tarjeta. */}
+          {(jugada.rbi > 0 || datosBatazo.length > 0) && (
+            <p className="text-xs tabular-nums text-ink-dim">
+              {jugada.rbi > 0 && (
+                <span className="font-semibold text-ink-fg">
+                  {jugada.rbi === 1 ? "1 carrera" : `${jugada.rbi} carreras`}
+                  {datosBatazo.length > 0 ? " · " : ""}
+                </span>
+              )}
+              {datosBatazo.join(" · ")}
             </p>
           )}
+        </div>
+      )}
+      </div>
+
+      {turno && (
+        <div className="border-t border-line pt-3 lg:border-l lg:border-t-0 lg:pl-4 lg:pt-0">
+          <ZonaStrike turno={turno} />
         </div>
       )}
     </section>

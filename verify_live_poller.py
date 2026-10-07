@@ -301,6 +301,12 @@ check("/detail trae la situación del juego en curso: outs, cuenta, bases, batea
              "runners", "strikes"], True))
 check("en pleno turno no hay fin de media entrada", sit.get("half_over_label"), None)
 check("…con los mismos datos que la tarjeta", (sit.get("outs"), sit.get("batter")), (d["outs"], d["batter"]))
+r = c.get(f"/live/games/{GAME_PK}/winprob")
+check("/winprob trae las jugadas clave", ("key_plays" in r.json(), isinstance(r.json().get("key_plays"), list)), (True, True))
+r = c.get(f"/live/games/{GAME_PK}/detail")
+_ab = r.json()["data"].get("at_bat") or {}
+check("/detail trae el turno con sus lanzamientos y el enlace a la ficha",
+      (bool(_ab.get("pitches")), "profile_id" in (_ab.get("batter") or {})), (True, True))
 r = c.get("/day")
 check("/day: un juego en vivo de la caché abre la puerta a los marcadores aunque la base no lo tenga",
       (r.status_code, r.json().get("any_live")), (200, True))

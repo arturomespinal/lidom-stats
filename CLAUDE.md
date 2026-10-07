@@ -776,6 +776,44 @@ la tarjeta; el detalle no los tenía), en el mismo sondeo.
 - Llega con el sondeo de 12 s, así que la animación va hasta unos 20 s detrás
   del juego (10 s de la MLB más el sondeo). Es el ritmo de toda la pantalla.
 
+**El turno, la zona de strike y los números (6-oct-2026, pedido de Arturo)**.
+Todo sale del GUMBO que la caché ya tiene; el feed de LIDOM lo trae igual que
+el de Grandes Ligas (comprobado en el juego inaugural guardado).
+
+| Qué | Backend | Web |
+|-----|---------|-----|
+| La zona de strike con los lanzamientos del turno (tipo en español, velocidad, canto, cuenta), vista del receptor | `at_bat` en `/detail` (`_at_bat()` en `detail.py`) | `game/ZonaStrike.tsx`, dentro de la tarjeta de situación |
+| El bateador (hoy, AVG y OPS de temporada) y el lanzador (lanzamientos, línea de hoy, EFE) | `matchup` en `/detail` | `game/Situacion.tsx` |
+| El batazo: velocidad de salida, distancia, ángulo | `hit` en cada jugada | La franja de la jugada y cada fila del relato |
+| Las tres jugadas que más movieron la probabilidad | `key_plays` en `/winprob` (`jugadas_clave()` en `store.py`) | `game/JugadasClave.tsx`, bajo la franja |
+| Equipo contra equipo: H, HR, BB, K, LOB, lanzamientos | `totals` en cada equipo (de `teamStats`) | `game/Comparativa.tsx` |
+
+- **`at_bat` y `matchup` son dos cosas.** La zona dibuja el turno en curso o,
+  si el bateador nuevo todavía no ha visto lanzamientos, el anterior
+  ("Turno anterior · Marco Luciano", con su resultado). `matchup` es siempre
+  el duelo de ahora con sus números; la tarjeta solo los muestra si es el
+  mismo bateador y lanzador de la situación (entre medias entradas no lo es).
+- **La zona en pies, como la manda la MLB**: el plato con el radio de la bola
+  (±0.83) y la altura del bateador (`strikeZoneTop/Bottom`). El tipo de
+  lanzamiento va por relleno además del color —strike navy, bola hueca, en
+  juego ocre—, con número, leyenda y la lista en texto al lado (debajo en el
+  teléfono). El último lleva un anillo.
+- **Las frases las compone el backend** con el vocabulario del boxscore: "1-3
+  · 2B, CI", "4.0 IP · 4 H · 1 CL · 1 BB · 5 K". Los tipos de lanzamiento,
+  los cantos y las trayectorias tienen sus tablas (`LANZAMIENTOS_ES`,
+  `CANTOS_ES`, `TRAYECTORIAS_ES`); uno desconocido cae a la descripción de la
+  MLB. La lateralidad, con `src/lateralidad.py`, como en las fichas.
+- **Las jugadas clave** salen de la misma probabilidad que la curva:
+  `_jugadas_con_probabilidad()` da cada jugada con la probabilidad antes y
+  después (la reconstrucción de la curva usa lo mismo). El cambio va desde el
+  equipo que bateaba ("+25%", un doble play da negativo), y menos de 2 puntos
+  no cuenta. Se congelan al terminar el juego, cuando se suelta el crudo.
+- **Comparativa**: el lado dice el equipo (con su código arriba); el color, quién
+  va adelante en esa fila. Un cero no lleva barra.
+- Las cuadrículas de la página llevan `grid-cols-1`: sin columna explícita, la
+  del teléfono tomaba el ancho del contenido y las tarjetas se salían.
+- Los números de temporada incluyen el juego de hoy (así los manda `seasonStats`).
+
 La página no hace fetch en el servidor: el estado cambia cada diez segundos y cualquier cosa renderizada ahí nacería vieja. El componente cliente carga `/live/games` al montarse y abre un `EventSource` por juego que no esté terminado. Al recibir el evento `final` cierra la conexión — sin eso, `EventSource` reconecta solo y recibe el mismo par de eventos en bucle.
 
 Para verla en movimiento fuera de temporada, dos consolas:

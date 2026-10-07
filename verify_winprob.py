@@ -180,6 +180,23 @@ check("no se reconstruye dos veces", len(_tarde.win_prob_track(826343)), len(_re
 check("el último punto reconstruido coincide con la probabilidad en vivo de ese estado",
       _rec[-1]["wp"], _est.win_prob_home)
 check("sin relato no inventa nada", recorrido_de_jugadas({"liveData": {"plays": {"allPlays": []}}}), [])
+
+print("\n━━━ las jugadas clave ━━━")
+from src.live.store import jugadas_clave  # noqa: E402
+_final = json.load(open(_archivos[-1]))
+_clave = jugadas_clave(_final)
+check("la que más movió el juego: el jonrón de 3 de Castro en la baja del 2do",
+      (_clave[0]["batter"], _clave[0]["event_es"], _clave[0]["half_label"], _clave[0]["team_code"], _clave[0]["rbi"]),
+      ("Rodolfo Castro", "Jonrón", "Baja del 2do", "EST", 3))
+check("el cambio es desde el equipo que bateaba: un doble play le resta al suyo",
+      next(k["swing"] for k in jugadas_clave(_final, 10) if k["event_es"] == "Doble play por tierra") < 0, True)
+check("de la que más a la que menos", [abs(k["swing"]) for k in _clave] == sorted((abs(k["swing"]) for k in _clave), reverse=True), True)
+check("tres, salvo que se pidan más", (len(_clave), len(jugadas_clave(_final, 5))), (3, 5))
+_cong = LiveStore()
+_ef = parse_live_feed(_final, game_id="826343")
+_cong.update(826343, _final, _ef)
+_cong.drop(826343)
+check("al terminar el juego quedan congeladas (el crudo ya no está)", _cong.key_plays(826343), _clave)
 check("el tope está por encima de cualquier juego real", MAX_PUNTOS_WP > len(track) * 10, True)
 
 # La etiqueta de cada punto la compone el backend con ordinal_es(): la franja

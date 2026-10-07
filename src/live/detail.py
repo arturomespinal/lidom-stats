@@ -124,6 +124,114 @@ def evento_es(event: Optional[str]) -> Optional[str]:
 # ─────────────────────────────────────────────────────────────────────────────
 
 
+
+# ── El turno, sus lanzamientos y el batazo (6-oct-2026) ─────────────────────
+
+# Tipos de lanzamiento, como se dicen en RD. Uno desconocido cae a la
+# descripción de la MLB, nunca a una cadena vacía.
+LANZAMIENTOS_ES = {
+    "FF": "Recta", "FA": "Recta", "FT": "Recta de dos costuras", "SI": "Sinker",
+    "FC": "Cutter", "SL": "Slider", "ST": "Sweeper", "SV": "Slurve",
+    "CU": "Curva", "KC": "Curva de nudillos", "CS": "Curva lenta",
+    "CH": "Cambio", "FS": "Splitter", "FO": "Forkball", "SC": "Screwball",
+    "KN": "Nudillos", "EP": "Eephus", "PO": "Pickoff",
+}
+
+# La decisión de cada lanzamiento (`details.call.code`).
+CANTOS_ES = {
+    "B": "Bola", "*B": "Bola en la tierra", "I": "Bola intencional", "P": "Pitchout",
+    "V": "Bola automática", "C": "Strike cantado", "S": "Strike tirándole",
+    "W": "Strike tirándole", "Q": "Strike tirándole", "M": "Toque fallado",
+    "F": "Foul", "T": "Foul tip", "L": "Toque de foul", "O": "Foul tip de toque",
+    "R": "Foul", "A": "Strike automático", "X": "En juego", "D": "En juego",
+    "E": "En juego", "H": "Golpeado",
+}
+
+TRAYECTORIAS_ES = {
+    "ground_ball": "Roletazo", "line_drive": "Línea", "fly_ball": "Elevado",
+    "popup": "Elevado al cuadro", "bunt_grounder": "Toque", "bunt_popup": "Toque elevado",
+    "bunt_line_drive": "Toque en línea",
+}
+
+
+class HitData(BaseModel):
+    """El batazo: velocidad de salida (mph), ángulo, distancia (pies)."""
+    speed_mph: Optional[float] = None
+    angle: Optional[float] = None
+    distance_ft: Optional[int] = None
+    trajectory_es: Optional[str] = None
+
+
+class PitchLine(BaseModel):
+    """Un lanzamiento del turno. `px`/`pz` en pies: px desde el centro del
+    plato (positivo = a la derecha, vista del receptor), pz desde el suelo."""
+    number: int
+    type_es: Optional[str] = None
+    speed_mph: Optional[float] = None
+    call_es: Optional[str] = None
+    kind: str = "bola"                       # bola | strike | en_juego
+    px: Optional[float] = None
+    pz: Optional[float] = None
+    balls: int = 0
+    strikes: int = 0
+
+
+class MatchupBatter(BaseModel):
+    name: Optional[str] = None
+    player_id: Optional[int] = None          # número de la MLB (ver BatterLine)
+    profile_id: Optional[str] = None
+    bats_label: Optional[str] = None         # "Zurdo", de src/lateralidad.py
+    today: Optional[str] = None              # "1-2 · 2B, CI"
+    avg: Optional[str] = None                # temporada, incluido hoy
+    ops: Optional[str] = None
+
+
+class MatchupPitcher(BaseModel):
+    name: Optional[str] = None
+    player_id: Optional[int] = None
+    profile_id: Optional[str] = None
+    throws_label: Optional[str] = None
+    pitches: int = 0
+    strikes: int = 0
+    today: Optional[str] = None              # "4.0 IP · 4 H · 1 CL · 1 BB · 5 K"
+    era: Optional[str] = None                # temporada, incluido hoy
+
+
+class AtBat(BaseModel):
+    """El turno en curso, o el último si el que viene todavía no tiene
+    lanzamientos (`is_current` en false): la zona de strike siempre muestra
+    dónde cayeron los últimos."""
+    index: int
+    is_current: bool = True
+    half_label: Optional[str] = None
+    batter: MatchupBatter
+    pitcher: MatchupPitcher
+    pitches: list[PitchLine] = Field(default_factory=list)
+    zone_top: float = 3.5                    # pies; la del bateador si la trae
+    zone_bottom: float = 1.6
+    result_es: Optional[str] = None          # si ya terminó
+
+
+class Matchup(BaseModel):
+    """El duelo de AHORA: quién batea y quién lanza, con sus números. Aparte
+    de `at_bat` porque cuando un bateador nuevo todavía no ha visto
+    lanzamientos la zona muestra el turno anterior, y la tarjeta no debe
+    perder los números del que está en el plato."""
+    batter: MatchupBatter
+    pitcher: MatchupPitcher
+
+
+class TeamTotals(BaseModel):
+    """Para la comparación equipo contra equipo. `pitches`: los que tiraron
+    los lanzadores de ESTE equipo."""
+    hits: int = 0
+    walks: int = 0
+    strikeouts: int = 0
+    home_runs: int = 0
+    left_on_base: int = 0
+    pitches: int = 0
+
+
 class PlayLine(BaseModel):
     """Una jugada del relato."""
 
@@ -150,6 +258,7 @@ class PlayLine(BaseModel):
     away_score: int = 0
     home_score: int = 0
     is_complete: bool = True
+    hit: Optional[HitData] = None            # el batazo, si hubo
 
 
 class InningLine(BaseModel):
@@ -232,6 +341,7 @@ class TeamDetail(BaseModel):
     pitchers: list[PitcherLine] = Field(default_factory=list)
     bench: list[BullpenArm] = Field(default_factory=list)
     bullpen: list[BullpenArm] = Field(default_factory=list)
+    totals: Optional[TeamTotals] = None
 
 
 class LiveGameDetail(BaseModel):
@@ -251,6 +361,8 @@ class LiveGameDetail(BaseModel):
 
     home: TeamDetail
     away: TeamDetail
+    at_bat: Optional[AtBat] = None
+    matchup: Optional[Matchup] = None
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -317,6 +429,136 @@ def _play(raw: dict) -> PlayLine:
         away_score=_i(result, "awayScore"),
         home_score=_i(result, "homeScore"),
         is_complete=bool(about.get("isComplete", True)),
+        hit=_hit(raw),
+    )
+
+
+def _hit(raw: dict) -> Optional[HitData]:
+    """El último evento con datos del batazo. No todos los parques los
+    miden: sin ellos, None."""
+    for ev in reversed(raw.get("playEvents") or []):
+        h = ev.get("hitData")
+        if h:
+            dist = h.get("totalDistance")
+            return HitData(
+                speed_mph=h.get("launchSpeed"),
+                angle=h.get("launchAngle"),
+                distance_ft=round(dist) if isinstance(dist, (int, float)) else None,
+                trajectory_es=TRAYECTORIAS_ES.get(h.get("trajectory") or ""),
+            )
+    return None
+
+
+def _pitch(ev: dict) -> PitchLine:
+    det = ev.get("details") or {}
+    pd = ev.get("pitchData") or {}
+    coord = pd.get("coordinates") or {}
+    tipo = det.get("type") or {}
+    call = det.get("call") or {}
+    count = ev.get("count") or {}
+    kind = "en_juego" if det.get("isInPlay") else "strike" if det.get("isStrike") else "bola"
+    return PitchLine(
+        number=_i(ev, "pitchNumber"),
+        type_es=LANZAMIENTOS_ES.get(tipo.get("code") or "", tipo.get("description")),
+        speed_mph=pd.get("startSpeed"),
+        call_es=CANTOS_ES.get(call.get("code") or "", call.get("description") or det.get("description")),
+        kind=kind,
+        px=coord.get("pX"),
+        pz=coord.get("pZ"),
+        balls=_i(count, "balls"),
+        strikes=_i(count, "strikes"),
+    )
+
+
+def _jugador(bx_teams: dict, pid: Optional[int]) -> dict:
+    for lado in ("home", "away"):
+        pl = ((bx_teams.get(lado) or {}).get("players") or {}).get(f"ID{pid}")
+        if pl:
+            return pl
+    return {}
+
+
+def _hoy_bateo(b: dict) -> Optional[str]:
+    """'1-3 · 2B, CI' — compuesto en español, no el resumen en inglés."""
+    if not b or (not b.get("atBats") and not b.get("plateAppearances") and not b.get("baseOnBalls")):
+        return None
+    partes = []
+    for clave, sigla in (("homeRuns", "HR"), ("triples", "3B"), ("doubles", "2B"), ("rbi", "CI"),
+                         ("baseOnBalls", "BB"), ("strikeOuts", "K"), ("stolenBases", "BR")):
+        n = b.get(clave) or 0
+        if n:
+            partes.append(sigla if n == 1 else f"{n} {sigla}")
+    linea = f"{b.get('hits') or 0}-{b.get('atBats') or 0}"
+    return linea + (f" · {', '.join(partes)}" if partes else "")
+
+
+def _hoy_pitcheo(p: dict) -> Optional[str]:
+    if not p or not (p.get("inningsPitched") or p.get("numberOfPitches")):
+        return None
+    return (f"{p.get('inningsPitched') or '0.0'} IP · {p.get('hits') or 0} H · "
+            f"{p.get('earnedRuns') or 0} CL · {p.get('baseOnBalls') or 0} BB · {p.get('strikeOuts') or 0} K")
+
+
+def _duelo(turno: dict, bx_teams: dict) -> Matchup:
+    from src.lateralidad import batea_es, lanza_es
+    matchup = turno.get("matchup") or {}
+    bid = (matchup.get("batter") or {}).get("id")
+    pid = (matchup.get("pitcher") or {}).get("id")
+    bj, pj = _jugador(bx_teams, bid), _jugador(bx_teams, pid)
+    bhoy = (bj.get("stats") or {}).get("batting") or {}
+    phoy = (pj.get("stats") or {}).get("pitching") or {}
+    btemp = (bj.get("seasonStats") or {}).get("batting") or {}
+    ptemp = (pj.get("seasonStats") or {}).get("pitching") or {}
+    return Matchup(
+        batter=MatchupBatter(
+            name=(matchup.get("batter") or {}).get("fullName"), player_id=bid,
+            bats_label=batea_es((matchup.get("batSide") or {}).get("code")),
+            today=_hoy_bateo(bhoy), avg=btemp.get("avg"), ops=btemp.get("ops"),
+        ),
+        pitcher=MatchupPitcher(
+            name=(matchup.get("pitcher") or {}).get("fullName"), player_id=pid,
+            throws_label=lanza_es((matchup.get("pitchHand") or {}).get("code")),
+            pitches=_i(phoy, "numberOfPitches") or _i(phoy, "pitchesThrown"),
+            strikes=_i(phoy, "strikes"), today=_hoy_pitcheo(phoy), era=ptemp.get("era"),
+        ),
+    )
+
+
+def _matchup(all_plays: list, bx_teams: dict) -> Optional[Matchup]:
+    """El duelo del turno en curso; None si no hay turno abierto."""
+    if not all_plays or (all_plays[-1].get("about") or {}).get("isComplete"):
+        return None
+    return _duelo(all_plays[-1], bx_teams)
+
+
+def _at_bat(all_plays: list, bx_teams: dict) -> Optional[AtBat]:
+    if not all_plays:
+        return None
+    turno = all_plays[-1]
+    tiene = lambda pl: any(e.get("isPitch") for e in pl.get("playEvents") or [])  # noqa: E731
+    actual = not (turno.get("about") or {}).get("isComplete")
+    if not tiene(turno):
+        previos = [pl for pl in all_plays[:-1] if tiene(pl)]
+        if not previos:
+            return None
+        turno, actual = previos[-1], False
+    about = turno.get("about") or {}
+    eventos = [e for e in turno.get("playEvents") or [] if e.get("isPitch")]
+    zona = (eventos[-1].get("pitchData") or {}) if eventos else {}
+    duelo = _duelo(turno, bx_teams)
+    ordinal = ordinal_es(about.get("inning"))
+    top = about.get("isTopInning")
+    evento = (turno.get("result") or {}).get("event")
+    return AtBat(
+        index=turno.get("atBatIndex", 0),
+        is_current=actual,
+        half_label=f"{'Alta' if top else 'Baja'} del {ordinal}" if ordinal and top is not None else None,
+        batter=duelo.batter,
+        pitcher=duelo.pitcher,
+        pitches=[_pitch(e) for e in eventos],
+        zone_top=zona.get("strikeZoneTop") or 3.5,
+        zone_bottom=zona.get("strikeZoneBottom") or 1.6,
+        result_es=None if actual else evento_es(evento),
     )
 
 
@@ -436,7 +678,15 @@ def _side(side: dict, ls_side: dict, gd_team: Optional[dict] = None) -> TeamDeta
     # El equipo del boxscore no trae abreviatura; la de gameData sí. Hace
     # falta para los equipos que no son de LIDOM (el modo de prueba con la MLB).
     team = {**(gd_team or {}), **(side.get("team") or {})}
+    ts = side.get("teamStats") or {}
+    bat, pit = ts.get("batting") or {}, ts.get("pitching") or {}
+    totals = TeamTotals(
+        hits=_i(bat, "hits"), walks=_i(bat, "baseOnBalls"), strikeouts=_i(bat, "strikeOuts"),
+        home_runs=_i(bat, "homeRuns"), left_on_base=_i(bat, "leftOnBase"),
+        pitches=_i(pit, "numberOfPitches") or _i(pit, "pitchesThrown"),
+    ) if ts else None
     return TeamDetail(
+        totals=totals,
         team_code=_team_code(team),
         team_name=_team_name(team),
         runs=_i(ls_side, "runs"),
@@ -499,6 +749,8 @@ def parse_game_detail(
                    (game_data.get("teams") or {}).get("home")),
         away=_side(bx_teams.get("away") or {}, ls_teams.get("away") or {},
                    (game_data.get("teams") or {}).get("away")),
+        at_bat=_at_bat(all_plays, bx_teams),
+        matchup=_matchup(all_plays, bx_teams),
     )
 
 
@@ -511,6 +763,11 @@ __all__ = [
     "PitcherLine",
     "BullpenArm",
     "TeamDetail",
+    "TeamTotals",
+    "AtBat",
+    "Matchup",
+    "PitchLine",
+    "HitData",
     "LiveGameDetail",
     "parse_game_detail",
 ]

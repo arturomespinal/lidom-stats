@@ -902,9 +902,9 @@ móvil").
 
 ### Detalle de un juego
 
-Tocar una tarjeta abre `screens/GameDetailScreen.tsx` con cuatro pestañas:
-`PlayByPlay`, `InningGrid`, `BoxScore` y `Lineups`, todas sobre
-`/live/games/{pk}/detail`.
+Tocar una tarjeta abre `screens/GameDetailScreen.tsx`, con la línea por
+entradas (`InningGrid`) a la vista y tres pestañas: `PlayByPlay`, `BoxScore`
+y `Lineups`, todas sobre `/live/games/{pk}/detail`.
 
 La primera pestaña (hoy "Hoy", antes "En Vivo") es una **pila** (`@react-navigation/native-stack`), no una
 pantalla suelta: así hay gesto de volver y botón de atrás. Es JavaScript sobre
@@ -938,7 +938,7 @@ clave debajo, la comparativa y las pestañas.
 
 | Qué | Móvil |
 |-----|-------|
-| Diamante, outs, cuenta o "Fin de la alta del 5to", al bate/abre, lanza, en espera, con los números del duelo | `components/Situacion.tsx` |
+| Terreno (ver "La pantalla del juego, por partes de SofaScore"), outs, cuenta o "Fin de la alta del 5to", al bate/abre, lanza, en espera, con los números del duelo | `components/Situacion.tsx` |
 | La franja de la jugada y el corredor | `Situacion.tsx` (`Franja`, `Corredor`) |
 | La zona de strike y la lista de lanzamientos | `components/ZonaStrike.tsx` (react-native-svg) |
 | Jugadas clave | `components/JugadasClave.tsx`, dentro de la tarjeta de la franja |
@@ -968,6 +968,60 @@ clave debajo, la comparativa y las pestañas.
 - Comprobado en el arnés web del móvil (react-native-web) con la caché
   sembrada: ponche, doble y jonrón con sus fotogramas. Ahí `useNativeDriver`
   cae a JavaScript; en el teléfono va en el hilo nativo.
+
+## La pantalla del juego, por partes de SofaScore (6-oct-2026)
+
+Arturo mandó una captura de SofaScore con el Dodgers-Braves y eligió cuatro
+partes; el tema se queda claro con tinta navy, como el resto de la app. De la
+captura NO se toman los escudos, las cuotas de apuestas ni el anuncio (ver la
+guía legal). Las dos plataformas cambian igual.
+
+| Qué | Web | Móvil |
+|-----|-----|-------|
+| Cabecera compacta: los equipos a los lados (teja, nombre corto, H · E) y el marcador al centro, con el estado y la media entrada arriba | `LadoHeroe` en `game/GameDetail.tsx` | `HeroeJuego`/`LadoHeroe` en `GameDetailScreen.tsx` |
+| El terreno visto desde arriba en la tarjeta de situación, con los corredores en sus bases y su apellido al lado | `game/Campo.tsx` | `components/Campo.tsx` |
+| La línea por entradas a la vista, en su tarjeta bajo la situación; deja de ser pestaña | `game/InningGrid.tsx` | `components/InningGrid.tsx` |
+| La franja por entradas: una raya entre entradas, el número centrado en su columna, la marca roja de dónde va el juego y la escala 100 / 50 / 100 | `game/WinProbBand.tsx` | `components/WinProbBand.tsx` |
+
+- **La media entrada sale del estado vivo**, no del último punto de la
+  curva. `situation` trae `half_label` ("Alta del 8vo") e `inning`. La
+  cabecera la tomaba de la curva, que no se mueve si la probabilidad no
+  cambia, y decía "Baja del 7mo" con Ohtani bateando en la alta del 8vo
+  (captura de Arturo). `verify_live_poller.py` lo comprueba.
+- **La tarjeta de situación**: arriba una barra con la media entrada (o "Fin
+  de la alta del 7mo"), los outs y la cuenta; debajo el terreno; después
+  los nombres con sus números y la zona de strike (en la web, a la derecha
+  desde `lg`).
+- **El terreno** es un lienzo fijo de 320×220 escalado al ancho, con las
+  mismas cuentas en las dos plataformas: home en (160, 206), 72 de base a
+  base, cerca en arco a 196 del home. Grama con franjas, tierra y líneas son
+  fondo con tokens propios (`campo*` en `constants.ts`, `--campo-*` en
+  `globals.css`), lavados: encima se leen las bases (vacía blanca, ocupada
+  ocre) y los apellidos. Ningún club se identifica por ellos.
+- **El corredor corre por el terreno.** En el móvil, `posicionesCampo(ancho)`
+  da las bases en puntos y el corredor es una vista animada encima; en la
+  web va DENTRO del SVG, un círculo movido con la Web Animations API con
+  `translate` en unidades del lienzo (en un elemento SVG los px de una
+  transformación CSS son unidades del viewBox), así acierta a cualquier
+  ancho. La base y el apellido se encienden cuando llega: en el móvil con
+  `useBasesPintadas()` (sacado de `BaseDiamond.tsx`, que lo sigue usando),
+  en la web con la transición del relleno retrasada solo al ocuparse.
+- **La franja de la jugada va sobre los jardines**: el 42% de arriba del
+  terreno, con su corte en diagonal. La segunda base queda justo debajo y el
+  corredor se ve entero.
+- **La línea por entradas** reparte el ancho medido en el móvil (columnas de
+  20 a 32 pt; con extrainnings no bajan del mínimo y el cuadro se desliza) y
+  en la web aprieta el relleno en el teléfono para que entren R, H y E. La
+  entrada en curso lleva su número en rojo, el de "EN VIVO". `?t=entradas`
+  en la web cae al relato.
+- **La franja de probabilidad** pinta la marca roja en el último punto solo
+  con el juego en curso, y el número de la entrada en curso del mismo rojo
+  (`entradaActual` = `situation.inning`; sin ella, la del último punto). La
+  escala va en su columna a la derecha y el eje deja ese hueco para que los
+  números caigan bajo su columna.
+- Comprobado en el arnés del móvil (react-native-web) y en la web a 1280 y a
+  390, con la caché sembrada: doble y jonrón con sus fotogramas. `next build`
+  no corre aquí (bloquea Google Fonts); tsc y lint sí, en las dos.
 
 ## El games_back de la MLB API no es distancia al líder
 
@@ -1580,10 +1634,12 @@ el detalle de juego. Móvil (`GameDetailScreen.tsx`) y web
   el color de uno solo diría que el juego es suyo. `Heroe` acepta `color`
   opcional por eso; las fichas siguen pasándolo. Cada club se identifica con
   su teja sólida y su código.
-- Dos filas de marcador: teja, nombre, `H · E`, carreras en Bebas de 56. Quien
-  va abajo se apaga a `inkDim` (8.3:1 sobre el navy) y el ganador de un juego
-  terminado lleva ◂ escrito. Junto al estado, una línea de contexto: la media
-  entrada del último punto del recorrido en vivo ("Baja del 7mo"),
+- El marcador al centro y los dos equipos a los lados (teja, nombre corto,
+  `H · E`), carreras en Bebas de 56; desde el 6-oct, ver "La pantalla del
+  juego, por partes de SofaScore". Quien va abajo se apaga a `inkDim` (8.3:1
+  sobre el navy) y el ganador de un juego terminado lleva la marca escrita
+  apuntando a su lado (◂ o ▸). Junto al estado, una línea de contexto: la
+  media entrada del estado vivo (`situation.half_label`, "Alta del 8vo"),
   "Resultado definitivo" o "Sin señal".
 - **Las pestañas van al pie**, en la zona del pulgar. En el móvil, fijas sobre
   la barra de la app y repartiendo el ancho (`GameTabs` → `Pestanas llenar

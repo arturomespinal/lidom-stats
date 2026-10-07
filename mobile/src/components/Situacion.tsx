@@ -1,24 +1,25 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 import { useFichas } from '../navigation';
 import { AtBat, LiveGameDetail, LiveSituation, PlayLine } from '../types';
-import BaseDiamond, { posicionesDiamante } from './BaseDiamond';
+import Campo, { altoCampo, posicionesCampo } from './Campo';
 import { useReducirMovimiento } from './Movimiento';
 import ZonaStrike from './ZonaStrike';
 
 /**
- * Lo que está pasando ahora mismo, en la pantalla de un juego: el diamante
- * con los corredores, los outs, la cuenta, quién batea y quién lanza, y la
- * zona de strike del turno. La misma tarjeta que la web
- * (`frontend/components/game/Situacion.tsx`).
+ * Lo que está pasando ahora mismo, en la pantalla de un juego: la media
+ * entrada, los outs y la cuenta arriba; el terreno con los corredores en sus
+ * bases (Campo.tsx); quién batea y quién lanza, y la zona de strike del
+ * turno. La misma tarjeta que la web (`frontend/components/game/Situacion.tsx`).
  *
  * ── La jugada que se mueve ──────────────────────────────────────────────────
  * Cuando la última jugada completa es sencillo, doble, triple, jonrón o
  * ponche, entra una franja navy con corte en diagonal con la jugada en Bebas,
  * el bateador, las carreras y el batazo, y se va sola a los ~3,6 s. En los
- * batazos un corredor recorre el diamante hasta su base (el jonrón da la
- * vuelta) y la base se enciende cuando llega.
+ * batazos un corredor recorre el terreno hasta su base (el jonrón da la
+ * vuelta) y la base se enciende cuando llega. La franja ocupa la mitad de
+ * arriba del terreno, los jardines: el corredor corre por debajo, a la vista.
  *
  * La franja lleva `key` = el índice de la jugada: se monta otra vez solo con
  * una jugada nueva y su animación corre al montarse. Todo con
@@ -27,8 +28,7 @@ import ZonaStrike from './ZonaStrike';
  * franja aparece y se va sin deslizarse.
  */
 
-const DIAMANTE = 92;
-const RADIO_CORREDOR = 5;
+const RADIO_CORREDOR = 6;
 const DURACION_FRANJA = 3600;
 
 /** Las jugadas que se celebran, y hasta qué base llega el bateador. */
@@ -65,6 +65,8 @@ export default function Situacion({
   duelo?: LiveGameDetail['matchup'];
 }) {
   const reducir = useReducirMovimiento();
+  // El terreno se dibuja al ancho de la tarjeta: hasta medirlo no se pinta.
+  const [ancho, setAncho] = useState(0);
   const info = jugada?.event ? JUGADAS[jugada.event] : null;
   const bases = info?.bases ?? 0;
   const duracion = duracionCarrera(bases);
@@ -101,69 +103,70 @@ export default function Situacion({
 
   return (
     <View style={styles.tarjeta} accessibilityLabel="Situación del juego">
-      {/* La franja de la jugada cubre esta parte y no la zona de strike: el
-          lanzamiento que acaba de pasar se sigue viendo. */}
-      <View style={styles.arriba}>
-        <View style={styles.filaDiamante}>
-          <View style={{ width: DIAMANTE, height: DIAMANTE }}>
-            <BaseDiamond runners={situacion.runners} size={DIAMANTE} retrasoLlenado={llegada} />
+      {/* La media entrada, los outs y la cuenta: la barra de arriba de la
+          tarjeta, como en la transmisión. Entre medias entradas la cuenta
+          es del turno que ya terminó, así que se cambia por la frase. */}
+      <View style={styles.barra}>
+        <Text style={styles.mitad} numberOfLines={1}>
+          {(fin ?? situacion.half_label ?? '').toUpperCase()}
+        </Text>
+        <View style={styles.contador} accessible accessibilityLabel={`${outs} ${outs === 1 ? 'out' : 'outs'}`}>
+          <Text style={styles.etiqueta}>OUTS</Text>
+          {[0, 1, 2].map(i => (
+            <View key={i} style={[styles.out, i < outs && styles.outOn]} />
+          ))}
+        </View>
+        {!fin && (
+          <Text
+            style={styles.cuenta}
+            accessibilityLabel={`Cuenta: ${situacion.balls} bolas, ${situacion.strikes} strikes`}
+          >
+            {situacion.balls}-{situacion.strikes}
+          </Text>
+        )}
+      </View>
+
+      {/* El terreno, con la franja de la jugada encima de los jardines. */}
+      <View
+        style={styles.terreno}
+        onLayout={e => setAncho(Math.round(e.nativeEvent.layout.width))}
+      >
+        {ancho > 0 && (
+          <View style={{ height: altoCampo(ancho) }}>
+            <Campo runners={situacion.runners} ancho={ancho} retrasoLlenado={llegada} />
             {jugada && bases > 0 && !reducir && (
-              <Corredor key={jugada.index} bases={bases} duracion={duracion} />
+              <Corredor key={jugada.index} bases={bases} duracion={duracion} ancho={ancho} />
+            )}
+            {jugada && info && (
+              <Franja key={jugada.index} jugada={jugada} titulo={info.titulo} reducir={reducir} />
             )}
           </View>
+        )}
+      </View>
 
-          <View style={styles.contadores}>
-            <View style={styles.contador} accessible accessibilityLabel={`${outs} ${outs === 1 ? 'out' : 'outs'}`}>
-              <Text style={styles.etiqueta}>OUTS</Text>
-              {[0, 1, 2].map(i => (
-                <View key={i} style={[styles.out, i < outs && styles.outOn]} />
-              ))}
-            </View>
-            {fin ? (
-              <Text style={styles.fin}>{fin}</Text>
-            ) : (
-              <View
-                style={styles.contador}
-                accessible
-                accessibilityLabel={`Cuenta: ${situacion.balls} bolas, ${situacion.strikes} strikes`}
-              >
-                <Text style={styles.etiqueta}>CUENTA</Text>
-                <Text style={styles.cuenta}>
-                  {situacion.balls}-{situacion.strikes}
-                </Text>
-              </View>
-            )}
-          </View>
-        </View>
-
-        {/* Los nombres en su propia fila: al lado del diamante quedaban
-            cortados. */}
-        <View style={styles.nombres}>
-          {!!situacion.batter && (
-            <Persona
-              rotulo={fin ? 'Abre' : 'Al bate'}
-              nombre={situacion.batter}
-              profileId={bateador?.profile_id ?? null}
-              linea={lineaBateador}
-            />
-          )}
-          {!!situacion.pitcher && (
-            <Persona
-              rotulo="Lanza"
-              nombre={situacion.pitcher}
-              profileId={lanzador?.profile_id ?? null}
-              linea={lineaLanzador}
-            />
-          )}
-          {!!situacion.on_deck && (
-            <Text style={styles.espera} numberOfLines={1}>
-              <Text style={styles.rotulo}>En espera </Text>
-              {situacion.on_deck}
-            </Text>
-          )}
-        </View>
-
-        {jugada && info && <Franja key={jugada.index} jugada={jugada} titulo={info.titulo} reducir={reducir} />}
+      <View style={styles.nombres}>
+        {!!situacion.batter && (
+          <Persona
+            rotulo={fin ? 'Abre' : 'Al bate'}
+            nombre={situacion.batter}
+            profileId={bateador?.profile_id ?? null}
+            linea={lineaBateador}
+          />
+        )}
+        {!!situacion.pitcher && (
+          <Persona
+            rotulo="Lanza"
+            nombre={situacion.pitcher}
+            profileId={lanzador?.profile_id ?? null}
+            linea={lineaLanzador}
+          />
+        )}
+        {!!situacion.on_deck && (
+          <Text style={styles.espera} numberOfLines={1}>
+            <Text style={styles.rotulo}>En espera </Text>
+            {situacion.on_deck}
+          </Text>
+        )}
       </View>
 
       {turno && (
@@ -209,8 +212,8 @@ function Persona({
   );
 }
 
-/** El corredor de la jugada: del home a su base, o la vuelta completa. */
-function Corredor({ bases, duracion }: { bases: number; duracion: number }) {
+/** El corredor de la jugada: del home a su base por el terreno, o la vuelta completa. */
+function Corredor({ bases, duracion, ancho }: { bases: number; duracion: number; ancho: number }) {
   const t = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     const anim = Animated.timing(t, {
@@ -223,7 +226,7 @@ function Corredor({ bases, duracion }: { bases: number; duracion: number }) {
     return () => anim.stop();
   }, [t, duracion]);
 
-  const p = posicionesDiamante(DIAMANTE);
+  const p = posicionesCampo(ancho);
   const ruta = [p.home, p.first, p.second, p.third, p.home].slice(0, bases + 1);
   const n = ruta.length - 1;
   // Mismo ritmo que la web: aparece en el home, corre base por base y se
@@ -341,26 +344,33 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  arriba: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 12, gap: 10 },
-  filaDiamante: { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  contadores: { gap: 10 },
-  contador: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  etiqueta: { width: 54, color: COLORS.textFaint, fontSize: 10, letterSpacing: 0.6 },
+  barra: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    paddingHorizontal: 16,
+    minHeight: 44,
+    borderBottomWidth: 1,
+    borderBottomColor: COLORS.border,
+  },
+  mitad: { flex: 1, color: COLORS.textPrimary, fontSize: 12, fontWeight: '700', letterSpacing: 0.6 },
+  contador: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  etiqueta: { color: COLORS.textFaint, fontSize: 10, letterSpacing: 0.6, marginRight: 2 },
   out: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.border },
   outOn: { backgroundColor: COLORS.warning },
-  // Bebas, sin fontWeight (ver FONTS).
+  // Bebas, sin fontWeight (ver FONTS). Aire arriba para iOS.
   cuenta: {
     color: COLORS.textPrimary,
     fontFamily: FONTS.display,
-    fontSize: 28,
-    lineHeight: 28,
+    fontSize: 26,
+    lineHeight: 26,
     paddingTop: 4,
     marginTop: -4,
     fontVariant: ['tabular-nums'],
   },
-  fin: { color: COLORS.textSupport, fontSize: 12, fontWeight: '600', maxWidth: 150 },
+  terreno: { overflow: 'hidden' },
 
-  nombres: { gap: 6 },
+  nombres: { gap: 6, paddingHorizontal: 16, paddingTop: 4, paddingBottom: 12 },
   persona: { minHeight: 36, justifyContent: 'center' },
   personaNombre: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
   rotulo: { color: COLORS.textSecondary, fontWeight: '400' },
@@ -379,12 +389,14 @@ const styles = StyleSheet.create({
     borderColor: COLORS.bgCard,
   },
 
+  // Los jardines: el 42% de arriba del terreno. La segunda base queda justo
+  // debajo, así que el corredor se ve entero.
   franja: {
     position: 'absolute',
     top: 0,
-    bottom: 0,
+    height: '42%',
     right: 0,
-    width: '64%',
+    width: '86%',
     justifyContent: 'center',
   },
   franjaFondo: {
@@ -401,8 +413,8 @@ const styles = StyleSheet.create({
   franjaTitulo: {
     color: COLORS.inkFg,
     fontFamily: FONTS.display,
-    fontSize: 38,
-    lineHeight: 38,
+    fontSize: 34,
+    lineHeight: 34,
     paddingTop: 6,
     marginTop: -6,
     letterSpacing: 0.5,

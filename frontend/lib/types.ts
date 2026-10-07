@@ -341,6 +341,9 @@ export interface LiveGameDetail {
 
 /** Lo que está pasando ahora mismo. Solo con el juego en curso. */
 export interface LiveSituation {
+  /** La media entrada en curso, "Alta del 8vo", del estado vivo. */
+  half_label?: string | null;
+  inning?: number | null;
   /** "Fin de la alta del 5to" entre medias entradas, compuesto en el
    *  backend. La cuenta es la del último turno y el bateador, el que abrirá. */
   half_over_label: string | null;

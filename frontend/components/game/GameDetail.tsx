@@ -16,6 +16,7 @@ import Situacion, { jugadaDestacada } from "@/components/game/Situacion";
 import JugadasClave from "@/components/game/JugadasClave";
 import Comparativa from "@/components/game/Comparativa";
 import Heroe from "@/components/ficha/Heroe";
+import { TEAM_SHORT_NAMES } from "@/lib/constants";
 
 /**
  * Detalle de un juego en la web.
@@ -34,7 +35,6 @@ const PLAYS = 40;
 
 const TABS = [
   { key: "relato", label: "Relato" },
-  { key: "entradas", label: "Entradas" },
   { key: "boxscore", label: "Boxscore" },
   { key: "alineacion", label: "Alineación" },
 ] as const;
@@ -158,16 +158,21 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
   }
 
   const terminado = detail.status === "final";
-  // La línea de contexto junto al estado. En vivo, la media entrada del último
-  // punto del recorrido ("Baja del 7mo"), compuesta en el backend.
+  // La línea de contexto junto al estado. En vivo, la media entrada del
+  // estado vivo ("Alta del 8vo", o "Fin de la alta del 7mo" entre medias). La
+  // del último punto de la curva queda de respaldo: no se mueve si la
+  // probabilidad no cambia, y decía "Baja del 7mo" con Ohtani bateando en la
+  // alta del 8vo.
   const ultimo = wp?.points[wp.points.length - 1];
   const contexto = failed
     ? "Sin señal · último dato recibido"
     : terminado && !updating
       ? "Resultado definitivo"
-      : detail.status === "live" && ultimo
-        ? ultimo.label
+      : detail.status === "live"
+        ? (situacion?.half_over_label ?? situacion?.half_label ?? ultimo?.label ?? null)
         : null;
+  const ganaVisita = terminado && detail.away.runs > detail.home.runs;
+  const ganaLocal = terminado && detail.home.runs > detail.away.runs;
 
   return (
     <>
@@ -175,17 +180,50 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
           juego es de dos clubes; cada uno se identifica con su teja. */}
       <Heroe>
         {volver}
-        <div className="mb-4 mt-1 flex items-center gap-2">
-          <StatusBadge status={detail.status} />
-          {contexto && (
-            <span className={`truncate text-xs ${failed ? "text-ink-fg" : "text-ink-dim"}`}>
-              {contexto}
-            </span>
-          )}
-        </div>
-        <div className="max-w-xl space-y-2">
-          <FilaHeroe lado={detail.away} rival={detail.home} terminado={terminado} />
-          <FilaHeroe lado={detail.home} rival={detail.away} terminado={terminado} />
+        {/* Compacta (6-oct, captura de SofaScore): los dos equipos a los
+            lados y el marcador al centro, con el estado arriba. */}
+        <div className="mx-auto max-w-xl">
+          <div className="mb-3 mt-1 flex items-center justify-center gap-2">
+            <StatusBadge status={detail.status} />
+            {contexto && (
+              <span className={`truncate text-xs ${failed ? "text-ink-fg" : "text-ink-dim"}`}>
+                {contexto}
+              </span>
+            )}
+          </div>
+          <div className="flex items-center">
+            <LadoHeroe lado={detail.away} />
+            <div
+              className="flex items-center gap-1.5"
+              aria-label={`${detail.away.team_code ?? "Visitante"} ${detail.away.runs}, ${detail.home.team_code ?? "Local"} ${detail.home.runs}${
+                ganaVisita ? `. Ganó ${detail.away.team_code}` : ganaLocal ? `. Ganó ${detail.home.team_code}` : ""
+              }`}
+              role="group"
+            >
+              {/* El ganador lleva la marca escrita, apuntando a su lado: el
+                  tono solo no basta. */}
+              <span aria-hidden className="w-3 text-sm text-ink-fg">{ganaVisita ? "◂" : ""}</span>
+              <span
+                aria-hidden
+                className={`num min-w-[32px] text-center font-cond text-[56px] leading-none sm:text-[64px] ${
+                  detail.away.runs < detail.home.runs ? "text-ink-dim" : "text-ink-fg"
+                }`}
+              >
+                {detail.away.runs}
+              </span>
+              <span aria-hidden className="font-cond text-[36px] leading-none text-ink-dim">–</span>
+              <span
+                aria-hidden
+                className={`num min-w-[32px] text-center font-cond text-[56px] leading-none sm:text-[64px] ${
+                  detail.home.runs < detail.away.runs ? "text-ink-dim" : "text-ink-fg"
+                }`}
+              >
+                {detail.home.runs}
+              </span>
+              <span aria-hidden className="w-3 text-sm text-ink-fg">{ganaLocal ? "▸" : ""}</span>
+            </div>
+            <LadoHeroe lado={detail.home} />
+          </div>
         </div>
       </Heroe>
 
@@ -204,6 +242,14 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
           />
         )}
 
+        {/* La línea por entradas, a la vista: antes era una pestaña. En la
+            previa no hay entradas y no se pinta. */}
+        {detail.innings.length > 0 && (
+          <section aria-label="Línea por entradas" className="overflow-hidden rounded-xl border border-line bg-card">
+            <InningGrid detail={detail} />
+          </section>
+        )}
+
         {/* La franja. Necesita al menos dos puntos para ser una curva; en la
             previa no hay estado que simular y no se pinta nada. */}
         {/* La franja con sus jugadas clave y, al lado en pantalla ancha, el
@@ -219,6 +265,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
                 homeCode={detail.home.team_code}
                 awayCode={detail.away.team_code}
                 headline={wp.headline}
+                entradaActual={situacion?.inning ?? null}
               />
               <JugadasClave
                 jugadas={wp.key_plays ?? []}
@@ -235,7 +282,6 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
           {/* key={tab}: cada pestaña entra con su fundido (.aparecer). */}
           <div key={tab} className="aparecer">
             {tab === "relato" && <PlayByPlay detail={detail} />}
-            {tab === "entradas" && <InningGrid detail={detail} />}
             {tab === "boxscore" && <BoxScore home={detail.home} away={detail.away} />}
             {tab === "alineacion" && <Lineups home={detail.home} away={detail.away} />}
           </div>
@@ -321,61 +367,38 @@ function PestanasJuego({ activa, onCambio }: { activa: TabKey; onCambio: (k: Tab
   );
 }
 
+/** El nombre corto: el de LIDOM, o la última palabra ("Dodgers"). */
+function nombreCorto(lado: LiveGameDetail["home"]): string {
+  const code = lado.team_code;
+  if (code && TEAM_SHORT_NAMES[code]) return TEAM_SHORT_NAMES[code];
+  return lado.team_name?.trim().split(/\s+/).slice(-1)[0] ?? code ?? "—";
+}
+
 /**
- * Una fila del marcador en la cabecera: teja, nombre, hits y errores,
- * carreras. Quien va abajo se apaga a `ink-dim` (8.3:1 sobre el navy: se
- * sigue leyendo), y el ganador de un juego terminado lleva la marca ◂ escrita:
- * el tono solo no basta.
+ * Un lado del marcador en la cabecera: teja, nombre corto y H · E, en
+ * columna. Teja y nombre abren el equipo (un juego en vivo es de la
+ * temporada actual, la que abre la ficha sin `season`). Sin código no hay a
+ * dónde ir.
  */
-function FilaHeroe({
-  lado,
-  rival,
-  terminado,
-}: {
-  lado: LiveGameDetail["home"];
-  rival: LiveGameDetail["home"];
-  terminado: boolean;
-}) {
-  const atras = lado.runs < rival.runs;
-  const gano = terminado && lado.runs > rival.runs;
+function LadoHeroe({ lado }: { lado: LiveGameDetail["home"] }) {
   const extra = [`H ${lado.hits}`, lado.errors != null ? `E ${lado.errors}` : null]
     .filter(Boolean)
     .join(" · ");
-  return (
-    <div className="flex min-h-[56px] items-center gap-3">
-      {/* Teja y nombre abren el equipo. Un juego en vivo es de la temporada
-          actual, que es la que abre la ficha sin `season`. Sin código (no
-          pasa en LIDOM, pero el tipo lo permite) no hay a dónde ir. */}
-      {lado.team_code ? (
-      <Link href={`/teams/${lado.team_code}`} className="group flex min-w-0 flex-1 items-center gap-3">
-        <TeamBadge code={lado.team_code ?? "—"} size="md" variant="solid" />
-        <div className="min-w-0 flex-1">
-          <p
-            className={`truncate text-base font-bold group-hover:underline sm:text-lg ${
-              atras ? "text-ink-dim" : "text-ink-fg"
-            }`}
-          >
-            {lado.team_name ?? lado.team_code ?? "—"}
-          </p>
-          <p className="num text-xs text-ink-dim">{extra}</p>
-        </div>
-      </Link>
-      ) : (
-        <div className="flex min-w-0 flex-1 items-center gap-3">
-          <TeamBadge code="—" size="md" variant="solid" />
-          <p className="truncate text-base font-bold text-ink-fg sm:text-lg">{lado.team_name ?? "—"}</p>
-        </div>
-      )}
-      <p
-        className={`num min-w-[40px] text-right font-cond text-[56px] leading-none sm:text-[64px] ${
-          atras ? "text-ink-dim" : "text-ink-fg"
-        }`}
-      >
-        {lado.runs}
-      </p>
-      <span className="w-3 text-sm text-ink-fg" aria-label={gano ? "ganó" : undefined}>
-        {gano ? "◂" : ""}
+  const contenido = (
+    <>
+      <TeamBadge code={lado.team_code ?? "—"} size="md" variant="solid" />
+      <span className="max-w-full truncate text-sm font-bold text-ink-fg group-hover:underline">
+        {nombreCorto(lado)}
       </span>
-    </div>
+      <span className="num text-[11px] text-ink-dim">{extra}</span>
+    </>
+  );
+  const clase = "group flex min-w-0 flex-1 flex-col items-center gap-1 py-1";
+  return lado.team_code ? (
+    <Link href={`/teams/${lado.team_code}`} className={clase} aria-label={`${lado.team_name ?? lado.team_code}: ${lado.runs} carreras, ${lado.hits} hits`}>
+      {contenido}
+    </Link>
+  ) : (
+    <div className={clase}>{contenido}</div>
   );
 }

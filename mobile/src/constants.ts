@@ -114,6 +114,14 @@ export const COLORS = {
   warning:  '#8A6A21',
   live:     '#D43128',
 
+  // El terreno dibujado de la situación del juego (Campo.tsx). Fondo, no
+  // dato: tonos lavados para que encima se lean las bases y los nombres.
+  // Ningún club se identifica por ellos.
+  campoPasto:  '#DCE9DF',
+  campoFranja: '#D3E3D7',  // las franjas del corte de la grama
+  campoTierra: '#EADFCB',
+  campoLinea:  '#FFFFFF',
+
   // Marca. El verde, SOLO cascarón.
   brand:     '#03DA58',
   brandNavy: '#091C3A',

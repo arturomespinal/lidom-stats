@@ -7,6 +7,10 @@ import { DetailInning, LiveGameDetail } from "@/lib/types";
  * Una media entrada que no se jugó lleva PUNTO, no cero: el local que va
  * ganando no batea en la baja del 9no, y un 0 ahí diría que bateó y no anotó.
  * El backend manda null justamente para poder distinguirlo.
+ *
+ * Va en la pantalla principal del juego, en su tarjeta (6-oct, captura de
+ * SofaScore): antes era una pestaña. La entrada en curso lleva su número en
+ * rojo, el de "EN VIVO".
  */
 
 function Row({
@@ -22,7 +26,7 @@ function Row({
 }) {
   return (
     <tr className="border-t border-line">
-      <th scope="row" className="py-2 pr-3 text-left font-normal">
+      <th scope="row" className="py-2 pr-2 text-left font-normal sm:pr-3">
         <span className="flex items-center gap-1.5">
           {/* El triángulo marca quién batea, igual que en la tarjeta. */}
           <span aria-hidden className="w-2 text-[11px] text-warn">
@@ -34,18 +38,18 @@ function Row({
       {cells.map((v, i) => (
         <td
           key={i}
-          className={`px-2 py-2 text-center tabular-nums ${
+          className={`px-1 py-2 text-center tabular-nums sm:px-2 ${
             v === null ? "text-faint" : "text-fg2"
           }`}
         >
           {v === null ? "·" : v}
         </td>
       ))}
-      <td className="px-2 py-2 text-center text-base font-bold tabular-nums text-fg">
+      <td className="px-1 py-2 text-center sm:px-2 text-base font-bold tabular-nums text-fg">
         {totals[0]}
       </td>
-      <td className="px-2 py-2 text-center tabular-nums text-fg2">{totals[1]}</td>
-      <td className="px-2 py-2 text-center tabular-nums text-fg2">{totals[2]}</td>
+      <td className="px-1 py-2 text-center sm:px-2 tabular-nums text-fg2">{totals[1]}</td>
+      <td className="px-1 py-2 text-center sm:px-2 tabular-nums text-fg2">{totals[2]}</td>
     </tr>
   );
 }
@@ -82,21 +86,26 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
   const last = jugadas[jugadas.length - 1];
   const homeBatting =
     detail.status === "live" && last.away_runs !== null && last.home_runs === null;
+  const enCurso = detail.status === "live" ? last.num : null;
 
   return (
-    <div className="overflow-x-auto table-scroll p-4">
-      <table className="text-sm">
+    <div className="overflow-x-auto table-scroll px-3 py-3 sm:px-4">
+      <table className="w-full text-sm">
         <thead>
           <tr className="text-xs text-dim">
-            <th className="w-16" />
+            <th className="w-14 sm:w-16" />
             {innings.map((i) => (
-              <th key={i.num} className="px-2 pb-1 text-center font-bold">
+              <th
+                key={i.num}
+                className={`px-1 pb-1 text-center font-bold sm:px-2 ${i.num === enCurso ? "text-live" : ""}`}
+              >
                 {i.num}
+                {i.num === enCurso && <span className="sr-only"> (en curso)</span>}
               </th>
             ))}
-            <th className="px-2 pb-1 text-center font-bold text-fg">R</th>
-            <th className="px-2 pb-1 text-center font-bold">H</th>
-            <th className="px-2 pb-1 text-center font-bold">E</th>
+            <th className="px-1 pb-1 text-center font-bold sm:px-2 text-fg">R</th>
+            <th className="px-1 pb-1 text-center font-bold sm:px-2">H</th>
+            <th className="px-1 pb-1 text-center font-bold sm:px-2">E</th>
           </tr>
         </thead>
         <tbody>

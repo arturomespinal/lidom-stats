@@ -297,8 +297,12 @@ r = c.get(f"/live/games/{GAME_PK}/detail")
 sit = r.json().get("situation") or {}
 check("/detail trae la situación del juego en curso: outs, cuenta, bases, bateador y lanzador",
       (r.status_code, sorted(sit), sit.get("runners", {}).get("third") is not None),
-      (200, ["balls", "batter", "half_over_label", "is_top_inning", "on_deck", "outs", "pitcher",
-             "runners", "strikes"], True))
+      (200, ["balls", "batter", "half_label", "half_over_label", "inning", "is_top_inning", "on_deck",
+             "outs", "pitcher", "runners", "strikes"], True))
+_est = lr.store.get(GAME_PK).state
+check("la media entrada en curso sale del estado vivo, no de la curva",
+      (sit.get("half_label"), sit.get("inning")),
+      (f"{'Alta' if _est.is_top_inning else 'Baja'} del {_est.inning_ordinal_es}", _est.inning))
 check("en pleno turno no hay fin de media entrada", sit.get("half_over_label"), None)
 check("…con los mismos datos que la tarjeta", (sit.get("outs"), sit.get("batter")), (d["outs"], d["batter"]))
 r = c.get(f"/live/games/{GAME_PK}/winprob")

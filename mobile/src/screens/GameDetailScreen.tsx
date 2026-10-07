@@ -13,7 +13,7 @@ import {
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail, fetchWinProb } from '../api';
-import { COLORS, FONTS } from '../constants';
+import { COLORS, FONTS, TEAM_SHORT_NAMES } from '../constants';
 import { LiveGameDetail, LiveSituation, WinProbResponse } from '../types';
 import { useFichas, type LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
@@ -205,7 +205,7 @@ export default function GameDetailScreen({ route }: Props) {
           />
         }
       >
-        <HeroeJuego detail={detail} updating={updating} failed={failed} wp={wp} />
+        <HeroeJuego detail={detail} updating={updating} failed={failed} wp={wp} situacion={situacion} />
 
         {/* Lo que está pasando: solo con el juego en curso (el backend manda
             `situation` en null en la previa y al final). */}
@@ -218,6 +218,14 @@ export default function GameDetailScreen({ route }: Props) {
           />
         )}
 
+        {/* La línea por entradas, a la vista: antes era una pestaña. En la
+            previa no hay entradas y no se pinta. */}
+        {detail.innings.length > 0 && (
+          <View style={[styles.tarjetaLinea, !(situacion && detail.status === 'live') && { marginTop: 16 }]}>
+            <InningGrid detail={detail} />
+          </View>
+        )}
+
         {/* Dos puntos como mínimo para que sea una curva. En la previa no hay
             estado que simular y no se pinta nada. */}
         {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
@@ -228,6 +236,7 @@ export default function GameDetailScreen({ route }: Props) {
               homeCode={detail.home.team_code}
               awayCode={detail.away.team_code}
               headline={wp.headline}
+              entradaActual={situacion?.inning ?? null}
             />
             {!!wp.key_plays?.length && (
               <JugadasClave
@@ -250,7 +259,6 @@ export default function GameDetailScreen({ route }: Props) {
               fundido. */}
           <Aparecer key={tab}>
             {tab === 'relato' && <PlayByPlay detail={detail} />}
-            {tab === 'linea' && <InningGrid detail={detail} />}
             {tab === 'boxscore' && <BoxScore home={detail.home} away={detail.away} />}
             {tab === 'alineaciones' && <Lineups home={detail.home} away={detail.away} />}
           </Aparecer>
@@ -266,31 +274,43 @@ export default function GameDetailScreen({ route }: Props) {
  * diagonal, pero SIN el plano de color. Un juego es de dos clubes, y pintar
  * el color de uno solo diría que el juego es suyo. Cada club se identifica
  * con su teja y su código, como en todas partes.
+ *
+ * Compacta (6-oct, captura de SofaScore): los dos equipos a los lados y el
+ * marcador al centro, con el estado y la media entrada arriba. Mide unos 60
+ * pt menos que las dos filas de antes, y eso es pantalla para la situación.
  */
 function HeroeJuego({
   detail,
   updating,
   failed,
   wp,
+  situacion,
 }: {
   detail: LiveGameDetail;
   updating: boolean;
   failed: boolean;
   wp: WinProbResponse | null;
+  situacion: LiveSituation | null;
 }) {
   const { away, home } = detail;
   const terminado = detail.status === 'final';
 
-  // La línea de contexto junto al estado. En vivo, la media entrada del último
-  // punto del recorrido ("Baja del 7mo"), compuesta en el backend.
+  // La línea de contexto junto al estado. En vivo, la media entrada del
+  // estado vivo ("Alta del 8vo", o "Fin de la alta del 7mo" entre medias).
+  // La del último punto de la curva queda de respaldo: no se mueve si la
+  // probabilidad no cambia, y decía "Baja del 7mo" con Ohtani bateando en
+  // la alta del 8vo.
   const ultimo = wp?.points[wp.points.length - 1];
   const contexto = failed
     ? 'Sin señal · último dato recibido'
     : terminado && !updating
       ? 'Resultado definitivo'
-      : detail.status === 'live' && ultimo
-        ? ultimo.label
+      : detail.status === 'live'
+        ? (situacion?.half_over_label ?? situacion?.half_label ?? ultimo?.label ?? null)
         : null;
+
+  const ganaVisita = terminado && away.runs > home.runs;
+  const ganaLocal = terminado && home.runs > away.runs;
 
   return (
     <Heroe>
@@ -302,65 +322,62 @@ function HeroeJuego({
           </Text>
         )}
       </View>
-      <View style={styles.filas}>
-        <FilaHeroe lado={away} rival={home} terminado={terminado} />
-        <FilaHeroe lado={home} rival={away} terminado={terminado} />
+      <View style={styles.marcador}>
+        <LadoHeroe lado={away} />
+        <View
+          style={styles.centro}
+          accessible
+          accessibilityLabel={`${away.team_code ?? 'Visitante'} ${away.runs}, ${home.team_code ?? 'Local'} ${home.runs}${
+            ganaVisita ? `. Ganó ${away.team_code}` : ganaLocal ? `. Ganó ${home.team_code}` : ''
+          }`}
+        >
+          {/* El ganador lleva la marca escrita, apuntando a su lado: el
+              tono solo no basta para quien no distingue contraste. */}
+          <Text style={styles.marca}>{ganaVisita ? '◂' : ''}</Text>
+          <Text style={[styles.carreras, away.runs < home.runs && styles.apagado]}>{away.runs}</Text>
+          <Text style={styles.guion}>–</Text>
+          <Text style={[styles.carreras, home.runs < away.runs && styles.apagado]}>{home.runs}</Text>
+          <Text style={styles.marca}>{ganaLocal ? '▸' : ''}</Text>
+        </View>
+        <LadoHeroe lado={home} />
       </View>
     </Heroe>
   );
 }
 
+/** El nombre corto: el de LIDOM, o la última palabra ("Dodgers"). */
+function nombreCorto(lado: LiveGameDetail['home']): string {
+  const code = lado.team_code;
+  if (code && TEAM_SHORT_NAMES[code]) return TEAM_SHORT_NAMES[code];
+  return lado.team_name?.trim().split(/\s+/).slice(-1)[0] ?? code ?? '—';
+}
+
 /**
- * Una fila del marcador: teja, nombre, hits y errores, carreras.
- *
- * Quien va abajo en el marcador se apaga a `inkDim` (8.3:1 sobre el navy:
- * se sigue leyendo). Y el ganador de un juego terminado lleva además la
- * marca ◂ escrita: el tono solo no basta para quien no distingue contraste.
+ * Un lado del marcador: teja, nombre corto y H · E, en columna. Teja y nombre
+ * abren el equipo (un juego en vivo es de la temporada actual: la ficha abre
+ * en ella sin pasarle `season`).
  */
-function FilaHeroe({
-  lado,
-  rival,
-  terminado,
-}: {
-  lado: LiveGameDetail['home'];
-  rival: LiveGameDetail['home'];
-  terminado: boolean;
-}) {
-  const atras = lado.runs < rival.runs;
-  const gano = terminado && lado.runs > rival.runs;
-  const extra = [`H ${lado.hits}`, lado.errors != null ? `E ${lado.errors}` : null].filter(Boolean).join(' · ');
+function LadoHeroe({ lado }: { lado: LiveGameDetail['home'] }) {
   const nav = useFichas();
   const code = lado.team_code;
-  // Teja y nombre abren el equipo (un juego en vivo es de la temporada
-  // actual: la ficha abre en ella sin pasarle `season`). Con el lector de
-  // pantalla, ese botón lleva también el marcador.
+  const extra = [`H ${lado.hits}`, lado.errors != null ? `E ${lado.errors}` : null].filter(Boolean).join(' · ');
   return (
-    <View style={styles.fila}>
-      <Pressable
-        disabled={!code}
-        onPress={() => code && nav.push('Equipo', { code })}
-        style={({ pressed }) => [styles.filaEquipo, pressed && { opacity: 0.7 }]}
-        accessibilityRole={code ? 'link' : undefined}
-        accessibilityLabel={`${lado.team_name ?? code ?? 'Equipo'}: ${lado.runs} ${
-          lado.runs === 1 ? 'carrera' : 'carreras'
-        }, ${lado.hits} hits${gano ? '. Ganó' : ''}`}
-        accessibilityHint={code ? 'Abre el equipo' : undefined}
-      >
-        <TeamBadge code={code ?? '—'} size={40} variant="solid" />
-        <View style={styles.filaTexto}>
-          <Text style={[styles.nombre, atras && styles.apagado]} numberOfLines={1}>
-            {lado.team_name ?? code ?? '—'}
-          </Text>
-          <Text style={styles.extra}>{extra}</Text>
-        </View>
-      </Pressable>
-      <Text style={[styles.carreras, atras && styles.apagado]} accessibilityElementsHidden importantForAccessibility="no">
-        {lado.runs}
+    <Pressable
+      disabled={!code}
+      onPress={() => code && nav.push('Equipo', { code })}
+      style={({ pressed }) => [styles.lado, pressed && { opacity: 0.7 }]}
+      accessibilityRole={code ? 'link' : undefined}
+      accessibilityLabel={`${lado.team_name ?? code ?? 'Equipo'}: ${lado.runs} ${
+        lado.runs === 1 ? 'carrera' : 'carreras'
+      }, ${lado.hits} hits`}
+      accessibilityHint={code ? 'Abre el equipo' : undefined}
+    >
+      <TeamBadge code={code ?? '—'} size={44} variant="solid" />
+      <Text style={styles.nombre} numberOfLines={1}>
+        {nombreCorto(lado)}
       </Text>
-      <Text style={styles.marca} accessibilityElementsHidden importantForAccessibility="no">
-        {gano ? '◂' : ''}
-      </Text>
-    </View>
+      <Text style={styles.extra}>{extra}</Text>
+    </Pressable>
   );
 }
 
@@ -380,15 +397,14 @@ const styles = StyleSheet.create({
   errorHint: { color: COLORS.textSecondary, fontSize: 12, textAlign: 'center' },
 
   esqueletoHeroe: { height: 208, backgroundColor: COLORS.ink },
-  heroeArriba: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  contexto: { flex: 1, color: COLORS.inkDim, fontSize: 12 },
+  heroeArriba: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  contexto: { flexShrink: 1, color: COLORS.inkDim, fontSize: 12 },
   contextoAviso: { color: COLORS.inkFg },
-  filas: { gap: 8 },
-  fila: { flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
-  filaEquipo: { flex: 1, minWidth: 0, flexDirection: 'row', alignItems: 'center', gap: 12, minHeight: 56 },
-  filaTexto: { flex: 1, minWidth: 0, gap: 2 },
-  nombre: { color: COLORS.inkFg, fontSize: 16, fontWeight: '700' },
-  extra: { color: COLORS.inkDim, fontSize: 12, fontVariant: ['tabular-nums'] },
+  marcador: { flexDirection: 'row', alignItems: 'center' },
+  lado: { flex: 1, minWidth: 0, alignItems: 'center', gap: 4, paddingVertical: 2 },
+  nombre: { color: COLORS.inkFg, fontSize: 14, fontWeight: '700', marginTop: 2 },
+  extra: { color: COLORS.inkDim, fontSize: 11, fontVariant: ['tabular-nums'] },
+  centro: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   // El marcador en Bebas Neue, sin fontWeight (ver FONTS).
   carreras: {
     color: COLORS.inkFg,
@@ -400,11 +416,23 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     marginTop: -8,
     fontVariant: ['tabular-nums'],
-    minWidth: 40,
-    textAlign: 'right',
+    minWidth: 28,
+    textAlign: 'center',
   },
+  guion: { color: COLORS.inkDim, fontFamily: FONTS.display, fontSize: 36, lineHeight: 40 },
   apagado: { color: COLORS.inkDim },
-  marca: { width: 12, color: COLORS.inkFg, fontSize: 14 },
+  marca: { width: 10, color: COLORS.inkFg, fontSize: 14 },
+
+  // La línea por entradas, en la pantalla principal.
+  tarjetaLinea: {
+    marginHorizontal: 16,
+    marginBottom: 16,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
 
   tarjetaWp: {
     marginHorizontal: 16,

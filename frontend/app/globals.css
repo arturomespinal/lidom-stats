@@ -74,6 +74,14 @@
   --warn:      138 106  33;   /* #8A6A21 — base ocupada, dato viejo   */
   --live:      212  49  40;   /* #D43128 — en vivo, ahora mismo       */
 
+  /* El terreno dibujado de la situación del juego (game/Campo.tsx). Fondo,
+     no dato: tonos lavados para que encima se lean las bases y los nombres.
+     Ningún club se identifica por ellos. Los mismos que el móvil. */
+  --campo-pasto:  220 233 223;   /* #DCE9DF */
+  --campo-franja: 211 227 215;   /* #D3E3D7 — el corte de la grama */
+  --campo-tierra: 234 223 203;   /* #EADFCB */
+  --campo-linea:  255 255 255;   /* #FFFFFF */
+
   /* Marca. El verde, SOLO cascarón: el punto del logotipo. */
   --brand:       3 218  88;   /* #03DA58 — verde Deportiv             */
   --brand-navy:  9  28  58;   /* #091C3A — navy Deportiv              */

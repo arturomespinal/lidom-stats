@@ -20,6 +20,8 @@ interface Props {
   awayCode: string;
   /** El titular del juego terminado, compuesto por el backend. */
   headline: string | null;
+  /** La entrada en curso (de la situación). Sin ella, la del último punto. */
+  entradaActual?: number | null;
 }
 
 /**
@@ -46,6 +48,13 @@ interface Props {
  * sobre la gráfica termina desplazando la pantalla, que es lo que se espera;
  * uno que barre en horizontal se queda en la curva.
  *
+ * ── Por entradas (6-oct, captura de SofaScore) ────────────────────────────
+ * Una raya fina separa cada entrada, el número de cada una va centrado debajo
+ * de su columna y, con el juego en curso, una marca roja (el rojo de "EN
+ * VIVO") dice dónde va el juego y su número se pinta del mismo rojo. A la
+ * derecha, la escala 100 / 50 / 100: arriba el 100% del local, abajo el del
+ * visitante.
+ *
  * ── Sin estirar el SVG ────────────────────────────────────────────────────
  * La web estira un viewBox y dibuja los puntos en HTML para que no salgan
  * ovalados. Aquí se mide el ancho real con onLayout y se dibuja en píxeles,
@@ -59,6 +68,8 @@ const LAVADO = 0.16;
 // esquinas redondeadas): el punto final quedaba cortado a la mitad. 7 = radio
 // del punto (5) + su anillo (2).
 const MARGEN = 7;
+// La columna de la escala, a la derecha de la gráfica.
+const ESCALA = 26;
 
 /** Posición de cada punto en medias entradas: 0 = alta del 1ro. */
 function posicionesX(points: WinProbPoint[]): number[] {
@@ -89,7 +100,7 @@ function par(wp: number): { local: string; visita: string } {
   return { local: `${n}%`, visita: `${100 - n}%` };
 }
 
-export default function WinProbBand({ points, current, homeCode, awayCode, headline }: Props) {
+export default function WinProbBand({ points, current, homeCode, awayCode, headline, entradaActual }: Props) {
   const [ancho, setAncho] = useState(0);
   const [sel, setSel] = useState<number | null>(null);
   const [verDatos, setVerDatos] = useState(false);
@@ -136,6 +147,10 @@ export default function WinProbBand({ points, current, homeCode, awayCode, headl
     if (e.nativeEvent.actionName === 'decrement') setSel(Math.max(0, actual - 1));
   }
 
+  // La entrada en curso: solo con el juego vivo (con `current`).
+  const ahoraEntrada = current === null ? null : (entradaActual ?? ultimo.inning);
+  const entradas = Math.ceil(dominio / 2);
+
   const lectura = `${p.label}: ${awayCode} ${p.away}, ${homeCode} ${p.home}. ${homeCode} ${par(p.wp).local}, ${awayCode} ${par(p.wp).visita}.`;
 
   return (
@@ -157,6 +172,7 @@ export default function WinProbBand({ points, current, homeCode, awayCode, headl
         </View>
       </View>
 
+      <View style={styles.filaGrafica}>
       <View
         style={styles.grafica}
         onLayout={(e: LayoutChangeEvent) => setAncho(e.nativeEvent.layout.width)}
@@ -196,8 +212,43 @@ export default function WinProbBand({ points, current, homeCode, awayCode, headl
               <Path d={geo.area} fill={away} fillOpacity={LAVADO} />
             </G>
 
+            {/* Una raya por entrada: el juego se lee por columnas. */}
+            {Array.from({ length: entradas - 1 }, (_, k) => (
+              <Line
+                key={k}
+                x1={((2 * (k + 1)) / dominio) * ancho}
+                y1={0}
+                x2={((2 * (k + 1)) / dominio) * ancho}
+                y2={ALTO}
+                stroke={COLORS.border}
+                strokeWidth={1}
+              />
+            ))}
+
             {/* El 50%: sólido y recesivo. Punteado es ruido. */}
             <Line x1={0} y1={geo.mitad} x2={ancho} y2={geo.mitad} stroke={COLORS.border} strokeWidth={1} />
+
+            {/* Dónde va el juego: la marca roja de "en vivo". */}
+            {sel === null && current !== null && (
+              <G>
+                <Line
+                  x1={geo.coords[geo.coords.length - 1][0]}
+                  y1={6}
+                  x2={geo.coords[geo.coords.length - 1][0]}
+                  y2={ALTO}
+                  stroke={COLORS.live}
+                  strokeWidth={1.5}
+                />
+                <Circle
+                  cx={geo.coords[geo.coords.length - 1][0]}
+                  cy={6}
+                  r={3.5}
+                  fill={COLORS.bgSunken}
+                  stroke={COLORS.live}
+                  strokeWidth={1.5}
+                />
+              </G>
+            )}
 
             {sel !== null && (
               <Line
@@ -237,20 +288,29 @@ export default function WinProbBand({ points, current, homeCode, awayCode, headl
         <Text style={[styles.lado, styles.ladoAbajo]}>{awayCode}</Text>
         </View>
       </View>
+      {/* La escala: el 100% de cada lado y el 50% en medio. */}
+      <View style={styles.escala} accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+        <Text style={styles.escalaTexto}>100</Text>
+        <Text style={styles.escalaTexto}>50</Text>
+        <Text style={styles.escalaTexto}>100</Text>
+      </View>
+      </View>
 
       {/* Eje: números de entrada, no ordinales — un número no hay que
           traducirlo. */}
       <View style={styles.eje}>
-        {Array.from({ length: Math.ceil(dominio / 2) }, (_, k) => k + 1)
-          .filter((n) => n % 2 === 1 || n > 9)
-          .map((n) => (
-            <Text
-              key={n}
-              style={[styles.tick, { left: `${(((n - 1) * 2) / dominio) * 100}%` }]}
-            >
-              {n}
-            </Text>
-          ))}
+        {Array.from({ length: entradas }, (_, k) => k + 1).map((n) => (
+          <Text
+            key={n}
+            style={[
+              styles.tick,
+              { left: `${(((n - 1) * 2 + 1) / dominio) * 100}%` },
+              n === ahoraEntrada && styles.tickAhora,
+            ]}
+          >
+            {n}
+          </Text>
+        ))}
       </View>
 
       {headline && <Text style={styles.headline}>{headline}</Text>}
@@ -316,7 +376,9 @@ const styles = StyleSheet.create({
     textAlign: 'right',
   },
 
+  filaGrafica: { flexDirection: 'row', gap: 6 },
   grafica: {
+    flex: 1,
     height: ALTO,
     borderRadius: 6,
     backgroundColor: COLORS.bgSunken,
@@ -333,13 +395,22 @@ const styles = StyleSheet.create({
   ladoArriba: { top: 6 },
   ladoAbajo: { bottom: 6 },
 
-  eje: { height: 16, marginTop: 4 },
+  escala: { width: ESCALA, height: ALTO, justifyContent: 'space-between', paddingVertical: 1 },
+  escalaTexto: { color: COLORS.textFaint, fontSize: 10, fontVariant: ['tabular-nums'], textAlign: 'right' },
+
+  // El eje mide lo mismo que la gráfica: deja fuera la columna de la escala.
+  eje: { height: 16, marginTop: 4, marginRight: ESCALA + 6 },
+  // Centrado en su columna: 20 de ancho y la mitad hacia atrás.
   tick: {
     position: 'absolute',
+    width: 20,
+    marginLeft: -10,
+    textAlign: 'center',
     color: COLORS.textFaint,
     fontSize: 10,
     fontVariant: ['tabular-nums'],
   },
+  tickAhora: { color: COLORS.live, fontWeight: '700' },
 
   headline: { color: COLORS.textSupport, fontSize: 14, lineHeight: 20, marginTop: 8 },
 

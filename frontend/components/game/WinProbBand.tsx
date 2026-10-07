@@ -12,6 +12,8 @@ interface Props {
   awayCode: string;
   /** El titular del juego terminado, ya compuesto por el backend. */
   headline: string | null;
+  /** La entrada en curso (de la situación). Sin ella, la del último punto. */
+  entradaActual?: number | null;
 }
 
 /**
@@ -90,6 +92,7 @@ export default function WinProbBand({
   homeCode,
   awayCode,
   headline,
+  entradaActual,
 }: Props) {
   const [sel, setSel] = useState<number | null>(null);
 
@@ -110,12 +113,16 @@ export default function WinProbBand({
 
     // Entradas del eje: 1, 3, 5, 7, 9 y cada extra. Números, no ordinales:
     // un número no hay que traducirlo.
+    // Por entradas (6-oct, captura de SofaScore): una raya entre entrada y
+    // entrada, y cada número centrado en su columna.
     const entradas = Math.ceil(dominio / 2);
-    const ticks = Array.from({ length: entradas }, (_, k) => k + 1)
-      .filter((n) => n % 2 === 1 || n > 9)
-      .map((n) => ({ n, left: ((n - 1) * 2) / dominio }));
+    const ticks = Array.from({ length: entradas }, (_, k) => k + 1).map((n) => ({
+      n,
+      left: ((n - 1) * 2 + 1) / dominio,
+    }));
+    const rayas = Array.from({ length: entradas - 1 }, (_, k) => ((2 * (k + 1)) / dominio) * VB_W);
 
-    return { xs, dominio, coords, linea, area, ticks };
+    return { xs, dominio, coords, linea, area, ticks, rayas };
   }, [points]);
 
   const home = TEAM_STYLES[homeCode]?.primary ?? "rgb(var(--dim))";
@@ -125,6 +132,10 @@ export default function WinProbBand({
   // En final `current` es null a propósito —ya no hay probabilidad, hay
   // resultado— y el último punto del recorrido es el 100% / 0% real.
   const ahora = current ?? ultimo.wp;
+  // Con el juego en curso, la entrada que se juega: su número va en rojo
+  // (el de "EN VIVO") y una marca roja dice dónde va el juego.
+  const ahoraEntrada = current === null ? null : (entradaActual ?? ultimo.inning);
+  const xAhora = geo.coords[geo.coords.length - 1][0] / VB_W;
 
   function elegirPorPuntero(e: PointerEvent<HTMLDivElement>) {
     const r = e.currentTarget.getBoundingClientRect();
@@ -183,6 +194,9 @@ export default function WinProbBand({
         </span>
       </div>
 
+      {/* La gráfica y, a su derecha, la escala 100 / 50 / 100: arriba el
+          100% del local, abajo el del visitante. */}
+      <div className="flex gap-1.5">
       <div
         role="group"
         tabIndex={0}
@@ -192,7 +206,7 @@ export default function WinProbBand({
         onPointerLeave={() => setSel(null)}
         onKeyDown={teclado}
         onBlur={() => setSel(null)}
-        className="relative h-28 cursor-crosshair touch-pan-y rounded-md bg-sunken/60 outline-none focus-visible:ring-2 focus-visible:ring-fg/60 sm:h-32"
+        className="relative h-28 min-w-0 flex-1 cursor-crosshair touch-pan-y rounded-md bg-sunken/60 outline-none focus-visible:ring-2 focus-visible:ring-fg/60 sm:h-32"
       >
         {/* Etiquetas de lado: quién está arriba y quién abajo. Es lo que hace
             que el color no tenga que identificar solo. */}
@@ -222,6 +236,20 @@ export default function WinProbBand({
           <path d={geo.area} fill={home} fillOpacity={LAVADO} clipPath="url(#wp-arriba)" />
           <path d={geo.area} fill={away} fillOpacity={LAVADO} clipPath="url(#wp-abajo)" />
 
+          {/* Una raya por entrada: el juego se lee por columnas. */}
+          {geo.rayas.map((x) => (
+            <line
+              key={x}
+              x1={x}
+              y1="0"
+              x2={x}
+              y2={VB_H}
+              stroke="rgb(var(--line))"
+              strokeWidth="1"
+              vectorEffect="non-scaling-stroke"
+            />
+          ))}
+
           {/* La línea del 50%: sólida y recesiva. Punteada es ruido. */}
           <line
             x1="0"
@@ -232,6 +260,19 @@ export default function WinProbBand({
             strokeWidth="1"
             vectorEffect="non-scaling-stroke"
           />
+
+          {/* Dónde va el juego: la marca roja de "en vivo". */}
+          {sel === null && current !== null && (
+            <line
+              x1={xAhora * VB_W}
+              y1="0"
+              x2={xAhora * VB_W}
+              y2={VB_H}
+              stroke="rgb(var(--live))"
+              strokeWidth="1.5"
+              vectorEffect="non-scaling-stroke"
+            />
+          )}
 
           {/* La mira */}
           {sel !== null && (
@@ -299,12 +340,25 @@ export default function WinProbBand({
         )}
       </div>
 
-      {/* Eje: números de entrada. */}
-      <div className="relative mt-1 h-4" aria-hidden="true">
+      <div
+        aria-hidden="true"
+        className="num flex h-28 w-6 shrink-0 flex-col justify-between text-right text-[10px] text-faint sm:h-32"
+      >
+        <span>100</span>
+        <span>50</span>
+        <span>100</span>
+      </div>
+      </div>
+
+      {/* Eje: el número de cada entrada, centrado en su columna. Mide lo
+          mismo que la gráfica: deja fuera la columna de la escala. */}
+      <div className="relative mr-[30px] mt-1 h-4" aria-hidden="true">
         {geo.ticks.map((t) => (
           <span
             key={t.n}
-            className="num absolute text-[10px] text-faint"
+            className={`num absolute w-5 -translate-x-1/2 text-center text-[10px] ${
+              t.n === ahoraEntrada ? "font-bold text-live" : "text-faint"
+            }`}
             style={{ left: `${t.left * 100}%` }}
           >
             {t.n}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
 import { LiveGameDetail } from '../types';
@@ -11,28 +11,36 @@ import TeamBadge from './TeamBadge';
  * ganando no batea en la baja del 9na, y pintar un 0 ahí sería decir que
  * bateó y no anotó. El backend manda null justamente para poder distinguirlo.
  *
- * Va en un ScrollView horizontal: en entradas extra la fila crece y no hay
- * pantalla de teléfono que aguante quince columnas.
+ * Va en la pantalla principal del juego, en su tarjeta (pedido de Arturo con
+ * una captura de SofaScore, 6-oct): las columnas se reparten el ancho medido,
+ * así las nueve entradas caben sin deslizar en un iPhone. Con entradas extra
+ * las columnas no bajan de CELDA_MIN y el cuadro se desliza en horizontal.
+ * La entrada en curso lleva su número en rojo, el de "EN VIVO".
  */
 
-const CELL = 26;
-const TOTAL = 30;
+const CELDA_MIN = 20;
+const CELDA_MAX = 32;
+const EQUIPO = 52;
+const TOTAL = 28;
+const RELLENO = 12;
 
 function Row({
   code,
-  runs,
   cells,
   totals,
   batting,
+  celda,
+  ultima = false,
 }: {
   code: string | null;
-  runs: number;
   cells: (number | null)[];
   totals: [number, number, number];
   batting: boolean;
+  celda: number;
+  ultima?: boolean;
 }) {
   return (
-    <View style={styles.row}>
+    <View style={[styles.row, ultima && styles.rowUltima]}>
       <View style={styles.teamCell}>
         {/* El triángulo marca quién batea, como en el marcador de la tarjeta. */}
         <Text style={styles.arrow}>{batting ? '▸' : ' '}</Text>
@@ -40,7 +48,7 @@ function Row({
       </View>
 
       {cells.map((v, i) => (
-        <Text key={i} style={[styles.cell, v === null && styles.cellEmpty]}>
+        <Text key={i} style={[styles.cell, { width: celda }, v === null && styles.cellEmpty]}>
           {v === null ? '·' : v}
         </Text>
       ))}
@@ -53,6 +61,7 @@ function Row({
 }
 
 export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
+  const [ancho, setAncho] = useState(0);
   // El backend solo manda las entradas JUGADAS, así que en el 2do el cuadro
   // salía con dos columnas y media pantalla vacía. Un marcador de béisbol
   // enseña las nueve desde el primer lanzamiento: las que faltan van en
@@ -84,14 +93,29 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
   const homeBatting =
     detail.status === 'live' && last.away_runs !== null && last.home_runs === null;
   const awayBatting = detail.status === 'live' && !homeBatting;
+  const enCurso = detail.status === 'live' ? last.num : null;
+
+  // El ancho de cada columna sale del medido; hasta medirlo, el mínimo.
+  const libre = ancho - 2 * RELLENO - EQUIPO - 3 * TOTAL;
+  const celda = ancho
+    ? Math.max(CELDA_MIN, Math.min(CELDA_MAX, Math.floor(libre / innings.length)))
+    : CELDA_MIN;
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      onLayout={e => setAncho(e.nativeEvent.layout.width)}
+    >
       <View style={styles.grid}>
         <View style={[styles.row, styles.headerRow]}>
           <View style={styles.teamCell} />
           {innings.map(i => (
-            <Text key={i.num} style={[styles.cell, styles.headText]}>
+            <Text
+              key={i.num}
+              style={[styles.cell, { width: celda }, styles.headText, i.num === enCurso && styles.headAhora]}
+              accessibilityLabel={i.num === enCurso ? `Entrada ${i.num}, en curso` : undefined}
+            >
               {i.num}
             </Text>
           ))}
@@ -102,17 +126,18 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
 
         <Row
           code={detail.away.team_code}
-          runs={detail.away.runs}
           cells={innings.map(i => i.away_runs)}
           totals={[detail.away.runs, detail.away.hits, detail.away.errors]}
           batting={awayBatting}
+          celda={celda}
         />
         <Row
           code={detail.home.team_code}
-          runs={detail.home.runs}
           cells={innings.map(i => i.home_runs)}
           totals={[detail.home.runs, detail.home.hits, detail.home.errors]}
           batting={homeBatting}
+          celda={celda}
+          ultima
         />
       </View>
     </ScrollView>
@@ -120,7 +145,7 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
 }
 
 const styles = StyleSheet.create({
-  grid: { paddingVertical: 14, paddingHorizontal: 12 },
+  grid: { paddingVertical: 6, paddingHorizontal: RELLENO },
   row: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -128,12 +153,12 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: COLORS.border,
   },
+  rowUltima: { borderBottomWidth: 0 },
   headerRow: { borderBottomColor: COLORS.textSecondary },
-  teamCell: { width: 54, flexDirection: 'row', alignItems: 'center', gap: 4 },
+  teamCell: { width: EQUIPO, flexDirection: 'row', alignItems: 'center', gap: 4 },
   arrow: { width: 10, color: COLORS.warning, fontSize: 11 },
 
   cell: {
-    width: CELL,
     textAlign: 'center',
     color: COLORS.textSupport,
     fontSize: 13,
@@ -146,6 +171,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     letterSpacing: 0.4,
   },
+  headAhora: { color: COLORS.live },
 
   total: {
     width: TOTAL,

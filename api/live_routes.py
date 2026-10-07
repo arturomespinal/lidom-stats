@@ -171,7 +171,19 @@ def _situacion(state) -> Optional[dict]:
     # cuenta del último turno, pero ya pone al bateador y al lanzador de la
     # mitad que viene. Sin avisarlo, la pantalla mezclaba las dos: "3 outs,
     # 2-2, al bate Dubón (que todavía no ha bateado)".
+    # La media entrada EN CURSO ("Alta del 8vo"), del estado vivo. La cabecera
+    # la tomaba del último punto de la curva, que no se mueve si la
+    # probabilidad no cambia: decía "Baja del 7mo" con Ohtani bateando en la
+    # alta del 8vo (captura de Arturo, Dodgers-Braves).
+    entrada = state.inning_ordinal_es or state.inning_ordinal or state.inning
+    half_label = (
+        f"{'Alta' if state.is_top_inning else 'Baja'} del {entrada}"
+        if entrada is not None and state.is_top_inning is not None
+        else None
+    )
     return {
+        "half_label": half_label,
+        "inning": state.inning,
         "half_over_label": state.half_over_label,
         "outs": state.outs,
         "balls": state.balls,

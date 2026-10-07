@@ -41,6 +41,37 @@ const ocupadas = (r: LiveRunners): Ocupadas => ({
   third: !!r.third,
 });
 
+/**
+ * Las bases que se pintan. Una base que se vacía se apaga en el acto; una
+ * que se llena espera `retraso` ms: lo que tarda el corredor de la jugada en
+ * llegar. Al montar se pinta lo que hay, sin esperar. Lo usan el diamante y
+ * el terreno de la situación (Campo.tsx).
+ */
+export function useBasesPintadas(runners: LiveRunners, retraso = 0): Ocupadas {
+  const ahora = ocupadas(runners);
+  const [pintadas, setPintadas] = useState<Ocupadas>(ahora);
+  useEffect(() => {
+    const vacias: Ocupadas = {
+      first: pintadas.first && ahora.first,
+      second: pintadas.second && ahora.second,
+      third: pintadas.third && ahora.third,
+    };
+    const iguales = (a: Ocupadas, c: Ocupadas) =>
+      a.first === c.first && a.second === c.second && a.third === c.third;
+    if (iguales(pintadas, ahora)) return;
+    if (retraso <= 0) {
+      setPintadas(ahora);
+      return;
+    }
+    if (!iguales(pintadas, vacias)) setPintadas(vacias);
+    const t = setTimeout(() => setPintadas(ahora), retraso);
+    return () => clearTimeout(t);
+    // Solo cuando cambian los corredores; `pintadas` es el punto de partida.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ahora.first, ahora.second, ahora.third, retraso]);
+  return pintadas;
+}
+
 export default function BaseDiamond({
   runners,
   size = 62,
@@ -55,29 +86,7 @@ export default function BaseDiamond({
   const b = Math.round(size * 0.22); // lado de cada base
   const half = b / 2;
 
-  // Lo que se pinta. Una base que se vacía se apaga en el acto; una que se
-  // llena espera al corredor. Al montar se pinta lo que hay, sin esperar.
-  const ahora = ocupadas(runners);
-  const [pintadas, setPintadas] = useState<Ocupadas>(ahora);
-  useEffect(() => {
-    const vacias: Ocupadas = {
-      first: pintadas.first && ahora.first,
-      second: pintadas.second && ahora.second,
-      third: pintadas.third && ahora.third,
-    };
-    const iguales = (a: Ocupadas, c: Ocupadas) =>
-      a.first === c.first && a.second === c.second && a.third === c.third;
-    if (iguales(pintadas, ahora)) return;
-    if (retrasoLlenado <= 0) {
-      setPintadas(ahora);
-      return;
-    }
-    if (!iguales(pintadas, vacias)) setPintadas(vacias);
-    const t = setTimeout(() => setPintadas(ahora), retrasoLlenado);
-    return () => clearTimeout(t);
-    // Solo cuando cambian los corredores; `pintadas` es el punto de partida.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ahora.first, ahora.second, ahora.third, retrasoLlenado]);
+  const pintadas = useBasesPintadas(runners, retrasoLlenado);
 
   const bases: { key: string; on: boolean; left: number; top: number }[] = [
     { key: 'second', on: pintadas.second, left: size / 2 - half, top: size * 0.14 },

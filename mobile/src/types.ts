@@ -247,6 +247,9 @@ export interface TeamTotals {
 
 /** Lo que está pasando ahora mismo. Solo con el juego en curso. */
 export interface LiveSituation {
+  /** La media entrada en curso, "Alta del 8vo", del estado vivo. */
+  half_label?: string | null;
+  inning?: number | null;
   half_over_label: string | null;
   outs: number;
   balls: number;

@@ -896,7 +896,9 @@ El diamante (`components/BaseDiamond.tsx`) usa `View` rotadas 45°, no SVG:
 no valía añadir una librería nativa por tres cuadrados. `react-native-svg` sí
 entró después, para la franja de probabilidad — una curva no se dibuja con
 `View` —, y viene incluido en Expo Go, así que no obliga a salir de él. El
-diamante se quedó como estaba: funciona y no hay razón para tocarlo.
+diamante se quedó en `View`: funciona. Desde la entrega 70 acepta
+`retrasoLlenado` y exporta `posicionesDiamante()` (ver "El juego en vivo en el
+móvil").
 
 ### Detalle de un juego
 
@@ -925,6 +927,47 @@ Tres cosas aprendidas al construirla:
 
 El `gamePk` viaja con los códigos de los dos equipos para que la cabecera tenga
 título antes de la primera respuesta y no parpadee.
+
+### El juego en vivo en el móvil (6-oct-2026)
+
+Lo mismo que la web (ver "La situación y la jugada que se mueve" y "El turno,
+la zona de strike y los números"), con los mismos datos del mismo sondeo de
+12 s. En `GameDetailScreen`, en este orden: la cabecera navy, la situación
+(solo con el juego en curso), la franja de probabilidad con las jugadas
+clave debajo, la comparativa y las pestañas.
+
+| Qué | Móvil |
+|-----|-------|
+| Diamante, outs, cuenta o "Fin de la alta del 5to", al bate/abre, lanza, en espera, con los números del duelo | `components/Situacion.tsx` |
+| La franja de la jugada y el corredor | `Situacion.tsx` (`Franja`, `Corredor`) |
+| La zona de strike y la lista de lanzamientos | `components/ZonaStrike.tsx` (react-native-svg) |
+| Jugadas clave | `components/JugadasClave.tsx`, dentro de la tarjeta de la franja |
+| Equipo contra equipo | `components/Comparativa.tsx` |
+| El batazo en cada fila del relato | `PlayByPlay.tsx` |
+| "Fin de la alta del 5to" y "Abre" en la tarjeta del listado | `LiveScoreboard.tsx` |
+
+- **Las animaciones van con `Animated` y `useNativeDriver`** (opacidad y
+  desplazamiento), sin librerías: nada de reanimated. La franja y el
+  corredor llevan `key` = el índice de la jugada y animan al montarse, igual
+  que en la web; el corredor recorre `posicionesDiamante()` con una
+  interpolación por tramos, al mismo ritmo (450 ms por base).
+- **La base se enciende cuando llega el corredor**: `BaseDiamond` con
+  `retrasoLlenado` pinta al instante la base que se vacía y espera para la
+  que se llena. Al montar pinta lo que hay, sin esperar.
+- **Con "reducir movimiento"** (`useReducirMovimiento()`) no hay corredor, las
+  bases se encienden en el acto y la franja aparece y se va sin deslizarse.
+- **El corte en diagonal de la franja** es un plano navy con `skewX`; lo que
+  sobra a la derecha lo recorta la tarjeta (`overflow: 'hidden'`). React
+  Native no tiene `clip-path`.
+- En el teléfono todo va apilado: los nombres en su propia fila, la zona
+  centrada y la lista de lanzamientos debajo. Las líneas de números y los
+  datos del batazo admiten dos renglones: "4 H · 4 CL · 0 BB · 2 K · EFE
+  12.00" no cabe en uno en un iPhone de 390.
+- Los nombres de la situación abren la ficha (`profile_id` del duelo), como
+  en el boxscore.
+- Comprobado en el arnés web del móvil (react-native-web) con la caché
+  sembrada: ponche, doble y jonrón con sus fotogramas. Ahí `useNativeDriver`
+  cae a JavaScript; en el teléfono va en el hilo nativo.
 
 ## El games_back de la MLB API no es distancia al líder
 

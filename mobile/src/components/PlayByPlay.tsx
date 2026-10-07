@@ -67,6 +67,18 @@ function Play({ play, detail }: { play: PlayLine; detail: LiveGameDetail }) {
             {play.pitcher}
           </Text>
         )}
+        {/* El batazo, si el parque lo midió. */}
+        {!enCurso && !!play.hit && (play.hit.speed_mph != null || !!play.hit.distance_ft) && (
+          <Text style={styles.batazo}>
+            {[
+              play.hit.speed_mph != null ? `${Math.round(play.hit.speed_mph)} mph` : null,
+              play.hit.distance_ft ? `${play.hit.distance_ft} pies` : null,
+              play.hit.angle != null ? `${Math.round(play.hit.angle)}°` : null,
+            ]
+              .filter(Boolean)
+              .join(' · ')}
+          </Text>
+        )}
       </View>
 
       <View style={styles.score}>
@@ -121,6 +133,7 @@ export default function PlayByPlay({ detail }: { detail: LiveGameDetail }) {
 }
 
 const styles = StyleSheet.create({
+  batazo: { color: COLORS.textFaint, fontSize: 11, fontVariant: ['tabular-nums'], marginTop: 1 },
   inningBar: {
     flexDirection: 'row',
     alignItems: 'center',

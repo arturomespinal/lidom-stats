@@ -14,7 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail, fetchWinProb } from '../api';
 import { COLORS, FONTS } from '../constants';
-import { LiveGameDetail, WinProbResponse } from '../types';
+import { LiveGameDetail, LiveSituation, WinProbResponse } from '../types';
 import { useFichas, type LiveStackParamList } from '../navigation';
 import GameTabs, { GameTab } from '../components/GameTabs';
 import PlayByPlay from '../components/PlayByPlay';
@@ -24,6 +24,9 @@ import Lineups from '../components/Lineups';
 import StatusBadge from '../components/StatusBadge';
 import TeamBadge from '../components/TeamBadge';
 import WinProbBand from '../components/WinProbBand';
+import Situacion, { jugadaDestacada } from '../components/Situacion';
+import JugadasClave from '../components/JugadasClave';
+import Comparativa from '../components/Comparativa';
 import Heroe from '../components/Heroe';
 import { Aparecer } from '../components/Movimiento';
 import { Bloque } from '../components/Esqueleto';
@@ -51,6 +54,7 @@ export default function GameDetailScreen({ route }: Props) {
 
   const [detail, setDetail] = useState<LiveGameDetail | null>(null);
   const [wp, setWp] = useState<WinProbResponse | null>(null);
+  const [situacion, setSituacion] = useState<LiveSituation | null>(null);
   const [updating, setUpdating] = useState(true);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -98,6 +102,7 @@ export default function GameDetailScreen({ route }: Props) {
 
       if (res) {
         setDetail(res.data);
+        setSituacion(res.situation ?? null);
         setUpdating(res.is_updating);
         setFailed(false);
       } else {
@@ -202,6 +207,17 @@ export default function GameDetailScreen({ route }: Props) {
       >
         <HeroeJuego detail={detail} updating={updating} failed={failed} wp={wp} />
 
+        {/* Lo que está pasando: solo con el juego en curso (el backend manda
+            `situation` en null en la previa y al final). */}
+        {situacion && detail.status === 'live' && (
+          <Situacion
+            situacion={situacion}
+            jugada={jugadaDestacada(detail.plays)}
+            turno={detail.at_bat}
+            duelo={detail.matchup}
+          />
+        )}
+
         {/* Dos puntos como mínimo para que sea una curva. En la previa no hay
             estado que simular y no se pinta nada. */}
         {wp && wp.points.length >= 2 && detail.home.team_code && detail.away.team_code && (
@@ -213,8 +229,17 @@ export default function GameDetailScreen({ route }: Props) {
               awayCode={detail.away.team_code}
               headline={wp.headline}
             />
+            {!!wp.key_plays?.length && (
+              <JugadasClave
+                jugadas={wp.key_plays}
+                awayCode={detail.away.team_code}
+                homeCode={detail.home.team_code}
+              />
+            )}
           </View>
         )}
+
+        <Comparativa away={detail.away} home={detail.home} />
 
         <View
           onLayout={e => {

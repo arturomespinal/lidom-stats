@@ -86,6 +86,9 @@ function LineScore({ state }: { state: LiveGameState }) {
 }
 
 function Situation({ state }: { state: LiveGameState }) {
+  // Entre medias entradas la MLB deja los 3 outs y la cuenta del último
+  // turno, con el bateador que abre la otra mitad: se dice, no se mezcla.
+  const fin = state.half_over_label;
   return (
     <View style={styles.situation}>
       <BaseDiamond runners={state.runners} />
@@ -102,18 +105,22 @@ function Situation({ state }: { state: LiveGameState }) {
             ))}
           </View>
         </View>
-        <View style={styles.counterRow}>
-          <Text style={styles.counterLabel}>CUENTA</Text>
-          <Text style={styles.count}>
-            {state.balls}-{state.strikes}
-          </Text>
-        </View>
+        {fin ? (
+          <Text style={styles.fin} numberOfLines={2}>{fin}</Text>
+        ) : (
+          <View style={styles.counterRow}>
+            <Text style={styles.counterLabel}>CUENTA</Text>
+            <Text style={styles.count}>
+              {state.balls}-{state.strikes}
+            </Text>
+          </View>
+        )}
       </View>
 
       <View style={styles.matchup}>
         {!!state.batter && (
           <Text style={styles.matchupLine} numberOfLines={1}>
-            <Text style={styles.matchupLabel}>Al bate </Text>
+            <Text style={styles.matchupLabel}>{fin ? 'Abre ' : 'Al bate '}</Text>
             {state.batter}
           </Text>
         )}
@@ -359,6 +366,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
   },
   outs: { flexDirection: 'row', gap: 5 },
+  fin: { color: COLORS.textSupport, fontSize: 11, fontWeight: '700', maxWidth: 110 },
   out: { width: 8, height: 8, borderRadius: 4, backgroundColor: COLORS.border },
   outFilled: { backgroundColor: COLORS.warning },
   count: { color: COLORS.textPrimary, fontSize: 15, fontWeight: '700' },

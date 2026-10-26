@@ -114,7 +114,12 @@ def franja_de_fechas(centro: date, conteo: dict[date, int], dias: int = 3) -> li
 def etiqueta_estado(juego: dict) -> str:
     """
     Lo que va en la esquina de la tarjeta: "FINAL", "FINAL (10)", "7:30 p. m.",
-    "Baja del 5to", "POSPUESTO".
+    "Baja del 5to", "POSPUESTO", "SUSPENDIDO".
+
+    Un juego suspendido (la MLB lo marca con los códigos U y T) no va a
+    jugarse a su hora: se reanuda otro día con el mismo juego. Sin esta rama
+    caía a la hora, y el EST-AGU del 21-oct-2026 salía "7:15 p. m." en una
+    fecha ya pasada, como si fuera a empezar.
     """
     st = juego["status"]
     if st == "final":
@@ -125,6 +130,8 @@ def etiqueta_estado(juego: dict) -> str:
         return f"{lado} del {juego.get('inning_ordinal') or ordinal_es(juego.get('inning') or 1)}"
     if st == "postponed":
         return "POSPUESTO"
+    if st == "suspended":
+        return "SUSPENDIDO"
     if st == "cancelled":
         return "CANCELADO"
     if st == "no_result":

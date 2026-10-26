@@ -697,6 +697,15 @@ check("antes de la primera jornada: la primera", (antes["date"], antes["is_reque
 call("/day?date=15-10-2025", expect=400)
 
 check("resolver_fecha sin juegos → None", resolver_fecha(_date(2025, 1, 1), []), None)
+from src.jornada import etiqueta_estado  # noqa: E402
+# Un suspendido no va a empezar a su hora: se reanuda otro día. Antes caía a
+# la hora y el EST-AGU del 21-oct-2026 salía "7:15 p. m." días después.
+check("un juego suspendido dice SUSPENDIDO, no su hora",
+      etiqueta_estado({"status": "suspended", "time_local": "7:15 p. m."}), "SUSPENDIDO")
+_susp = [g for g in call("/day?date=2026-10-21").get("games", []) if g["status"] == "suspended"]
+if _susp:  # solo con la 2026-27 cargada
+    check("  y así sale en la jornada, sin marcador",
+          (_susp[0]["status_label"], _susp[0]["away"]["runs"], _susp[0]["home"]["runs"]), ("SUSPENDIDO", None, None))
 check("hora_local: 00:00 UTC son las 8 de la noche del día anterior",
       hora_local("2025-10-16 00:00:00.000000"), "8:00 p. m.")
 check("Game Score de una blanqueada completa de 9 K y 3 H",

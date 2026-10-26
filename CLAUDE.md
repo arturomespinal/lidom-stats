@@ -1608,6 +1608,12 @@ el orden en que se jugó.
 - **Un juego `scheduled` de una fecha pasada pasa a `no_result`** ("SIN
   RESULTADO"): el forfeit de 2016 se pintaba "7:15 p. m.", como si fuera a
   jugarse. `armar_juego` compara contra hoy en RD.
+- **Un juego suspendido dice "SUSPENDIDO"** (`etiqueta_estado`, 26-oct-2026):
+  el EST-AGU del 21-oct-2026 caía a su hora y salía "7:15 p. m." días
+  después. Va sin marcador, como todo lo que no es final ni en vivo; al
+  reanudarse debería conservar su `game_id`, porque `officialDate` sigue
+  siendo la del día original, y pasar a final. Está por comprobar con este
+  juego.
 - La decisión va como nota junto al lanzador — (G), (P), (SV) — igual que en
   el detalle en vivo.
 

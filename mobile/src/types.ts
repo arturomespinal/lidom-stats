@@ -819,7 +819,7 @@ export interface TeamStanding {
    (src/jornada.py). El cliente dibuja. */
 
 /** `no_result`: una fecha pasada que la base nunca cerró (forfeit, pospuesto sin reposición). */
-export type EstadoJornada = 'scheduled' | 'live' | 'final' | 'postponed' | 'cancelled' | 'no_result';
+export type EstadoJornada = 'scheduled' | 'live' | 'final' | 'postponed' | 'suspended' | 'cancelled' | 'no_result';
 
 export interface LadoJornada {
   code: string;

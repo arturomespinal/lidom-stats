@@ -88,6 +88,7 @@ pip install -r requirements-analitica.txt
 python main.py exportar-parquet      # data/parquet/<tabla>.parquet
 cd analitica && dbt build            # modelos y pruebas → data/analitica.duckdb
 python -m dbt.cli.main build         # lo mismo, si `dbt` no está en el PATH (Python de la Store)
+cd .. && python main.py publicar-analitica  # las mejores temporadas → tabla ana_mejores_temporadas de la app
 
 # Tablas planas de todas las temporadas (necesita red; ya cargadas 2012–2025):
 # for /L %y in (2012,1,2025) do python main.py ingest %y
@@ -2078,6 +2079,7 @@ números. Se rehace al final de cada `ingest-historia` y con
 | Endpoint | Qué da |
 |----------|--------|
 | `GET /historia/lideres?group=bateo&stat=hr` | Líderes de todos los tiempos, serie regular, las dos fuentes sumadas por persona. Trae la lista de `categories` |
+| `GET /historia/temporadas?group=bateo&stat=avg` | Las mejores temporadas de la historia (top 10, empates compartidos, solo temporadas terminadas). Las calcula la capa analítica; 404 si no están publicadas |
 | `GET /historia/resumen` | El líder de las categorías principales (5 de bateo, 4 de pitcheo) en una llamada: la portada de récords |
 | `GET /historia/miembros/{id_miembro}` | La ficha de un jugador que solo está en DIGIMETRICS: temporadas con etapas, carrera regular y postemporada aparte |
 | `GET /players/{id}` → `history` | Sus temporadas antes de 2012-13 y la carrera completa. `null` si no tiene años anteriores |
@@ -2276,10 +2278,13 @@ carga se valida sola al terminar**. `main.py` sigue funcionando igual.
 `analitica/` — un proyecto dbt sobre DuckDB que lee la base exportada a
 Parquet. Es la capa para preguntas que cruzan toda la historia, empezando por
 **las mejores temporadas desde 1951**, uniendo las dos fuentes. La app sigue
-leyendo SQLite; esto no la toca.
+leyendo SQLite y nada más: lo que la capa calcula para ella vuelve a SQLite
+con `publicar-analitica` (ver "De vuelta a la app").
 
 ```
 SQLite ──src/exportar.py──► data/parquet/*.parquet ──dbt (DuckDB)──► data/analitica.duckdb
+   ▲                                                                        │
+   └──────────────── src/publicar.py (ana_mejores_temporadas) ◄─────────────┘
 ```
 
 | Modelo | Grano | Qué es |
@@ -2313,10 +2318,11 @@ SQLite ──src/exportar.py──► data/parquet/*.parquet ──dbt (DuckDB)�
   `analitica/`. El perfil (`analitica/profiles.yml`) vive en el proyecto: no
   tiene nada secreto. Sin paquetes de dbt (pedirían red) y sin telemetría.
 - **Pruebas de dbt**: las genéricas (únicas, no nulas, valores aceptados, la
-  categoría existe) y nueve singulares en `analitica/tests/`: los juegos
+  categoría existe) y diez singulares en `analitica/tests/`: los juegos
   cuadran en lo que leyó dbt, una sola fuente por temporada, cada fuente de
   su lado del corte, conteos y tasas en rango, en las tasas solo calificados,
-  y un aviso si una temporada no tiene mínimos.
+  ninguna temporada en curso en las mejores, y un aviso si una temporada no
+  tiene mínimos.
 
 ### En Dagster
 
@@ -2347,12 +2353,56 @@ la ingesta a las mejores temporadas sin cortes.
 - `CapaAnalitica.entorno()` pone las rutas absolutas en las variables que lee
   dbt y las quita al salir: el ejecutor es en proceso.
 
+### De vuelta a la app: las mejores temporadas (26-oct-2026)
+
+**El fallo que destapó la 2026-27:** el mínimo de una temporada en curso
+escala con los juegos jugados (25 AP a los diez días), así que Munguia
+encabezaba el promedio de la historia con .478 y cinco relevistas empataban
+el récord de efectividad con 0.00. Una temporada a medias no compite con las
+terminadas.
+
+- **`completa` en `minimos_temporada`** (`src/exportar.py`): una temporada
+  está completa si el último juego de su serie regular —jugado o por jugar—
+  es anterior a hoy en RD. Las de DIGIMETRICS, siempre. `exportar(hoy=…)`
+  fija el día para la suite.
+- `fct_bateo_temporada` y `fct_pitcheo_temporada` exponen `completa` (falso
+  si la temporada no tiene mínimos); `mejores_temporadas` solo toma las
+  completas. La prueba `sin_temporada_en_curso` vigila que nadie quite el
+  filtro. La temporada en curso sigue en los `fct_*`: solo sale del ranking.
+  Entra sola el día después de su último juego.
+- **`src/publicar.py` / `python main.py publicar-analitica`** copia el modelo a
+  la tabla `ana_mejores_temporadas` de la base de la app, entera y en una
+  transacción, y anota la hora en `ana_publicacion`. Copiar en vez de que la
+  API lea DuckDB: el servidor no instala duckdb ni dbt, la base sigue siendo
+  un solo archivo que respaldar, y la tabla cambia una vez al año.
+- **`GET /historia/temporadas`** la lee tal cual. El mínimo de una tasa se
+  dice como regla ("3.1 apariciones por juego de su temporada"), porque cambia
+  de temporada en temporada. Sin la tabla, 404 con el comando que falta.
+- **En Dagster**, `app/mejores_temporadas` cuelga del modelo, va en el job
+  `capa_analitica` y su check `publicadas_completas` cuenta las filas contra
+  DuckDB.
+- **Web**: en `/historia`, debajo de los récords de carrera, la sección
+  "Mejores temporadas" de la misma categoría (`ListaTemporadas`): filas, sin
+  otra tarjeta navy. Si la API da null, la sección no sale.
+- **Móvil**: en `RecordsScreen`, un control "Carrera | Una temporada" cambia
+  la lista; las dos se piden a la vez. Debajo de 25 filas de carrera las
+  temporadas no se verían. Sin temporadas publicadas, el control no sale.
+- **Al desplegar**: correr la capa y `publicar-analitica` en la PC ANTES de
+  subir la base (paso 7 de `deploy/oracle/GUIA.md`). Después, la base del
+  servidor manda; cuando termine la 2026-27, rehacer la tabla allá (ver
+  Próximos pasos).
+- Datos reales que lo comprueban: Ralph Garr .457 (1970-71) encabeza el
+  promedio y Víctor Díaz 17 jonrones (2008-09) los jonrones. El 0.00 de Tommy
+  Milone en 2018-19 es real (34.1 entradas, 0 limpias; las dos capas
+  coinciden).
+
 ### La suite
 
-`verify_analitica.py` (64 comprobaciones): una base sintética con las dos
+`verify_analitica.py` (81 comprobaciones): una base sintética con las dos
 fuentes —un enlazado con años en las dos, una leyenda solo de DIGIMETRICS, un
-cambiado de equipo, postemporada que no cuenta, el caso del 46.5— exportada y
-construida con dbt; **la carrera de cada persona igual a `carreras()` de
+cambiado de equipo, postemporada que no cuenta, el caso del 46.5 y una
+temporada en curso que encabezaría dos categorías— exportada y construida con
+dbt; la publicación y el endpoint; **la carrera de cada persona igual a `carreras()` de
 `src/historia.py`**, la que sirve la API; el Parquet dañado a propósito hace
 fallar la prueba que corresponde; el job de Dagster de punta a punta; y con
 la base real, cada temporada de la MLB API igual a la suma de sus líneas y
@@ -2426,7 +2476,7 @@ día, y cualquier otra hace fallar la suite y el check de Dagster.
 1. Desplegar en Oracle siguiendo `deploy/oracle/GUIA.md`, y apuntar la app y la web a la API de allá. La temporada ya arrancó: es lo más urgente.
 2. Encender el poller contra los juegos reales de LIDOM y vigilar una jornada completa (`LIDOM_LIVE_POLLER=1`). Hay un juego suspendido (EST en AGU, 21-oct): ver cómo llega el día que se reanude.
 3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen.
-4. Las mejores temporadas de la historia en la app: ya están en `mejores_temporadas` (capa analítica); falta servirlas en la API (leyendo `data/analitica.duckdb`) y pintarlas junto a los récords de carrera.
+4. Cuando termine la 2026-27, rehacer las mejores temporadas en el servidor: instalar `requirements-analitica.txt` allá y correr `exportar-parquet`, `dbt build` y `publicar-analitica` (o el job `capa_analitica`). La base de la PC ya no se sube con la temporada en marcha.
 5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.
 
 ## Antes de monetizar: leer la guía legal

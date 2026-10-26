@@ -24,7 +24,14 @@ from src.constants import DEFAULT_DB_URL
 from dagster_dbt import DbtCliResource
 
 from .activos import cruce_historia, enlaces_historia, historia, juegos, tablas_planas
-from .analitica import CapaAnalitica, ejecutable_dbt, modelos_dbt, parquet, proyecto_dbt
+from .analitica import (
+    CapaAnalitica,
+    app_mejores_temporadas,
+    ejecutable_dbt,
+    modelos_dbt,
+    parquet,
+    proyecto_dbt,
+)
 from .recursos import BaseDatos
 from .temporadas import TEMPORADAS, temporada_actual
 
@@ -62,8 +69,8 @@ def cada_madrugada(context: ScheduleEvaluationContext) -> RunRequest:
 # `temporada_en_curso` está particionado por temporada y estos assets no.
 capa_analitica = define_asset_job(
     "capa_analitica",
-    selection=AssetSelection.assets(parquet, modelos_dbt),
-    description="Exporta la base a Parquet y corre dbt build: modelos y pruebas.",
+    selection=AssetSelection.assets(parquet, modelos_dbt, app_mejores_temporadas),
+    description="Exporta la base a Parquet, corre dbt build (modelos y pruebas) y publica en la app.",
 )
 
 
@@ -80,7 +87,8 @@ def cada_manana(context: ScheduleEvaluationContext) -> RunRequest:
 
 
 defs = Definitions(
-    assets=[juegos, tablas_planas, historia, enlaces_historia, cruce_historia, parquet, modelos_dbt],
+    assets=[juegos, tablas_planas, historia, enlaces_historia, cruce_historia, parquet, modelos_dbt,
+            app_mejores_temporadas],
     jobs=[temporada_en_curso, capa_analitica],
     schedules=[cada_madrugada, cada_manana],
     resources={

@@ -38,7 +38,8 @@ export default function ListaLideres({ datos }: { datos: LideresHistoricos }) {
   );
 }
 
-function Equipos({ codigos, variante = "outline" }: { codigos: string[]; variante?: "outline" | "solid" }) {
+/** Las tejas de los equipos, hasta tres y "+n". También en ListaTemporadas. */
+export function Equipos({ codigos, variante = "outline" }: { codigos: string[]; variante?: "outline" | "solid" }) {
   return (
     <span className="flex shrink-0 gap-1">
       {codigos.slice(0, 3).map((c) => (

@@ -19,6 +19,8 @@ divergiendo:
   los mínimos de calificación, con `src/qualification.py`. Ojo: `round()` de
   Python redondea los .5 al par (3.1 × 15 = 46.5 → 46) y el de SQL hacia
   arriba (47). Calculado aquí, la app y la capa analítica califican igual.
+  Lleva además `completa`: si la temporada ya terminó (ver
+  `minimos_temporada`).
 - `nombres_historicos`: el nombre para mostrar de cada miembro de la liga,
   con `src/nombres.py` (tildes, apodos, los Alou sin el Rojas).
 - `categorias`: las categorías de récords con su etiqueta, si mayor es mejor y
@@ -33,6 +35,7 @@ import math
 import os
 import sqlite3
 from pathlib import Path
+from datetime import date
 from typing import Any, Optional
 
 import pyarrow as pa
@@ -41,6 +44,7 @@ import pyarrow.parquet as pq
 from src.historia import (
     ANIO_CORTE, CATEGORIAS_BATEO, CATEGORIAS_PITCHEO, MIN_OUTS_CARRERA, MIN_PA_CARRERA,
 )
+from src.jornada import hoy_rd
 from src.models.hist_models import etiqueta_historica
 from src.nombres import mostrar_nombre
 from src.qualification import qualifying_ip, qualifying_pa
@@ -94,14 +98,36 @@ def _tabla(con: sqlite3.Connection, nombre: str) -> Optional[pa.Table]:
     return pa.table(datos, schema=esquema)
 
 
-def minimos_temporada(con: sqlite3.Connection) -> list[dict[str, Any]]:
-    """Por temporada: los juegos del equipo que más jugó y los mínimos.
+def minimos_temporada(con: sqlite3.Connection, hoy: Optional[date] = None) -> list[dict[str, Any]]:
+    """Por temporada: los juegos del equipo que más jugó, los mínimos y si
+    la temporada ya terminó.
 
     Desde 2012-13, de `v_standings`, igual que la API. Antes, de las
     decisiones de los lanzadores de la liga (ganados + perdidos por equipo):
     la fuente no trae posiciones de esos años (CLAUDE.md, "Qué tiene la fuente
     y qué no").
+
+    ── `completa` ──
+    Una temporada en curso no puede tener la mejor temporada de la historia:
+    el mínimo de calificación crece con los juegos jugados, y a los diez días
+    de la 2026-27 bastaban 25 apariciones. Ismael Munguia salía primero de
+    todos los tiempos en AVG con .478, y cinco relevistas empataban el récord
+    de efectividad con 0.00. Una temporada de la MLB API está completa cuando
+    su último juego de serie regular es anterior a hoy (en RD); las de
+    DIGIMETRICS lo están siempre. La fecha del último juego cuenta los que
+    faltan por jugar: el calendario entero se ingesta desde el primer día.
     """
+    hoy = hoy or hoy_rd()
+    ultima_fecha: dict[str, str] = {}
+    hay_juegos = con.execute(
+        "SELECT 1 FROM sqlite_master WHERE type='table' AND name='games'"
+    ).fetchone()
+    if hay_juegos:
+        for sid, f in con.execute(
+            "SELECT season_id, MAX(game_date) FROM games WHERE stage = 'regular' GROUP BY season_id"
+        ):
+            if f:
+                ultima_fecha[sid] = str(f)[:10]
     juegos: dict[str, int] = {}
     # La misma cuenta que `season_games_played()` de la API: la vista de
     # posiciones, solo regular y juegos finales.
@@ -129,12 +155,15 @@ def minimos_temporada(con: sqlite3.Connection) -> list[dict[str, Any]]:
     filas = []
     for sid, n in sorted(juegos.items()):
         min_ip = qualifying_ip(n)
+        fin = ultima_fecha.get(sid)
         filas.append({
             "season_id": sid, "juegos_equipo": n,
             "min_pa": qualifying_pa(n), "min_ip": min_ip,
             # En outs y entero: 30.6 entradas son 92 outs (91.8 hacia arriba).
             # Comparar contra 30.6 * 3 en SQL es comparar flotantes.
             "min_outs": math.ceil(round(min_ip * 3, 6)),
+            # Sin juegos en `games` es una temporada de DIGIMETRICS: completa.
+            "completa": fin is None or fin < hoy.isoformat(),
         })
     return filas
 
@@ -171,6 +200,7 @@ ESQUEMAS_DERIVADAS = {
     "minimos_temporada": pa.schema([
         ("season_id", pa.string()), ("juegos_equipo", pa.int64()),
         ("min_pa", pa.int64()), ("min_ip", pa.float64()), ("min_outs", pa.int64()),
+        ("completa", pa.bool_()),
     ]),
     "nombres_historicos": pa.schema([("id_miembro", pa.int64()), ("nombre", pa.string())]),
     "categorias": pa.schema([
@@ -183,9 +213,10 @@ ESQUEMAS_DERIVADAS = {
 }
 
 
-def exportar(db: str, destino: Path = DIRECTORIO) -> dict[str, int]:
+def exportar(db: str, destino: Path = DIRECTORIO, hoy: Optional[date] = None) -> dict[str, int]:
     """Exporta la base `db` (ruta o URL sqlite:///) a `destino`. Devuelve las
-    filas de cada archivo escrito."""
+    filas de cada archivo escrito. `hoy` decide qué temporadas están
+    completas (por defecto, hoy en RD); la suite lo fija."""
     ruta = Path(db.removeprefix("sqlite:///")).resolve()
     if not ruta.exists():
         raise FileNotFoundError(f"No existe la base: {ruta}")
@@ -200,7 +231,7 @@ def exportar(db: str, destino: Path = DIRECTORIO) -> dict[str, int]:
             _escribir(t, destino / f"{nombre}.parquet")
             filas[nombre] = t.num_rows
         derivadas = {
-            "minimos_temporada": minimos_temporada(con),
+            "minimos_temporada": minimos_temporada(con, hoy),
             "nombres_historicos": nombres_historicos(con),
             "categorias": categorias(),
             "constantes": constantes(),

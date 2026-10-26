@@ -2,6 +2,7 @@
 orquestacion/analitica.py — La capa analítica en Dagster: el Parquet y dbt.
 
     juegos, tablas_planas, historia ──► parquet/<tabla> ──► modelos de dbt
+                                                    ──► app/mejores_temporadas
 
 `parquet` exporta la base con `src/exportar.py` (lo mismo que
 `python main.py exportar-parquet`): un asset por archivo, con un check que
@@ -9,6 +10,10 @@ cuenta sus filas contra la base. Cada modelo de `analitica/` es un asset y
 cada prueba de dbt, un check. Un job aparte, `capa_analitica`, con su
 schedule: un job particionado por temporada no puede llevar assets sin
 partición.
+
+`app/mejores_temporadas` cierra el círculo: copia el modelo de dbt a la base
+de la app (`src/publicar.py`, lo mismo que `python main.py
+publicar-analitica`), con un check que cuenta las filas contra DuckDB.
 
 Las rutas salen del recurso `CapaAnalitica` y le llegan a dbt como variables
 de entorno (`LIDOM_PARQUET_DIR`, `LIDOM_DUCKDB_PATH`), las mismas que lee
@@ -34,11 +39,13 @@ from dagster import (
     ConfigurableResource,
     MaterializeResult,
     MetadataValue,
+    asset,
     multi_asset,
 )
 from dagster_dbt import DagsterDbtTranslator, DagsterDbtTranslatorSettings, DbtCliResource, DbtProject, dbt_assets
 
 from src.exportar import TABLAS, exportar
+from src.publicar import TABLA as TABLA_APP, publicar_mejores
 
 from .activos import enlaces_historia, historia, juegos, tablas_planas
 from .recursos import BaseDatos
@@ -201,3 +208,33 @@ def modelos_dbt(context: AssetExecutionContext, dbt: DbtCliResource, analitica: 
     with analitica.entorno():
         yield from dbt.cli(["build"], context=context).stream()
 
+
+
+# ── De vuelta a la app ───────────────────────────────────────────────────────
+CLAVE_APP = AssetKey(["app", "mejores_temporadas"])
+
+
+@asset(
+    key=CLAVE_APP,
+    deps=[AssetKey(["mejores_temporadas"])],
+    group_name="analitica",
+    description="Las mejores temporadas, copiadas a la base de la app (src/publicar.py).",
+    check_specs=[AssetCheckSpec("publicadas_completas", asset=CLAVE_APP,
+                                description="La tabla de la app tiene las filas del modelo de dbt.")],
+)
+def app_mejores_temporadas(context: AssetExecutionContext, base: BaseDatos, analitica: CapaAnalitica):
+    """Lo mismo que `python main.py publicar-analitica`."""
+    import duckdb
+
+    n = publicar_mejores(base.url, Path(analitica.duckdb))
+    context.log.info(f"{n} filas en {TABLA_APP}")
+    origen = duckdb.connect(analitica.duckdb, read_only=True)
+    try:
+        en_dbt = origen.execute("SELECT COUNT(*) FROM mejores_temporadas").fetchone()[0]
+    finally:
+        origen.close()
+    with closing(base.leer()) as con:
+        en_app = con.execute(f"SELECT COUNT(*) FROM {TABLA_APP}").fetchone()[0]
+    yield MaterializeResult(metadata={"filas": n})
+    yield AssetCheckResult(check_name="publicadas_completas", passed=en_app == en_dbt,
+                           severity=AssetCheckSeverity.ERROR, metadata={"dbt": en_dbt, "app": en_app})

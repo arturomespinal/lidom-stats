@@ -8,6 +8,7 @@ import {
   Jornada,
   JuegoHistorico,
   LideresHistoricos,
+  MejoresTemporadas,
   LiveDetailResponse,
   LiveGameState,
   MiembroHistorico,
@@ -184,6 +185,14 @@ export async function fetchLideresHistoricos(
   limit = 25,
 ): Promise<LideresHistoricos | null> {
   return get<LideresHistoricos>(`/historia/lideres?group=${grupo}&stat=${encodeURIComponent(stat)}&limit=${limit}`);
+}
+
+/**
+ * Las mejores temporadas de la historia en una categoría. null si no están
+ * publicadas (404) o si falló: la pantalla de récords esconde esa vista.
+ */
+export async function fetchMejoresTemporadas(grupo: GrupoHistorico, stat: string): Promise<MejoresTemporadas | null> {
+  return get<MejoresTemporadas>(`/historia/temporadas?group=${grupo}&stat=${encodeURIComponent(stat)}`);
 }
 
 /** La ficha de un jugador que solo está en DIGIMETRICS. */

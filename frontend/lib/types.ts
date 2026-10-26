@@ -602,6 +602,40 @@ export interface LideresHistoricos {
   categories: CategoriaHistorica[];
 }
 
+/** Una de las mejores temporadas de la historia (GET /historia/temporadas). */
+export interface TemporadaHistorica {
+  rank: number;
+  name: string;
+  /** Con player_id, su ficha es /players/{id}; sin él, /historia/jugador/{id_miembro}. */
+  player_id: string | null;
+  id_miembro: number | null;
+  /** "1970-71". */
+  season_id: string;
+  /** "liga" (DIGIMETRICS, hasta 2011-12) o "mlb" (MLB Stats API, desde 2012-13). */
+  source: "liga" | "mlb";
+  value: number;
+  /** Los equipos de esa temporada: más de uno si lo cambiaron a mitad. */
+  teams: string[];
+}
+
+/**
+ * GET /historia/temporadas: el top 10 de una categoría en UNA temporada, con
+ * empates compartidos. Solo temporadas terminadas: la que está en curso no
+ * entra hasta que acaba (la calcula la capa analítica, analitica/).
+ */
+export interface MejoresTemporadas {
+  group: GrupoHistorico;
+  stat: string;
+  label: string;
+  is_rate: boolean;
+  /** El mínimo de las tasas es el de SU temporada; null en los conteos. */
+  minimum: string | null;
+  count: number;
+  data: TemporadaHistorica[];
+  published_at: string | null;
+  categories: CategoriaHistorica[];
+}
+
 /** GET /historia/resumen: el líder de cada categoría principal. */
 export type ResumenHistorico = Record<
   GrupoHistorico,

@@ -32,6 +32,9 @@ Modos:
                                   de la MLB API (ingest-historia ya lo hace)
   exportar-parquet                La base a Parquet (data/parquet/), para la
                                   capa analítica de dbt (analitica/)
+  publicar-analitica              Copia las mejores temporadas de la capa
+                                  analítica (data/analitica.duckdb) a la base
+                                  de la app. Después de `dbt build`.
 
 La temporada va en el formato crudo de la MLB API y se nombra por el año en
 que EMPIEZA la campaña: "2025" es la 2025-26. Por defecto, "2025".
@@ -178,6 +181,19 @@ def main():
         filas = exportar("sqlite:///data/lidom_stats.db")
         logger.success(f"✅ {len(filas)} archivos en {DIRECTORIO}/: " + ", ".join(
             f"{t} {n}" for t, n in filas.items()))
+
+    # ── La capa analítica de vuelta a la app ──────────────────────────────────
+    elif mode == "publicar-analitica":
+        try:
+            from src.publicar import SinCapaAnalitica, publicar_mejores
+            n = publicar_mejores("sqlite:///data/lidom_stats.db")
+        except ImportError:
+            logger.error("Falta duckdb. Instala: pip install -r requirements-analitica.txt")
+            sys.exit(1)
+        except SinCapaAnalitica as e:
+            logger.error(str(e))
+            sys.exit(1)
+        logger.success(f"✅ {n} mejores temporadas publicadas en la base de la app")
 
     else:
         logger.error(f"Modo desconocido: {mode!r}")

@@ -4,10 +4,14 @@
 -- Las categorías, su sentido y si son tasa vienen de src/historia.py (la
 -- fuente `categorias`). En las tasas solo entra quien calificó en SU
 -- temporada: un .600 en 10 turnos no es la mejor temporada de nadie.
+--
+-- Y solo temporadas TERMINADAS (`completa`): con la 2026-27 en curso, a los
+-- diez días el mínimo era de 25 apariciones y Ismael Munguia salía primero
+-- de todos los tiempos en AVG con .478. Una temporada entra al terminar.
 with bateo as (
     unpivot (
         select
-            persona_temporada, persona, season_id, anio, fuente, equipos, califica,
+            persona_temporada, persona, season_id, anio, fuente, equipos, califica, completa,
             cast(h as double) as h, cast(hr as double) as hr, cast(rbi as double) as rbi,
             cast(r as double) as r, cast(doubles as double) as doubles,
             cast(triples as double) as triples, cast(sb as double) as sb,
@@ -22,7 +26,7 @@ with bateo as (
 pitcheo as (
     unpivot (
         select
-            persona_temporada, persona, season_id, anio, fuente, equipos, califica,
+            persona_temporada, persona, season_id, anio, fuente, equipos, califica, completa,
             cast(wins as double) as wins, cast(saves as double) as saves,
             cast(so as double) as so, cast(outs as double) as outs,
             cast(games as double) as games, cast(games_started as double) as games_started,
@@ -44,6 +48,7 @@ candidatas as (
     from largo l
     join {{ source('base', 'categorias') }} c on c.grupo = l.grupo and c.stat = l.stat
     where l.valor is not null
+      and l.completa
       and (not c.es_tasa or l.califica)
 ),
 

@@ -21,6 +21,9 @@ models:
       - name: califica
         description: Si alcanzó el mínimo de apariciones al plato de su temporada.
         data_tests: [not_null]
+      - name: completa
+        description: Si la temporada ya terminó. Las en curso no compiten por las mejores temporadas.
+        data_tests: [not_null]
 
   - name: fct_pitcheo_temporada
     description: Pitcheo de serie regular por persona y temporada, desde 1951, una fuente por temporada.
@@ -36,6 +39,9 @@ models:
                 values: [liga, mlb]
       - name: califica
         description: Si alcanzó el mínimo de outs de su temporada.
+        data_tests: [not_null]
+      - name: completa
+        description: Si la temporada ya terminó. Las en curso no compiten por las mejores temporadas.
         data_tests: [not_null]
 
   - name: fct_carrera_bateo

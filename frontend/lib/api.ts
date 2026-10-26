@@ -8,6 +8,7 @@ import {
   JuegoHistorico,
   LideresHistoricos,
   LiveDetailResponse,
+  MejoresTemporadas,
   LiveGameState,
   MiembroHistorico,
   PitchingRow,
@@ -220,6 +221,16 @@ export async function fetchLideresHistoricos(
 ): Promise<LideresHistoricos | null> {
   const params = new URLSearchParams({ group: grupo, stat, limit: String(limit) });
   return apiFetch<LideresHistoricos>(`/historia/lideres?${params}`);
+}
+
+/**
+ * Las mejores temporadas de la historia en una categoría. null si no están
+ * publicadas (404: falta `python main.py publicar-analitica`) o si la
+ * categoría no existe (422): la página las esconde, los récords siguen.
+ */
+export async function fetchMejoresTemporadas(grupo: GrupoHistorico, stat: string): Promise<MejoresTemporadas | null> {
+  const params = new URLSearchParams({ group: grupo, stat });
+  return apiFetch<MejoresTemporadas>(`/historia/temporadas?${params}`);
 }
 
 /** El líder de cada categoría principal, en una sola llamada. */

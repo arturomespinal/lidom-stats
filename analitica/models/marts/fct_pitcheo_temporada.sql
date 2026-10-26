@@ -41,6 +41,10 @@ select
     {{ tasas_pitcheo() }},
     m.min_outs,
     -- 0.6 entradas por juego del equipo que más jugó, en outs.
-    coalesce(u.outs >= m.min_outs, false) as califica
+    coalesce(u.outs >= m.min_outs, false) as califica,
+    -- La temporada ya terminó. Una en curso no compite por las mejores
+    -- temporadas (ver minimos_temporada en src/exportar.py). Sin mínimos
+    -- conocidos tampoco: no se sabe ni cuántos juegos tuvo.
+    coalesce(m.completa, false) as completa
 from unidas u
 left join {{ source('base', 'minimos_temporada') }} m on m.season_id = u.season_id

@@ -2,6 +2,7 @@
 api/historia_routes.py — La historia de la liga: DIGIMETRICS (1951-2012) + MLB API.
 
     GET /historia/lideres             Líderes de todos los tiempos, serie regular
+    GET /historia/temporadas          Las mejores temporadas de la historia
     GET /historia/miembros/{id}       Un jugador que solo existe en DIGIMETRICS
 
 La lógica vive en src/historia.py; aquí solo HTTP. La ficha de los jugadores
@@ -75,6 +76,69 @@ def lideres_historicos(
             raise HTTPException(404, SIN_HISTORIA)
     resultado = _cache.lideres(engine, group, stat, limit)
     return resultado | {"categories": _categorias(group)}
+
+
+SIN_TEMPORADAS = (
+    "Las mejores temporadas no están publicadas. Corre: python main.py exportar-parquet, "
+    "dbt build en analitica/ y python main.py publicar-analitica"
+)
+
+
+@router.get("/historia/temporadas", tags=["Historia"])
+def mejores_temporadas(
+    group: str = Query("bateo", pattern="^(bateo|pitcheo)$"),
+    stat: str = Query("h", max_length=20),
+):
+    """
+    Las mejores temporadas de la historia en una categoría: el top 10 con
+    empates compartidos, de 1951 a la última temporada TERMINADA.
+
+    Las calcula la capa analítica (`mejores_temporadas` en `analitica/`, dbt
+    sobre DuckDB) y `python main.py publicar-analitica` las copia a la tabla
+    `ana_mejores_temporadas` (src/publicar.py). Aquí solo se leen: la regla
+    —una fuente por temporada, el mínimo de SU temporada en las tasas, nada
+    de temporadas en curso— vive en un solo lugar.
+    """
+    cats = CATEGORIAS_BATEO if group == "bateo" else CATEGORIAS_PITCHEO
+    if stat not in cats:
+        raise HTTPException(422, f"'{stat}' no es una categoría de {group}: {', '.join(cats)}")
+    etiqueta, _mayor, es_tasa = cats[stat]
+    with engine.connect() as conn:
+        hay = conn.execute(text(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'ana_mejores_temporadas'")).first()
+        if not hay:
+            raise HTTPException(404, SIN_TEMPORADAS)
+        filas = conn.execute(text(
+            """SELECT puesto, nombre, player_id, id_miembro, season_id, fuente, equipos, valor
+               FROM ana_mejores_temporadas WHERE grupo = :g AND stat = :s
+               ORDER BY puesto, nombre"""), {"g": group, "s": stat}).mappings().all()
+        pub = conn.execute(text(
+            "SELECT publicado_en FROM ana_publicacion WHERE tabla = 'ana_mejores_temporadas'")).first()
+    data = [{
+        "rank": f["puesto"],
+        "name": f["nombre"],
+        "player_id": f["player_id"],
+        "id_miembro": f["id_miembro"],
+        "season_id": f["season_id"],
+        "source": f["fuente"],
+        # Las tasas, como las sirve el resto de la API; los conteos, enteros.
+        "value": (round(f["valor"], 2 if stat in ("era", "whip") else 3) if es_tasa else int(f["valor"])),
+        "teams": (f["equipos"] or "").split("/") if f["equipos"] else [],
+    } for f in filas]
+    return {
+        "group": group,
+        "stat": stat,
+        "label": etiqueta,
+        "is_rate": es_tasa,
+        # El mínimo de una tasa es el de SU temporada (3.1 AP o 0.6 entradas
+        # por juego del equipo que más jugó), no uno fijo.
+        "minimum": ("3.1 apariciones por juego de su temporada" if group == "bateo"
+                    else "0.6 entradas por juego de su temporada") if es_tasa else None,
+        "count": len(data),
+        "data": data,
+        "published_at": pub[0] if pub else None,
+        "categories": _categorias(group),
+    }
 
 
 @router.get("/historia/resumen", tags=["Historia"])

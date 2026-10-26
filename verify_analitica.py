@@ -11,15 +11,18 @@ Qué comprueba:
 2. Contra una base SINTÉTICA con las dos fuentes: el Parquet, `dbt build`
    en verde, una sola fuente por temporada, la postemporada fuera, el
    cambiado de equipo en una fila, los nombres de la planilla arreglados, y
-   el mínimo de calificación redondeado como Python (46.5 → 46, no 47).
+   el mínimo de calificación redondeado como Python (46.5 → 46, no 47), y
+   la temporada EN CURSO fuera de las mejores (aunque califique).
 3. La carrera de CADA persona en dbt es la de `carreras()` de
    src/historia.py, la que sirve la API: dos implementaciones, un resultado.
+   Y la publicación: `publicar_mejores` copia el modelo a la base de la app
+   y `GET /historia/temporadas` lo sirve tal cual.
 4. Las pruebas de dbt fallan cuando se daña el Parquet a propósito.
-5. Dagster: el Parquet y los modelos como assets, las pruebas de dbt como
-   checks, de punta a punta.
+5. Dagster: el Parquet, los modelos y la publicación como assets, las pruebas
+   de dbt como checks, de punta a punta.
 6. Contra la base REAL, si existe: `dbt build` en verde, cada temporada de la
-   MLB API igual a la suma de sus líneas en SQLite, y la carrera de cada
-   persona igual a `carreras()`.
+   MLB API igual a la suma de sus líneas en SQLite, la carrera de cada
+   persona igual a `carreras()` y ninguna temporada en curso en las mejores.
 """
 
 import contextlib
@@ -235,20 +238,43 @@ with Session(engine) as s, s.begin():
     # 12 = EFE 0.00 en dos entradas: no califica y no puede encabezar la EFE.
     s.add(HistJugador(id_miembro=12, nombre="RELEVO FUGAZ"))
     s.add(pitcheo_h(1990, 12, "LIC", wins=0, losses=0, outs=6, earned_runs=0, games=2))
+
+    # 2016-17, EN CURSO el día de la exportación (HOY, abajo): un juego jugado
+    # y otro por jugar. El novato batea 1.000 con dos jonrones y califica (5 AP
+    # en una temporada de un juego), y el cerrador lanza tres entradas en
+    # blanco: los dos encabezarían su categoría. Es el caso de Munguia en
+    # 2026-27 (.478 a los diez días): una temporada sin terminar no entra.
+    s.add(Season(season_id="2016-17", short_label="16-17"))
+    s.add(Player(player_id="p-novato", full_name="Novato Caliente"))
+    s.add(Player(player_id="p-visita", full_name="Visita Fría"))
+    s.add(Game(game_id="g4", season_id="2016-17", game_date=date(2016, 10, 20), home_team_code="AGU",
+               away_team_code="LIC", home_score=4, away_score=0, stage="regular", status="final"))
+    s.add(Game(game_id="g5", season_id="2016-17", game_date=date(2016, 12, 20), home_team_code="LIC",
+               away_team_code="AGU", stage="regular", status="scheduled"))
+    s.add(BattingLine(game_id="g4", player_id="p-novato", team_code="AGU", at_bats=4, hits=4, home_runs=2,
+                      runs=4, walks=1, plate_appearances=5))
+    s.add(BattingLine(game_id="g4", player_id="p-visita", team_code="LIC", at_bats=3, hits=0, runs=0,
+                      plate_appearances=3))
+    s.add(PitchingLine(game_id="g4", player_id="p-cerrador", team_code="LIC", outs_recorded=9,
+                       earned_runs=0, hits_allowed=0))
 engine.dispose()
+HOY = date(2016, 11, 1)  # 2015-16 terminó; 2016-17 tiene un juego por jugar
 
 PQ = TMP / "parquet"
-filas = exportar(f"sqlite:///{SINT}", PQ)
+filas = exportar(f"sqlite:///{SINT}", PQ, hoy=HOY)
 check("el Parquet: las tablas y las cuatro derivadas",
       {k: filas[k] for k in ("games", "batting_lines", "hist_bateo", "hist_pitcheo", "hist_enlaces",
                              "minimos_temporada", "nombres_historicos", "categorias", "constantes")},
-      {"games": 4, "batting_lines": 8, "hist_bateo": 9, "hist_pitcheo": 5, "hist_enlaces": 1,
-       "minimos_temporada": 4, "nombres_historicos": 9, "categorias": 21, "constantes": 1})
+      {"games": 6, "batting_lines": 10, "hist_bateo": 9, "hist_pitcheo": 5, "hist_enlaces": 1,
+       "minimos_temporada": 5, "nombres_historicos": 9, "categorias": 21, "constantes": 1})
 check("ningún archivo a medias queda en la carpeta", sorted(p.name for p in PQ.iterdir() if p.suffix != ".parquet"), [])
 minimos = {r["season_id"]: r for r in pq.read_table(PQ / "minimos_temporada.parquet").to_pylist()}
 check("mínimos de 2015-16: 3 juegos (de v_standings, sin la postemporada)",
       minimos["2015-16"], {"season_id": "2015-16", "juegos_equipo": 3, "min_pa": qualifying_pa(3),
-                           "min_ip": qualifying_ip(3), "min_outs": 6})
+                           "min_ip": qualifying_ip(3), "min_outs": 6, "completa": True})
+check("completa: 2015-16 terminó, 2016-17 no (le queda un juego), y las de DIGIMETRICS siempre",
+      (minimos["2016-17"]["completa"], minimos["2016-17"]["juegos_equipo"], minimos["1960-61"]["completa"]),
+      (False, 1, True))
 check("mínimos de 1990-91: 15 juegos (8-7 de AGU), 46 AP y 27 outs",
       (minimos["1990-91"]["juegos_equipo"], minimos["1990-91"]["min_pa"], minimos["1990-91"]["min_outs"]),
       (15, 46, 27))
@@ -274,6 +300,9 @@ check("el cambiado de equipo: una fila, AGU/LIC, 10 jonrones",
 check("46 AP en una temporada de 15 juegos: califica (46.5 → 46 en Python)",
       bateo[("hist:7", "1990-91")][4:], (46, True))
 check("45 AP: no califica", bateo[("hist:8", "1990-91")][4:], (45, False))
+check("el novato de 2016-17: califica, pero su temporada no está completa",
+      con.execute("SELECT avg, califica, completa FROM fct_bateo_temporada WHERE persona = 'p-novato'").fetchone(),
+      (1.0, True, False))
 
 mejores = con.execute("SELECT stat, puesto, nombre, season_id, valor FROM mejores_temporadas ORDER BY stat, puesto, nombre").fetchall()
 por_stat: dict[str, list] = {}
@@ -289,6 +318,8 @@ check("EFE: de menor a mayor, empates compartidos, y sin el 0.00 de dos entradas
       [(p, n, v) for p, n, _, v in por_stat["era"]],
       [(1, "Abridor Bueno", 1.8), (2, "Lanzador Viejo", 3.6), (3, "Lanzador Viejo", 3.78),
        (4, "Abridor Malo", 9.0), (4, "Cerrador Uno", 9.0)])
+check("la temporada en curso no entra en NINGUNA categoría (ni el 1.000 ni el 0.00)",
+      con.execute("SELECT count(*) FROM mejores_temporadas WHERE season_id = '2016-17'").fetchone()[0], 0)
 check("salvados: el de la MLB API (2015-16) cuenta", [(n, v) for _, n, _, v in por_stat["saves"]][:1],
       [("Cerrador Uno", 1.0)])
 dim = dict(con.execute("SELECT persona, nombre FROM dim_personas").fetchall())
@@ -305,6 +336,58 @@ check("Juan Pérez: 412 VB, 126 H, 13 HR en dos temporadas, de 1990-91 a 2015-16
       (412, 126, 13, 2, "1990-91", "2015-16"))
 con.close()
 engine.dispose()
+
+print("\n━━━ 3b. De vuelta a la app: publicar y servir ━━━")
+from fastapi import HTTPException  # noqa: E402
+
+import api.historia_routes as historia_routes  # noqa: E402
+from src.publicar import TABLA, SinCapaAnalitica, publicar_mejores  # noqa: E402
+
+APP = TMP / "app.db"
+shutil.copy(SINT, APP)
+CONSULTA = "SELECT grupo, stat, puesto, nombre, season_id, fuente, equipos, valor FROM {} ORDER BY 1, 2, 3, 4, 5"
+with duckdb.connect(str(DUCK), read_only=True) as c:
+    en_dbt = c.execute(CONSULTA.format("mejores_temporadas")).fetchall()
+check("publicar: las filas del modelo", publicar_mejores(f"sqlite:///{APP}", DUCK), len(en_dbt))
+publicar_mejores(f"sqlite:///{APP}", DUCK)  # dos veces: reemplaza, no duplica
+with sqlite3.connect(APP) as c:
+    en_app = c.execute(CONSULTA.format(TABLA)).fetchall()
+    pub = c.execute("SELECT tabla, filas FROM ana_publicacion").fetchall()
+check("la tabla de la app es el modelo, fila por fila (publicada dos veces)", en_app == en_dbt, True)
+check("ana_publicacion: una fila, con las filas publicadas", pub, [(TABLA, len(en_dbt))])
+try:
+    publicar_mejores(f"sqlite:///{APP}", TMP / "no_existe.duckdb")
+    check("sin DuckDB → SinCapaAnalitica", "no falló", "SinCapaAnalitica")
+except SinCapaAnalitica:
+    check("sin DuckDB → SinCapaAnalitica", True, True)
+
+
+def ruta(url: str, **params):
+    """Llama al endpoint contra esa base; devuelve el JSON o el código de error."""
+    original = historia_routes.engine
+    historia_routes.engine = get_engine(url)
+    try:
+        return historia_routes.mejores_temporadas(**params)
+    except HTTPException as e:
+        return e.status_code
+    finally:
+        historia_routes.engine.dispose()
+        historia_routes.engine = original
+
+
+hr = ruta(f"sqlite:///{APP}", group="bateo", stat="hr")
+check("GET /historia/temporadas?stat=hr: el empate en el 1º, enteros, los equipos partidos",
+      [(d["rank"], d["name"], d["season_id"], d["value"], d["teams"]) for d in hr["data"][:2]],
+      [(1, "Juan Pérez", "1990-91", 10, ["AGU"]), (1, "Pedro Cambiado", "1990-91", 10, ["AGU", "LIC"])])
+check("…sin mínimo en un conteo, con la fecha de publicación",
+      (hr["is_rate"], hr["minimum"], hr["count"], hr["published_at"] is not None), (False, None, len(hr["data"]), True))
+era = ruta(f"sqlite:///{APP}", group="pitcheo", stat="era")
+check("stat=era: tasa a dos decimales, el mínimo de su temporada, sin el 0.00 en curso",
+      ([(d["name"], d["value"]) for d in era["data"][:1]], era["minimum"],
+       any(d["season_id"] == "2016-17" for d in era["data"])),
+      ([("Abridor Bueno", 1.8)], "0.6 entradas por juego de su temporada", False))
+check("una categoría que no existe → 422", ruta(f"sqlite:///{APP}", group="bateo", stat="era"), 422)
+check("una base sin publicar → 404", ruta(f"sqlite:///{SINT}", group="bateo", stat="hr"), 404)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -363,13 +446,30 @@ check("una temporada sin mínimos → aviso (no fallo) en temporadas_con_minimo"
       ("warn", []))
 
 
+# 1990-91 marcada en curso: sale de las mejores, y la prueba sigue en verde
+# (la regla está en el modelo; la prueba vigila que nadie la quite).
+def en_curso_1990(fs):
+    next(f for f in fs if f["season_id"] == "1990-91")["completa"] = False
+    return fs
+
+
+d = danar("minimos_temporada", en_curso_1990)
+estados = dbt_build(d, TMP / "d5.duckdb")
+with duckdb.connect(str(TMP / "d5.duckdb"), read_only=True) as c:
+    quedan = c.execute("SELECT count(*) FROM mejores_temporadas WHERE season_id = '1990-91'").fetchone()[0]
+check("una temporada marcada en curso → fuera de las mejores, sin_temporada_en_curso en verde",
+      (quedan, estados.get("sin_temporada_en_curso"), fallidos(estados)), (0, "pass", []))
+
+
 # ─────────────────────────────────────────────────────────────────────────────
 print("\n━━━ 5. Dagster: el Parquet y dbt como assets ━━━")
 from dagster import DagsterInstance, materialize  # noqa: E402
 from dagster_dbt import DbtCliResource  # noqa: E402
 
 from orquestacion import defs  # noqa: E402
-from orquestacion.analitica import ARCHIVOS, CapaAnalitica, ejecutable_dbt, modelos_dbt, parquet, proyecto_dbt  # noqa: E402
+from orquestacion.analitica import (  # noqa: E402
+    ARCHIVOS, CLAVE_APP, CapaAnalitica, app_mejores_temporadas, ejecutable_dbt, modelos_dbt, parquet, proyecto_dbt,
+)
 from orquestacion.recursos import BaseDatos  # noqa: E402
 from src.exportar import TABLAS  # noqa: E402
 
@@ -377,8 +477,8 @@ rg = defs.get_repository_def().asset_graph
 analitica = sorted(k.to_user_string() for k in rg.get_all_asset_keys() if rg.get(k).group_name == "analitica")
 check("los modelos de dbt son assets",
       [a for a in analitica if not a.startswith("parquet/")],
-      ["dim_personas", "fct_bateo_temporada", "fct_carrera_bateo", "fct_carrera_pitcheo",
-       "fct_pitcheo_temporada", "mejores_temporadas"])
+      ["app/mejores_temporadas", "dim_personas", "fct_bateo_temporada", "fct_carrera_bateo",
+       "fct_carrera_pitcheo", "fct_pitcheo_temporada", "mejores_temporadas"])
 check("y cada archivo de Parquet también", sorted(a for a in analitica if a.startswith("parquet/")),
       sorted(f"parquet/{a}" for a in ARCHIVOS))
 check("parquet/games sale de la carga de juegos",
@@ -393,8 +493,10 @@ singulares = {c.name for c in rg.asset_check_keys} & {p.stem for p in (PROYECTO 
 check("todas las pruebas singulares de dbt son checks",
       sorted(singulares), sorted(p.stem for p in (PROYECTO / "tests").glob("*.sql")))
 job = defs.resolve_job_def("capa_analitica")
-check("el job capa_analitica toma el Parquet y los modelos", len(job.asset_layer.selected_asset_keys),
-      len(ARCHIVOS) + 6)
+check("app/mejores_temporadas sale del modelo de dbt",
+      sorted(p.to_user_string() for p in rg.get(CLAVE_APP).parent_keys), ["mejores_temporadas"])
+check("el job capa_analitica toma el Parquet, los modelos y la publicación",
+      len(job.asset_layer.selected_asset_keys), len(ARCHIVOS) + 7)
 sched = defs.resolve_schedule_def("cada_manana")
 check("su schedule: 6:15 de RD, de octubre a febrero, apagado",
       (sched.cron_schedule, sched.execution_timezone, sched.default_status.value),
@@ -404,9 +506,9 @@ PQ_D = TMP / "dagster_parquet"
 # dagster-dbt reimprime la salida de dbt; aquí solo estorba.
 with contextlib.redirect_stdout(io.StringIO()):
     r = materialize(
-        [parquet, modelos_dbt],
+        [parquet, modelos_dbt, app_mejores_temporadas],
         resources={
-            "base": BaseDatos(url=f"sqlite:///{SINT}"),
+            "base": BaseDatos(url=f"sqlite:///{APP}"),
             "analitica": CapaAnalitica(parquet=str(PQ_D), duckdb=str(TMP / "dagster.duckdb")),
             "dbt": DbtCliResource(project_dir=proyecto_dbt, dbt_executable=ejecutable_dbt()),
         },
@@ -416,8 +518,10 @@ with contextlib.redirect_stdout(io.StringIO()):
     )
 check("la ejecución termina bien", r.success, True)
 mat = {e.event_specific_data.materialization.asset_key.to_user_string() for e in r.get_asset_materialization_events()}
-check("materializa el Parquet y los seis modelos", len(mat), len(ARCHIVOS) + 6)
+check("materializa el Parquet, los seis modelos y la publicación", len(mat), len(ARCHIVOS) + 7)
 evals = r.get_asset_check_evaluations()
+check("el check de la publicación, en verde",
+      [(e.check_name, e.passed) for e in evals if e.asset_key == CLAVE_APP], [("publicadas_completas", True)])
 check("los checks del Parquet: uno por tabla, todos en verde",
       sorted({(e.check_name, e.passed) for e in evals if e.asset_key.path[0] == "parquet"}),
       [("filas_completas", True)])
@@ -468,6 +572,11 @@ else:
           con.execute("SELECT min(n) >= 10 FROM (SELECT count(*) n FROM mejores_temporadas GROUP BY grupo, stat)").fetchone()[0],
           True)
     check("y las 21 categorías", con.execute("SELECT count(DISTINCT grupo || stat) FROM mejores_temporadas").fetchone()[0], 21)
+    en_curso = sorted(r[0] for r in con.execute(
+        "SELECT DISTINCT season_id FROM fct_bateo_temporada WHERE NOT completa").fetchall())
+    check(f"las temporadas en curso ({', '.join(en_curso) or 'ninguna'}) no entran en las mejores",
+          con.execute("SELECT count(*) FROM mejores_temporadas WHERE season_id IN "
+                      "(SELECT season_id FROM fct_bateo_temporada WHERE NOT completa)").fetchone()[0], 0)
     engine = get_engine(f"sqlite:///{REAL}")
     comparar_carreras(con, engine, "real")
     engine.dispose()

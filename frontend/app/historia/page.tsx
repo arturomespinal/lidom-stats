@@ -6,14 +6,15 @@ import EmptyState from "@/components/EmptyState";
 import Heroe from "@/components/ficha/Heroe";
 import { SelectorOpciones } from "@/components/SelectorTemporada";
 import ListaLideres from "@/components/historia/ListaLideres";
+import ListaTemporadas from "@/components/historia/ListaTemporadas";
 import TarjetasRecord from "@/components/historia/TarjetasRecord";
-import { fetchLideresHistoricos, fetchResumenHistorico } from "@/lib/api";
+import { fetchLideresHistoricos, fetchMejoresTemporadas, fetchResumenHistorico } from "@/lib/api";
 import { DEFAULT_SEASON } from "@/lib/constants";
 import type { GrupoHistorico } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Récords de todos los tiempos · Deportiv",
-  description: "Los líderes de todos los tiempos de la LIDOM, en serie regular desde 1951.",
+  description: "Los líderes de todos los tiempos y las mejores temporadas de la LIDOM, en serie regular desde 1951.",
 };
 
 // En Next 16 `searchParams` es una promesa: ver CLAUDE.md.
@@ -29,17 +30,25 @@ const POR_DEFECTO: Record<GrupoHistorico, string> = { bateo: "h", pitcheo: "wins
  *
  * La categoría vive en la URL (?grupo=bateo&stat=hr): un enlace compartido abre
  * en esa tabla y el botón de atrás funciona, igual que con la temporada.
+ *
+ * Debajo, las mejores temporadas de la misma categoría (GET
+ * /historia/temporadas, de la capa analítica). Si no están publicadas, la
+ * sección no sale: los récords de carrera no dependen de ella.
  */
 export default async function HistoriaPage(props: Props) {
   const sp = await props.searchParams;
   const grupo: GrupoHistorico = sp.grupo === "pitcheo" ? "pitcheo" : "bateo";
-  const [resumen, pedida] = await Promise.all([
+  const statPedida = sp.stat ?? POR_DEFECTO[grupo];
+  const [resumen, pedida, temporadasPedidas] = await Promise.all([
     fetchResumenHistorico(),
-    fetchLideresHistoricos(grupo, sp.stat ?? POR_DEFECTO[grupo]),
+    fetchLideresHistoricos(grupo, statPedida),
+    fetchMejoresTemporadas(grupo, statPedida),
   ]);
   // Una categoría que no existe (enlace viejo, mano en la URL) da 422: se cae
   // a la de por defecto del grupo en vez de a una página vacía.
   const lideres = pedida ?? (sp.stat ? await fetchLideresHistoricos(grupo, POR_DEFECTO[grupo]) : null);
+  const temporadas =
+    lideres && lideres.stat !== statPedida ? await fetchMejoresTemporadas(grupo, lideres.stat) : temporadasPedidas;
 
   return (
     <>
@@ -49,8 +58,8 @@ export default async function HistoriaPage(props: Props) {
           <p className="text-[11px] uppercase tracking-[0.08em] text-ink-dim">LIDOM · Serie regular · desde 1951</p>
           <h1 className="font-cond text-[52px] leading-[0.92] text-ink-fg sm:text-[76px]">Récords</h1>
           <p className="text-[13px] leading-snug text-ink-dim sm:text-sm">
-            Los líderes de todos los tiempos. Antes de 2012-13, el portal de estadísticas de la liga; desde
-            entonces, la MLB Stats API. Cada temporada cuenta una sola vez.
+            Los líderes de todos los tiempos y las mejores temporadas. Antes de 2012-13, el portal de
+            estadísticas de la liga; desde entonces, la MLB Stats API. Cada temporada cuenta una sola vez.
           </p>
         </div>
       </Heroe>
@@ -84,8 +93,24 @@ export default async function HistoriaPage(props: Props) {
               </div>
               <ListaLideres datos={lideres} />
             </section>
+            {temporadas && (
+              <section aria-labelledby="mejores-temporadas">
+                {/* El mínimo de una tasa es largo ("3.1 apariciones por juego de su
+                    temporada"): a 390 px baja de línea en vez de empujar la página. */}
+                <div className="mb-3 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <h2 id="mejores-temporadas" className="font-cond text-2xl leading-none tracking-[0.02em] text-fg">
+                    Mejores temporadas · {temporadas.label}
+                  </h2>
+                  <span className="num text-xs text-dim">
+                    {temporadas.minimum ? `Mínimo: ${temporadas.minimum}` : "En una sola temporada"}
+                  </span>
+                </div>
+                <ListaTemporadas datos={temporadas} />
+              </section>
+            )}
             <p className="text-[11px] leading-relaxed text-faint">
               Serie regular. Fuentes: LIDOM hasta 2011-12 y MLB Stats API desde 2012-13.
+              {temporadas && " Las mejores temporadas cuentan solo temporadas terminadas: la que está en curso entra cuando acaba."}
             </p>
           </main>
         </>

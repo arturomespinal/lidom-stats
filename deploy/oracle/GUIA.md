@@ -126,12 +126,22 @@ Más adelante, con dominio propio, solo cambia este nombre (ver el final).
 
 ## 7. Subir la base
 
-Desde la PC, en CMD, con la API de la PC apagada:
+Desde la PC, en CMD, con la API de la PC apagada. Primero se publican las
+mejores temporadas dentro de la base (la página de récords las lee de ahí; el
+servidor no corre la capa analítica), y después se sube:
 
 ```
 cd C:\Users\Arturo\Desktop\Trabajos\lidom-stats
+python main.py exportar-parquet
+cd analitica
+dbt build
+cd ..
+python main.py publicar-analitica
 scp -i "%USERPROFILE%\.ssh\deportiv" data\lidom_stats.db ubuntu@IP_DEL_SERVIDOR:~/
 ```
+
+`publicar-analitica` debe decir "… mejores temporadas publicadas". Si `dbt`
+no está en el PATH, `python -m dbt.cli.main build` en su lugar.
 
 La primera vez pregunta si confías en el servidor: `yes`. Son unos 20 MB.
 

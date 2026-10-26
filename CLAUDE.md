@@ -155,10 +155,12 @@ src/pipeline/mlb_ingestor.py   src/pipeline/boxscore_ingestor.py ◄────
    /pitching    → líderes de pitcheo
 ```
 
-**Estado actual:** el esquema de juego cubre **14 temporadas, de la 2012-13 a la
-2025-26** — 2.014 juegos, 2.253 jugadores, 45.029 líneas de bateo y 24.729 de
-pitcheo. **Las tablas planas cubren las mismas 14**, así que `/standings`,
-`/batting` y `/pitching` responden para toda la historia.
+**Estado actual:** el esquema de juego cubre **14 temporadas completas, de la
+2012-13 a la 2025-26** — 2.014 juegos, 2.253 jugadores, 45.029 líneas de bateo y
+24.729 de pitcheo — **más la 2026-27 en curso** (arrancó el 16-oct-2026; el
+26-oct llevaba 23 juegos terminados, uno suspendido y 126 por jugar). **Las
+tablas planas cubren las mismas 15**, así que `/standings`, `/batting` y
+`/pitching` responden para toda la historia.
 
 La validación cruzada entre las dos capas se corrió sobre las 14: **12 coinciden
 equipo por equipo**. Las dos que no son el caso de los forfeits, documentado más
@@ -196,7 +198,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 50 comprobaciones del ingestor contra un boxscore sintético, incluida la ingesta de un solo juego |
-| `verify_game_routes.py` | 316 comprobaciones de los endpoints contra la base real |
+| `verify_game_routes.py` | 304 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -2386,10 +2388,37 @@ carguen con instalar Dagster y dbt.
 - Validado con actionlint 1.7.12. `npm ci` probado desde un clon limpio en la
   web y el móvil: los `package-lock.json` coinciden con sus `package.json`.
 
+## La suite con la temporada en curso (26-oct-2026)
+
+Con la 2026-27 cargada, `verify_game_routes.py` fallaba en 26 comprobaciones sin
+que la API hubiera cambiado: decían "la más reciente" o "la primera fila"
+cuando querían decir "2025-26", y contaban 14 temporadas fijas.
+
+- Las cifras validadas al dígito siguen siendo de la 2025-26 (`VALIDADA`) y se
+  buscan por su temporada con `de_temporada()`, no por posición.
+- Lo que depende de cuántas temporadas hay (`TEMPORADAS`, `ULTIMA`,
+  `N_TEMPORADAS`) sale de la propia base al arrancar la suite. Los hechos
+  fijos se comprueban hasta la 2025-26 ("las 14 hasta la 2025-26").
+- Dos comportamientos de la API que cambian con razón al llegar una
+  temporada nueva, y la suite ya los espera: el titular del puesto en la liga
+  nombra la temporada cuando no es la última ("Tercer mejor OPS de la liga en
+  2025-26, a los 38."), y `/day` fuera de temporada trae en `next` la
+  primera jornada de la siguiente.
+- Pasa igual con la base de 14 temporadas que con la de 15.
+
+`verify_capas.py` encontró la primera diferencia de la 2026-27: un robo de
+Vidal Bruján que está en /stats y en ninguno de sus boxscores, todos leídos
+después de jugados. Va en `FUENTE` (`src/validacion.py`) como el robo de Engel
+Beltre en 2017-18: la diferencia queda fija aunque los totales crezcan cada
+día, y cualquier otra hace fallar la suite y el check de Dagster.
+
+`verify_winprob.py` y las tres suites del motor en vivo necesitan `fixtures/`
+(`python capture_gumbo.py && python capture_diffs.py`).
+
 ## Próximos pasos
 
-1. Desplegar en Oracle siguiendo `deploy/oracle/GUIA.md` antes del arranque de la 2026-27 (mediados de octubre), y apuntar la app y la web a la API de allá.
-2. Probar el poller contra juegos reales cuando arranque la 2026-27 (mediados de octubre). Hasta entonces, `replay_game.py` y las suites cubren el camino.
+1. Desplegar en Oracle siguiendo `deploy/oracle/GUIA.md`, y apuntar la app y la web a la API de allá. La temporada ya arrancó: es lo más urgente.
+2. Encender el poller contra los juegos reales de LIDOM y vigilar una jornada completa (`LIDOM_LIVE_POLLER=1`). Hay un juego suspendido (EST en AGU, 21-oct): ver cómo llega el día que se reanude.
 3. Las fichas de DIGIMETRICS (`/Miembro/Detalle` con `idMiembro`) para la biografía de los históricos, si la traen.
 4. Las mejores temporadas de la historia en la app: ya están en `mejores_temporadas` (capa analítica); falta servirlas en la API (leyendo `data/analitica.duckdb`) y pintarlas junto a los récords de carrera.
 5. Producción: PostgreSQL vía Alembic, y varios workers de uvicorn — ojo, la caché en memoria es por proceso, así que ahí haría falta Redis o un solo worker dedicado al poller.

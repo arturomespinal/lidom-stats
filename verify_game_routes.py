@@ -22,6 +22,36 @@ def check(label, got, want):
     print(f"  {'✓' if ok else '✗'} {label}: {got}" + ("" if ok else f"  (esperado {want})"))
 
 
+# ── La base crece: desde el 16-oct-2026 tiene la 2026-27 en curso ─────────────
+# Las cifras fijas de esta suite son de la 2025-26 (validadas al dígito), y
+# varias comprobaciones decían "la más reciente" cuando querían decir
+# "2025-26": con la temporada nueva cargada fallaban 26 sin que la API
+# hubiera cambiado. Ahora las cifras de 2025-26 se piden por su temporada, y
+# lo que depende de cuántas temporadas hay sale de la propia base.
+import sqlite3  # noqa: E402
+from src.constants import DEFAULT_DB_URL  # noqa: E402
+
+# La misma base que lee la API (sqlite:///data/lidom_stats.db).
+with sqlite3.connect(DEFAULT_DB_URL.removeprefix("sqlite:///")) as _con:
+    TEMPORADAS = [r[0] for r in _con.execute(
+        "SELECT DISTINCT season_id FROM games WHERE status = 'final' ORDER BY season_id")]
+    _PRIMERA_DESPUES = lambda f: (_con.execute(
+        "SELECT MIN(game_date) FROM games WHERE game_date > ?", (f,)).fetchone()[0])
+    PROXIMA_TRAS_2025_26 = _PRIMERA_DESPUES("2026-09-29")
+ULTIMA = TEMPORADAS[-1]
+N_TEMPORADAS = len(TEMPORADAS)
+VALIDADA = "2025-26"   # la temporada de las cifras fijas
+
+
+def de_temporada(filas, season_id=VALIDADA):
+    """La fila de una temporada, no la primera de la lista: con una
+    temporada nueva cargada, la primera ya no es la 2025-26."""
+    return next(f for f in filas if f["season_id"] == season_id)
+
+
+print(f"Base: {N_TEMPORADAS} temporadas, de {TEMPORADAS[0]} a {ULTIMA}. Cifras fijas: {VALIDADA}.")
+
+
 print("━━━ /health ━━━")
 h = call("/health")
 print("  planas:", h["flat_tables"])
@@ -109,7 +139,7 @@ check("el perfil trae la etiqueta compuesta", isinstance(bio.get("bats_label"), 
 for b in p["batting"]:
     print(f"    {b['season_id']} {b['team_code']}: G={b['games']} GB={b['games_batted']} "
           f"AB={b['ab']} AVG={b['avg']} OBP={b['obp']} SLG={b['slg']} OPS={b['ops']}")
-check("AVG coincide con lo ya validado", p["batting"][0]["avg"], 0.368)
+check("AVG coincide con lo ya validado", de_temporada(p["batting"])["avg"], 0.368)
 check("no es lanzador", p["is_pitcher"], False)
 check("player_id inexistente → 404", c.get("/players/no-existe-1990-01-01").status_code, 404)
 
@@ -143,7 +173,11 @@ check("SLG de carrera = TB / AB", car["slg"], round(car["tb"] / car["ab"], 3))
 check("OPS = OBP + SLG", car["ops"], round(car["obp"] + car["slg"], 3))
 check("los turnos suman los de cada temporada", car["ab"],
       sum(t["ab"] for t in veterano["batting"]))
-check("14 temporadas en la carrera", car["seasons"], 14)
+# Cada temporada cuenta una vez aunque haya jugado con dos equipos: eran 14
+# hasta la 2025-26, y la carrera sigue sumando con la temporada en curso.
+check("una temporada por año en la carrera, aunque cambie de equipo",
+      car["seasons"], len({t["season_id"] for t in veterano["batting"]}))
+check("  las 14 hasta la 2025-26", len({t["season_id"] for t in veterano["batting"] if t["season_id"] <= VALIDADA}), 14)
 check("y cuatro camisetas", car["teams"], 4)
 
 # Los equipos, en orden cronológico inverso y con el rango de cada uno.
@@ -171,9 +205,9 @@ for r in gl["batting"]:
           f"R={r['runs']} RBI={r['rbi']} BB={r['walks']}")
 full = call(f"/players/{pid}/gamelog?season=2025&limit=200")
 check("los juegos del gamelog cuadran con 'games' de la vista",
-      len(full["batting"]), p["batting"][0]["games"])
+      len(full["batting"]), de_temporada(p["batting"])["games"])
 suma_ab = sum(r["at_bats"] for r in full["batting"])
-check("suma de AB del gamelog == AB de la vista", suma_ab, p["batting"][0]["ab"])
+check("suma de AB del gamelog == AB de la vista", suma_ab, de_temporada(p["batting"])["ab"])
 
 print("\n━━━ /leaderboards/batting ━━━")
 lb = call("/leaderboards/batting?season=2025&sort_by=avg")
@@ -218,10 +252,10 @@ print(f"  {agu['team_name']} ({agu['city']}, {agu['founded_year']}): "
       f"{len(agu['pitchers'])} lanzadores")
 check("catálogo canónico, no el código pelado", agu["team_name"], "Águilas Cibaeñas")
 check("nombre corto para pantallas angostas", agu["short_name"], "Águilas")
-check("las 14 temporadas de la base", agu["seasons_count"], 14)
+check("todas las temporadas de la base", agu["seasons_count"], N_TEMPORADAS)
 check("historial de la más reciente a la más vieja",
       (agu["history"][0]["season_id"], agu["history"][-1]["season_id"]),
-      ("2025-26", "2012-13"))
+      (ULTIMA, "2012-13"))
 check("equipo inválido → 400", c.get("/teams/XXX").status_code, 400)
 check("roster_limit recorta la plantilla", len(call("/teams/AGU?roster_limit=5")["batters"]), 5)
 
@@ -231,7 +265,7 @@ check("roster_limit recorta la plantilla", len(call("/teams/AGU?roster_limit=5")
 # coinciden al dígito en los seis equipos, es que las dos están bien.
 for fila_plana in call("/standings?season=2025")["data"]:
     codigo = fila_plana["team_id"]
-    reciente = call(f"/teams/{codigo}")["history"][0]
+    reciente = de_temporada(call(f"/teams/{codigo}")["history"])
     check(f"{codigo}: G-P y carreras cuadran con la tabla plana",
           (reciente["wins"], reciente["losses"],
            reciente["runs_for"], reciente["runs_against"]),
@@ -536,14 +570,17 @@ check("  3º en OPS, 2º en slugging y en poder aislado", (pos["ops"], pos["slg"
 check("  el orden es fijo: OPS primero, ponches al final",
       (rk["items"][0]["stat"], rk["items"][-1]["stat"]), ("ops", "so_pct"))
 check("  en ponches, menos es mejor", rk["items"][-1]["higher_is_better"], False)
-check("  el OPS recompuesto es el de su fila", round(rk["items"][0]["value"], 3), nv["batting"][0]["ops"])
-check("  titular con la edad de ESA temporada", rk["headline"], "Tercer mejor OPS de la liga, a los 38.")
+check("  el OPS recompuesto es el de su fila", round(rk["items"][0]["value"], 3), de_temporada(nv["batting"])["ops"])
+# Si la 2025-26 ya no es la última de la base, el titular la nombra (ver el
+# caso de Valdespin, más abajo).
+_en = "" if ULTIMA == VALIDADA else f" en {VALIDADA}"
+check("  titular con la edad de ESA temporada", rk["headline"], f"Tercer mejor OPS de la liga{_en}, a los 38.")
 check("empates compartidos: .9 .8 .8 .7 → el .8 es 2º y el .7 es 4º",
       (_puesto(.8, [.9, .8, .8, .7], True), _puesto(.7, [.9, .8, .8, .7], True)), (2, 4))
 
 tv = call("/players/jorge-tavarez-1995-08-04")["context"]
 check("un abridor se compara como lanzador, en femenino",
-      (tv["role"], tv["ranking"]["headline"]), ("pitching", "Segunda mejor efectividad de la liga."))
+      (tv["role"], tv["ranking"]["headline"]), ("pitching", f"Segunda mejor efectividad de la liga{_en}."))
 vd = call("/players/jordany-valdespin-1987-12-23")["context"]["ranking"]
 check("si la temporada no es la actual, el titular la nombra",
       vd["headline"], "Segundo mejor OPS de la liga en 2019-20.")
@@ -551,11 +588,12 @@ ob = call("/players/wirfin-obispo-1984-09-26")["context"]
 check("un relevista sin temporada calificada no tiene puesto", ob["ranking"], None)
 
 cv = ctx["curve"]
-check("la curva: una temporada por punto", len(cv["points"]), 11)
+check("la curva: una temporada por punto", len(cv["points"]), len({b["season_id"] for b in nv["batting"]}))
+check("  11 hasta la 2025-26", len([q for q in cv["points"] if q["season_id"] <= VALIDADA]), 11)
 check("  2016-17 (27 AP) es muestra chica",
       next(p["small_sample"] for p in cv["points"] if p["season_id"] == "2016-17"), True)
-check("  la liga en las 14 temporadas", len(cv["league"]), 14)
-check("  OPS de la liga 2025-26", cv["league"][-1]["value"], 0.696)
+check("  la liga en todas las temporadas", len(cv["league"]), N_TEMPORADAS)
+check("  OPS de la liga 2025-26", de_temporada(cv["league"])["value"], 0.696)
 # 2020-21 fue la temporada de la pandemia: sus 99 AP sí calificaron, con .926.
 check("  titular", cv["headline"], "Su mejor temporada calificada desde 2020-21.")
 Q = lambda s, v: {"season_id": s, "value": v, "qualified": True}
@@ -570,13 +608,18 @@ print("\n━━━ ficha de equipo: la temporada juego a juego ━━━")
 ag = call("/teams/AGU?season=2025")
 serie = {c["team_code"]: c["series"] for c in ag["race"]}
 check("la carrera trae a los seis", sorted(serie), sorted(["AGU", "TOR", "EST", "GIG", "ESC", "LIC"]))
-h0 = ag["history"][0]
+h0 = de_temporada(ag["history"])
 check("  el último punto de Águilas es G−P de la temporada", serie["AGU"][-1], h0["wins"] - h0["losses"])
 check("  un punto por juego, más el cero inicial", len(serie["AGU"]), h0["wins"] + h0["losses"] + 1)
 check("  titular (se mide el ritmo, no los juegos sobre .500)",
       ag["race_headline"], "Llegaron a 21-4 y cerraron 11-13.")
 check("últimos 10, del más viejo al más nuevo", "".join(x["result"] for x in ag["last10"]), "PPGGPPPGGP")
-check("titular del historial", ag["history_headline"], "9 de 14 con más carreras anotadas que permitidas.")
+# 9 de las 14 hasta la 2025-26; la temporada en curso suma al total.
+_mas = sum(1 for t in ag["history"] if t["runs_for"] > t["runs_against"])
+check("  9 hasta la 2025-26",
+      sum(1 for t in ag["history"] if t["runs_for"] > t["runs_against"] and t["season_id"] <= VALIDADA), 9)
+check("titular del historial", ag["history_headline"],
+      f"{_mas} de {N_TEMPORADAS} con más carreras anotadas que permitidas.")
 gi = call("/teams/GIG?season=2025")
 check("la remontada de Gigantes", gi["race_headline"], "Estuvieron 17-25 y cerraron 7-1.")
 check("titular_banderin: menos de 10 juegos → nada", titular_banderin([0, 1, 2, 3]), None)
@@ -645,8 +688,10 @@ check("sin extras, el titular es la figura del juego", d2["featured"]["headline"
       "Jonrón y 4 impulsadas de Aderlin Rodríguez.")
 
 fuera = call("/day?date=2026-09-29")
+# Con la 2026-27 cargada, "lo que viene" ya existe: su primera jornada.
 check("fuera de temporada: la última jornada, marcada como no pedida",
-      (fuera["date"], fuera["is_requested"], fuera["next"]), ("2025-12-23", False, None))
+      (fuera["date"], fuera["is_requested"], fuera["next"] and fuera["next"]["date"]),
+      ("2025-12-23", False, PROXIMA_TRAS_2025_26))
 antes = call("/day?date=2012-01-01")
 check("antes de la primera jornada: la primera", (antes["date"], antes["is_requested"]), ("2012-10-14", False))
 call("/day?date=15-10-2025", expect=400)
@@ -723,8 +768,9 @@ lado = gj["home"] if ult["home"] else gj["away"]
 check("…y ese juego es el que dice la celda", (lado["code"], lado["runs"]), ("AGU", ult["runs_for"]))
 
 print("\n━━━ el calendario de jornadas ━━━")
-cal = call("/calendar")
-check("por defecto, la última temporada", (cal["season_id"], len(cal["seasons"])), ("2025-26", 14))
+check("por defecto, la última temporada", (call("/calendar")["season_id"], len(call("/calendar")["seasons"])),
+      (ULTIMA, N_TEMPORADAS))
+cal = call("/calendar?season=2025")
 check("de la inaugural a la última jornada",
       (cal["first_date"], cal["last_date"], cal["game_days"], cal["games"]),
       ("2025-10-15", "2025-12-23", 55, 149))

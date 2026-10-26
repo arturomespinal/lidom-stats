@@ -56,6 +56,13 @@ propios boxscores:
   Martinez). Las posiciones sí cuadran, así que no es un juego perdido.
 - 2023-24: Juan Lagares tiene un VB más en /stats y Cristopher Molina un out
   más: otra jugada reanotada.
+- 2026-27 (en curso; visto el 26-oct-2026, 23 juegos): Vidal Bruján (ESC)
+  tiene 2 robos en /stats y 1 en sus boxscores (el del 25-oct ante Toros).
+  Los 23 boxscores se leyeron ese mismo día, después de jugados, así que no
+  es un boxscore viejo nuestro: es /stats contra sus propios boxscores, como
+  el robo de Engel Beltre en 2017-18. Con la temporada en curso los totales
+  crecen cada día, pero la DIFERENCIA se queda fija: si la MLB corrige un
+  lado, o aparece otra, la comprobación falla y se mira.
 
 Se fijan EXACTAS (cuánto cambia cada total y qué jugadores difieren). Si la
 fuente se corrige o aparece una diferencia nueva, la comprobación falla. Para
@@ -98,6 +105,12 @@ FUENTE: dict[str, dict] = {
     "2023-24": {
         "bateo": {"ab": 1}, "bateadores": {501571},
         "pitcheo": {"outs": 1}, "lanzadores": {650654},
+    },
+    # Jugador por jugador se comparan VB/H/HR/BB/K, no los robos: Bruján
+    # (660644) cuadra ahí, por eso el conjunto va vacío.
+    "2026-27": {
+        "bateo": {"sb": 1}, "bateadores": set(),
+        "pitcheo": {}, "lanzadores": set(),
     },
 }
 

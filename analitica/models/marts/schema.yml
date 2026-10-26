@@ -40,6 +40,9 @@ models:
       - name: califica
         description: Si alcanzó el mínimo de outs de su temporada.
         data_tests: [not_null]
+      - name: califica_record
+        description: Si alcanzó el mínimo de outs de los récords (0.8 entradas por juego). Implica califica.
+        data_tests: [not_null]
       - name: completa
         description: Si la temporada ya terminó. Las en curso no compiten por las mejores temporadas.
         data_tests: [not_null]

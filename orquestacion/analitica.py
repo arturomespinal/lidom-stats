@@ -167,16 +167,32 @@ def ejecutable_dbt() -> str:
 proyecto_dbt = DbtProject(project_dir=PROYECTO_DBT, profiles_dir=PROYECTO_DBT)
 
 
+def manifiesto_vigente() -> bool:
+    """El manifiesto existe y es más nuevo que todo el proyecto de dbt
+    (modelos, pruebas, macros y su configuración)."""
+    manifiesto = proyecto_dbt.manifest_path
+    if not manifiesto.exists():
+        return False
+    raiz = Path(proyecto_dbt.project_dir)
+    fuentes = [f for patron in ("*.sql", "*.yml") for f in raiz.rglob(patron)
+               if "target" not in f.relative_to(raiz).parts and "logs" not in f.relative_to(raiz).parts]
+    return all(f.stat().st_mtime <= manifiesto.stat().st_mtime for f in fuentes)
+
+
 def preparar_manifiesto(forzar: bool = False) -> None:
     """`dbt parse`: arma `analitica/target/manifest.json`, que no se versiona
-    y del que salen los assets. Con `dagster dev` se rehace en cada carga,
-    para que un modelo editado aparezca sin más; fuera de dev (la suite, la
-    CI, `dagster definitions validate`), solo si falta.
+    y del que salen los assets. Con `dagster dev` se rehace en cada carga;
+    fuera de dev (la suite, la CI, `dagster definitions validate`), si falta
+    o si un archivo del proyecto es más nuevo que él.
+
+    Lo segundo no es un lujo: con un manifiesto viejo, dagster-dbt no conoce
+    la prueba nueva de un modelo editado, y cuando `dbt build` la corre, la
+    ejecución falla. Pasó al añadir `califica_record` (26-oct-2026).
 
     No se usa `DbtProject.prepare_if_dev()`: llama a `dbt` a secas, sin la
     búsqueda de `ejecutable_dbt()`.
     """
-    if not forzar and proyecto_dbt.manifest_path.exists() and not os.getenv("DAGSTER_IS_DEV_CLI"):
+    if not forzar and manifiesto_vigente() and not os.getenv("DAGSTER_IS_DEV_CLI"):
         return
     dbt = DbtCliResource(project_dir=proyecto_dbt, dbt_executable=ejecutable_dbt())
     with CapaAnalitica().entorno():

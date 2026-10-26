@@ -293,7 +293,7 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 
 9. **`games` vs `games_batted`** en `v_batting_season`: `games` cuenta cualquier aparición (convención oficial, incluye corredores emergentes y sustitutos defensivos con 0 turnos); `games_batted` solo juegos con al menos una aparición al plato. Usar `games_batted` para filtrar tablas de líderes.
 
-10. **El mínimo de calificación solo aplica a estadísticas de tasa**, y rige en las DOS capas — endpoints planos y vistas. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. Los mínimos viven en `src/qualification.py`, compartidos por `api/main.py` y `api/game_routes.py`: duplicarlos garantizaría que un día muestren líderes distintos.
+10. **El mínimo de calificación solo aplica a estadísticas de tasa**, y rige en las DOS capas — endpoints planos y vistas. AVG, OBP, SLG, OPS, ERA y WHIP lo llevan; jonrones, ponches, victorias y salvados no — nadie exige un mínimo para liderar una acumulada. Y el estándar de la MLB no es trasladable al pitcheo invernal: 1.0 IP por juego de equipo deja **un solo** calificado en LIDOM, porque un abridor de aquí hace 8–14 aperturas contra las ~32 de Grandes Ligas. Usamos 0.6 (30 IP), que deja 14 — la misma proporción por equipo que el 3.1 PA/juego del bateo. **Los récords de una temporada piden 0.8** (40 IP; ver "De vuelta a la app"). Los mínimos viven en `src/qualification.py`, compartidos por `api/main.py` y `api/game_routes.py`: duplicarlos garantizaría que un día muestren líderes distintos.
 
 11. **No migrar a PostgreSQL aún** — Alembic se agregará cuando se decida migrar.
 
@@ -2348,8 +2348,11 @@ la ingesta a las mejores temporadas sin cortes.
   carpeta de scripts del usuario: con el Python de la Store, dagster-dbt
   fallaba con "The dbt executable 'dbt' does not exist". Por lo mismo no se
   usa `DbtProject.prepare_if_dev()`, que llama a `dbt` a secas:
-  `preparar_manifiesto()` corre `dbt parse` al cargar si falta el manifiesto,
-  y siempre con `dagster dev`.
+  `preparar_manifiesto()` corre `dbt parse` al cargar si falta el manifiesto
+  o si un archivo del proyecto es más nuevo que él, y siempre con `dagster
+  dev`. Con un manifiesto viejo, dagster-dbt no conoce la prueba nueva de un
+  modelo editado y la ejecución falla al correrla (pasó con
+  `califica_record`).
 - `CapaAnalitica.entorno()` pone las rutas absolutas en las variables que lee
   dbt y las quita al salir: el ejecutor es en proceso.
 
@@ -2391,17 +2394,27 @@ terminadas.
   subir la base (paso 7 de `deploy/oracle/GUIA.md`). Después, la base del
   servidor manda; cuando termine la 2026-27, rehacer la tabla allá (ver
   Próximos pasos).
+- **Efectividad y WHIP piden 0.8 entradas por juego, no 0.6** (decidido por
+  Arturo el 26-oct). Con 0.6 la mejor efectividad de la historia era el 0.00
+  de Tommy Milone en 2018-19: real (seis aperturas, 34.1 entradas, ninguna
+  limpia; los boxscores, /stats y DIGIMETRICS coinciden), pero un récord de
+  todos los tiempos en 34 entradas se discute. Con 0.8 (40 en 50 juegos)
+  quedan de 5 a 11 calificados por temporada desde 2012-13; con 1.0, 1 o 2,
+  y el récord era solo de los años 50 a 70. `IP_PER_TEAM_GAME_RECORD` en
+  `src/qualification.py`, exportado como `min_outs_record`;
+  `califica_record` en `fct_pitcheo_temporada`. Los líderes de cada
+  temporada siguen con 0.6, y el bateo con 3.1 en los dos.
 - Datos reales que lo comprueban: Ralph Garr .457 (1970-71) encabeza el
-  promedio y Víctor Díaz 17 jonrones (2008-09) los jonrones. El 0.00 de Tommy
-  Milone en 2018-19 es real (34.1 entradas, 0 limpias; las dos capas
-  coinciden).
+  promedio, Víctor Díaz 17 jonrones (2008-09) los jonrones, Bartolo Colón y
+  Rafael Soriano 0.21 la efectividad, Edwin Uceta 0.63 el WHIP.
 
 ### La suite
 
-`verify_analitica.py` (81 comprobaciones): una base sintética con las dos
+`verify_analitica.py` (85 comprobaciones): una base sintética con las dos
 fuentes —un enlazado con años en las dos, una leyenda solo de DIGIMETRICS, un
-cambiado de equipo, postemporada que no cuenta, el caso del 46.5 y una
-temporada en curso que encabezaría dos categorías— exportada y construida con
+cambiado de equipo, postemporada que no cuenta, el caso del 46.5, una
+temporada en curso que encabezaría dos categorías y un 0.00 que califica en
+su temporada pero no para el récord— exportada y construida con
 dbt; la publicación y el endpoint; **la carrera de cada persona igual a `carreras()` de
 `src/historia.py`**, la que sirve la API; el Parquet dañado a propósito hace
 fallar la prueba que corresponde; el job de Dagster de punta a punta; y con

@@ -47,7 +47,7 @@ from src.historia import (
 from src.jornada import hoy_rd
 from src.models.hist_models import etiqueta_historica
 from src.nombres import mostrar_nombre
-from src.qualification import qualifying_ip, qualifying_pa
+from src.qualification import qualifying_ip, qualifying_ip_record, qualifying_pa
 
 DIRECTORIO = Path("data/parquet")
 
@@ -162,6 +162,9 @@ def minimos_temporada(con: sqlite3.Connection, hoy: Optional[date] = None) -> li
             # En outs y entero: 30.6 entradas son 92 outs (91.8 hacia arriba).
             # Comparar contra 30.6 * 3 en SQL es comparar flotantes.
             "min_outs": math.ceil(round(min_ip * 3, 6)),
+            # El de los récords de una temporada (0.8 por juego): las mejores
+            # temporadas de efectividad y WHIP. Ver src/qualification.py.
+            "min_outs_record": math.ceil(round(qualifying_ip_record(n) * 3, 6)),
             # Sin juegos en `games` es una temporada de DIGIMETRICS: completa.
             "completa": fin is None or fin < hoy.isoformat(),
         })
@@ -200,7 +203,7 @@ ESQUEMAS_DERIVADAS = {
     "minimos_temporada": pa.schema([
         ("season_id", pa.string()), ("juegos_equipo", pa.int64()),
         ("min_pa", pa.int64()), ("min_ip", pa.float64()), ("min_outs", pa.int64()),
-        ("completa", pa.bool_()),
+        ("min_outs_record", pa.int64()), ("completa", pa.bool_()),
     ]),
     "nombres_historicos": pa.schema([("id_miembro", pa.int64()), ("nombre", pa.string())]),
     "categorias": pa.schema([

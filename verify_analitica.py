@@ -57,7 +57,7 @@ from src.historia import (  # noqa: E402
 from src.models import flat_models  # noqa: E402,F401
 from src.models.database import BattingLine, Game, PitchingLine, Player, Season, Team, get_engine, init_db  # noqa: E402
 from src.models.hist_models import HistBateo, HistEnlace, HistJugador, HistPitcheo, etiqueta_historica  # noqa: E402
-from src.qualification import qualifying_ip, qualifying_pa  # noqa: E402
+from src.qualification import qualifying_ip, qualifying_ip_record, qualifying_pa  # noqa: E402
 
 RAIZ = Path(__file__).resolve().parent
 PROYECTO = RAIZ / "analitica"
@@ -148,6 +148,8 @@ check("la EFE y el WHIP: menor es mejor", sorted(c["stat"] for c in categorias()
 check("constantes", constantes(), [{"anio_corte": ANIO_CORTE, "min_pa_carrera": MIN_PA_CARRERA,
                                     "min_outs_carrera": MIN_OUTS_CARRERA}])
 check("el caso del redondeo: 15 juegos piden 46 AP (Python redondea 46.5 al par)", qualifying_pa(15), 46)
+check("el mínimo de los récords de pitcheo: 40 entradas en 50 juegos (los líderes, 30)",
+      (qualifying_ip_record(50), qualifying_ip(50)), (40.0, 30.0))
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -238,6 +240,11 @@ with Session(engine) as s, s.begin():
     # 12 = EFE 0.00 en dos entradas: no califica y no puede encabezar la EFE.
     s.add(HistJugador(id_miembro=12, nombre="RELEVO FUGAZ"))
     s.add(pitcheo_h(1990, 12, "LIC", wins=0, losses=0, outs=6, earned_runs=0, games=2))
+    # 13 = EFE 0.00 en 10 entradas: califica en 1990-91 (mínimo 9) pero no
+    # para el récord (0.8 × 15 = 12). Es el caso de Milone en 2018-19.
+    s.add(HistJugador(id_miembro=13, nombre="RELEVO MEDIO"))
+    s.add(pitcheo_h(1990, 13, "LIC", wins=0, losses=0, outs=30, earned_runs=0, hits_allowed=3,
+                    walks_allowed=1, games=6))
 
     # 2016-17, EN CURSO el día de la exportación (HOY, abajo): un juego jugado
     # y otro por jugar. El novato batea 1.000 con dos jonrones y califica (5 AP
@@ -265,19 +272,19 @@ filas = exportar(f"sqlite:///{SINT}", PQ, hoy=HOY)
 check("el Parquet: las tablas y las cuatro derivadas",
       {k: filas[k] for k in ("games", "batting_lines", "hist_bateo", "hist_pitcheo", "hist_enlaces",
                              "minimos_temporada", "nombres_historicos", "categorias", "constantes")},
-      {"games": 6, "batting_lines": 10, "hist_bateo": 9, "hist_pitcheo": 5, "hist_enlaces": 1,
-       "minimos_temporada": 5, "nombres_historicos": 9, "categorias": 21, "constantes": 1})
+      {"games": 6, "batting_lines": 10, "hist_bateo": 9, "hist_pitcheo": 6, "hist_enlaces": 1,
+       "minimos_temporada": 5, "nombres_historicos": 10, "categorias": 21, "constantes": 1})
 check("ningún archivo a medias queda en la carpeta", sorted(p.name for p in PQ.iterdir() if p.suffix != ".parquet"), [])
 minimos = {r["season_id"]: r for r in pq.read_table(PQ / "minimos_temporada.parquet").to_pylist()}
 check("mínimos de 2015-16: 3 juegos (de v_standings, sin la postemporada)",
       minimos["2015-16"], {"season_id": "2015-16", "juegos_equipo": 3, "min_pa": qualifying_pa(3),
-                           "min_ip": qualifying_ip(3), "min_outs": 6, "completa": True})
+                           "min_ip": qualifying_ip(3), "min_outs": 6, "min_outs_record": 8, "completa": True})
 check("completa: 2015-16 terminó, 2016-17 no (le queda un juego), y las de DIGIMETRICS siempre",
       (minimos["2016-17"]["completa"], minimos["2016-17"]["juegos_equipo"], minimos["1960-61"]["completa"]),
       (False, 1, True))
-check("mínimos de 1990-91: 15 juegos (8-7 de AGU), 46 AP y 27 outs",
-      (minimos["1990-91"]["juegos_equipo"], minimos["1990-91"]["min_pa"], minimos["1990-91"]["min_outs"]),
-      (15, 46, 27))
+check("mínimos de 1990-91: 15 juegos (8-7 de AGU), 46 AP, 27 outs y 36 para los récords",
+      tuple(minimos["1990-91"][k] for k in ("juegos_equipo", "min_pa", "min_outs", "min_outs_record")),
+      (15, 46, 27, 36))
 nombres = {r["id_miembro"]: r["nombre"] for r in pq.read_table(PQ / "nombres_historicos.parquet").to_pylist()}
 check("el nombre de la planilla, como lo escribe la app", nombres[5], 'Diómedes "Guayubín" Olivo')
 check("los tipos se conservan (BOOLEAN de SQLite → bool de Arrow)",
@@ -314,7 +321,10 @@ avg_nombres = [n for _, n, _, _ in por_stat["avg"]]
 check("AVG: entra el .500 de 46 AP (empatado en el 1º) y no el .641 de 45",
       ([(p, v) for p, n, _, v in por_stat["avg"] if n == "Ramón Exacto"], "Luis Corto" in avg_nombres),
       ([(1, 0.5)], False))
-check("EFE: de menor a mayor, empates compartidos, y sin el 0.00 de dos entradas",
+check("el 0.00 en 10 entradas: califica en su temporada, no para el récord",
+      con.execute("SELECT era, califica, califica_record FROM fct_pitcheo_temporada WHERE persona = 'hist:13'").fetchone(),
+      (0.0, True, False))
+check("EFE: de menor a mayor, empates compartidos, sin el 0.00 de dos entradas ni el de diez",
       [(p, n, v) for p, n, _, v in por_stat["era"]],
       [(1, "Abridor Bueno", 1.8), (2, "Lanzador Viejo", 3.6), (3, "Lanzador Viejo", 3.78),
        (4, "Abridor Malo", 9.0), (4, "Cerrador Uno", 9.0)])
@@ -385,7 +395,7 @@ era = ruta(f"sqlite:///{APP}", group="pitcheo", stat="era")
 check("stat=era: tasa a dos decimales, el mínimo de su temporada, sin el 0.00 en curso",
       ([(d["name"], d["value"]) for d in era["data"][:1]], era["minimum"],
        any(d["season_id"] == "2016-17" for d in era["data"])),
-      ([("Abridor Bueno", 1.8)], "0.6 entradas por juego de su temporada", False))
+      ([("Abridor Bueno", 1.8)], "0.8 entradas por juego de su temporada", False))
 check("una categoría que no existe → 422", ruta(f"sqlite:///{APP}", group="bateo", stat="era"), 422)
 check("una base sin publicar → 404", ruta(f"sqlite:///{SINT}", group="bateo", stat="hr"), 404)
 
@@ -497,6 +507,16 @@ check("app/mejores_temporadas sale del modelo de dbt",
       sorted(p.to_user_string() for p in rg.get(CLAVE_APP).parent_keys), ["mejores_temporadas"])
 check("el job capa_analitica toma el Parquet, los modelos y la publicación",
       len(job.asset_layer.selected_asset_keys), len(ARCHIVOS) + 7)
+from orquestacion.analitica import manifiesto_vigente, preparar_manifiesto  # noqa: E402
+
+# Un modelo editado deja viejo el manifiesto: se rehace solo al cargar, no
+# solo con `dagster dev` (con uno viejo, la prueba nueva rompía la ejecución).
+modelo = PROYECTO / "models" / "marts" / "mejores_temporadas.sql"
+os.utime(modelo, None)
+vigente_antes = manifiesto_vigente()
+preparar_manifiesto()
+check("un modelo editado deja viejo el manifiesto, y preparar_manifiesto() lo rehace",
+      (vigente_antes, manifiesto_vigente()), (False, True))
 sched = defs.resolve_schedule_def("cada_manana")
 check("su schedule: 6:15 de RD, de octubre a febrero, apagado",
       (sched.cron_schedule, sched.execution_timezone, sched.default_status.value),
@@ -571,6 +591,10 @@ else:
     check("las mejores temporadas: diez o más por categoría (con empates)",
           con.execute("SELECT min(n) >= 10 FROM (SELECT count(*) n FROM mejores_temporadas GROUP BY grupo, stat)").fetchone()[0],
           True)
+    check("EFE: nadie con menos de 0.8 entradas por juego de su temporada (Milone, 0.00 en 34.1, fuera)",
+          con.execute("""SELECT count(*) FROM mejores_temporadas t
+                         JOIN fct_pitcheo_temporada f USING (persona, season_id)
+                         WHERE t.stat IN ('era', 'whip') AND NOT f.califica_record""").fetchone()[0], 0)
     check("y las 21 categorías", con.execute("SELECT count(DISTINCT grupo || stat) FROM mejores_temporadas").fetchone()[0], 21)
     en_curso = sorted(r[0] for r in con.execute(
         "SELECT DISTINCT season_id FROM fct_bateo_temporada WHERE NOT completa").fetchall())

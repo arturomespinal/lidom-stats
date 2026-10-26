@@ -42,6 +42,9 @@ select
     m.min_outs,
     -- 0.6 entradas por juego del equipo que más jugó, en outs.
     coalesce(u.outs >= m.min_outs, false) as califica,
+    -- 0.8 por juego: el mínimo para competir por el récord de una temporada
+    -- en efectividad y WHIP (src/qualification.py, nota 3).
+    coalesce(u.outs >= m.min_outs_record, false) as califica_record,
     -- La temporada ya terminó. Una en curso no compite por las mejores
     -- temporadas (ver minimos_temporada en src/exportar.py). Sin mínimos
     -- conocidos tampoco: no se sabe ni cuántos juegos tuvo.

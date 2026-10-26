@@ -33,6 +33,7 @@ from src.historia import (
 )
 from src.models.database import get_engine
 from src.models.hist_models import etiqueta_historica
+from src.qualification import IP_PER_TEAM_GAME_RECORD
 
 router = APIRouter()
 engine = get_engine()
@@ -130,10 +131,11 @@ def mejores_temporadas(
         "stat": stat,
         "label": etiqueta,
         "is_rate": es_tasa,
-        # El mínimo de una tasa es el de SU temporada (3.1 AP o 0.6 entradas
-        # por juego del equipo que más jugó), no uno fijo.
+        # El mínimo de una tasa es el de SU temporada (3.1 AP o 0.8 entradas
+        # por juego del equipo que más jugó), no uno fijo. En pitcheo es el de
+        # los récords, más alto que el de los líderes de cada temporada (0.6).
         "minimum": ("3.1 apariciones por juego de su temporada" if group == "bateo"
-                    else "0.6 entradas por juego de su temporada") if es_tasa else None,
+                    else f"{IP_PER_TEAM_GAME_RECORD:g} entradas por juego de su temporada") if es_tasa else None,
         "count": len(data),
         "data": data,
         "published_at": pub[0] if pub else None,

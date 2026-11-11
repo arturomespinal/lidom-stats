@@ -12,7 +12,7 @@ import BarrasDiferencial from "@/components/ficha/BarrasDiferencial";
 import TeamHistory from "@/components/team/TeamHistory";
 import Leaders from "@/components/team/Leaders";
 import { Batters, Pitchers } from "@/components/team/Roster";
-import { fetchTeamProfile } from "@/lib/api";
+import { fetchSeasons, fetchTeamProfile } from "@/lib/api";
 import { DEFAULT_SEASON } from "@/lib/constants";
 
 interface Props {
@@ -28,7 +28,9 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function TeamPage(props: Props) {
   const { code } = await props.params;
   const searchParams = await props.searchParams;
-  const season = searchParams.season ?? DEFAULT_SEASON;
+  // Sin `?season=` manda la temporada en curso (la más reciente de la API),
+  // como en Posiciones. Con una fija, la ficha abría en la del año pasado.
+  const season = searchParams.season ?? (await fetchSeasons())[0] ?? DEFAULT_SEASON;
 
   // La URL puede venir en minúsculas de un enlace escrito a mano; la API
   // valida contra el catálogo y responde 400, así que se normaliza aquí.
@@ -40,7 +42,7 @@ export default async function TeamPage(props: Props) {
 
   return (
     <>
-      <Navbar season={season} />
+      <Navbar season={searchParams.season} />
       <TeamHeader equipo={equipo} />
       {/* Cada opción lleva el récord de esa campaña: se elige sabiendo qué
           se va a ver. */}

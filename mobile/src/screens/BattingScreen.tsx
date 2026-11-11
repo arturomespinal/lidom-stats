@@ -30,14 +30,17 @@ interface SortOption {
 }
 
 const SORT_OPTIONS: SortOption[] = [
-  { key: 'ops',          label: 'OPS',  fmt: r => r.ops?.toFixed(3)                          ?? '—', sublabel: 'On-base + Slugging' },
+  // Sin el cero de delante, como el promedio (".958"; "1.195" si pasa de
+  // uno). Salía "0.958" aquí y ".958" en la ficha del mismo jugador.
+  { key: 'ops',          label: 'OPS',  fmt: r => r.ops?.toFixed(3).replace(/^0(?=\.)/, '')  ?? '—', sublabel: 'Embasado más slugging' },
   { key: 'batting_avg',  label: 'AVG',  fmt: r => r.batting_avg?.toFixed(3).replace(/^0/,'') ?? '—', sublabel: 'Promedio de bateo' },
-  { key: 'on_base_pct',  label: 'OBP',  fmt: r => r.on_base_pct?.toFixed(3).replace(/^0/,'') ?? '—', sublabel: 'On-base %' },
-  { key: 'slugging_pct', label: 'SLG',  fmt: r => r.slugging_pct?.toFixed(3).replace(/^0/,'')  ?? '—', sublabel: 'Slugging %' },
-  { key: 'home_runs',    label: 'HR',   fmt: r => String(r.home_runs),                               sublabel: 'Home runs' },
-  { key: 'rbi',          label: 'RBI',  fmt: r => String(r.rbi),                                     sublabel: 'Carreras impulsadas' },
+  { key: 'on_base_pct',  label: 'OBP',  fmt: r => r.on_base_pct?.toFixed(3).replace(/^0/,'') ?? '—', sublabel: 'Porcentaje de embasado' },
+  { key: 'slugging_pct', label: 'SLG',  fmt: r => r.slugging_pct?.toFixed(3).replace(/^0/,'')  ?? '—', sublabel: 'Slugging' },
+  { key: 'home_runs',    label: 'HR',   fmt: r => String(r.home_runs),                               sublabel: 'Jonrones' },
+  // Las siglas, en español como en las fichas y en la web: CI, BR.
+  { key: 'rbi',          label: 'CI',   fmt: r => String(r.rbi),                                     sublabel: 'Carreras impulsadas' },
   { key: 'hits',         label: 'H',    fmt: r => String(r.hits),                                    sublabel: 'Hits' },
-  { key: 'stolen_bases', label: 'SB',   fmt: r => String(r.stolen_bases),                            sublabel: 'Bases robadas' },
+  { key: 'stolen_bases', label: 'BR',   fmt: r => String(r.stolen_bases),                            sublabel: 'Bases robadas' },
 ];
 
 const fmtAvg = (v: number | null) => v?.toFixed(3).replace(/^0/, '') ?? '—';
@@ -102,7 +105,7 @@ function PlayerRow({
           <Text style={styles.statLabel}>HR </Text>
           <Text style={styles.statVal}>{item.home_runs}</Text>
           <Text style={styles.dot}> · </Text>
-          <Text style={styles.statLabel}>RBI </Text>
+          <Text style={styles.statLabel}>CI </Text>
           <Text style={styles.statVal}>{item.rbi}</Text>
           <Text style={styles.dot}> · </Text>
           <Text style={styles.statLabel}>JJ </Text>

@@ -26,6 +26,11 @@ _CONTEO_BATEO = ("pa", "ab", "h", "doubles", "triples", "hr", "rbi", "bb", "so",
 _CONTEO_PITCHEO = ("outs", "h", "er", "so", "bb", "wins", "losses", "saves", "games", "games_started")
 
 
+def _ops(obp: float, slg: float) -> float:
+    """OBP + SLG con cada uno redondeado a tres cifras, como en el resto de la app."""
+    return round(round(obp, 3) + round(slg, 3), 3)
+
+
 def _div(a: float, b: float) -> float | None:
     return a / b if b else None
 
@@ -50,7 +55,11 @@ def agregar_bateo(filas: Iterable[dict]) -> dict[tuple[str, str], dict]:
         a["avg"] = _div(a["h"], a["ab"])
         a["obp"] = _div(a["h"] + a["bb"] + a["hbp"], a["ab"] + a["bb"] + a["hbp"] + a["sf"])
         a["slg"] = _div(tb, a["ab"])
-        a["ops"] = None if a["obp"] is None or a["slg"] is None else a["obp"] + a["slg"]
+        # OPS = OBP y SLG ya redondeados a tres cifras, sumados: así lo publica
+        # la MLB y así lo dan las vistas, los líderes y la carrera. Sumados
+        # sin redondear, Munguia 2025-26 daba .903 en la cabecera de su ficha
+        # y .904 en la tabla de la misma página (.4695 + .4338).
+        a["ops"] = None if a["obp"] is None or a["slg"] is None else _ops(a["obp"], a["slg"])
         a["iso"] = None if a["slg"] is None or a["avg"] is None else a["slg"] - a["avg"]
         a["bb_pct"] = _div(a["bb"], a["pa"])
         a["so_pct"] = _div(a["so"], a["pa"])
@@ -209,7 +218,7 @@ def liga_por_temporada(bateo: Iterable[dict], pitcheo: Iterable[dict]) -> list[d
             a = b[s]
             obp = _div(a["h"] + a["bb"] + a["hbp"], a["ab"] + a["bb"] + a["hbp"] + a["sf"])
             slg = _div(a["h"] + a["doubles"] + 2 * a["triples"] + 3 * a["hr"], a["ab"])
-            fila["ops"] = round(obp + slg, 3) if obp is not None and slg is not None else None
+            fila["ops"] = _ops(obp, slg) if obp is not None and slg is not None else None
         if s in p and p[s]["outs"]:
             fila["era"] = round(p[s]["er"] * 27 / p[s]["outs"], 2)
         salida.append(fila)

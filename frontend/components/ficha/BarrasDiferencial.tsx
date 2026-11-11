@@ -110,7 +110,10 @@ export default function BarrasDiferencial({
                   {marcadas.has(r.season_id) && (
                     <text
                       x={x + bw / 2}
-                      y={r.run_diff >= 0 ? Y(r.run_diff) - 6 : Y(r.run_diff) + 14}
+                      // La cifra de una barra negativa va sobre la línea del
+                      // cero, no bajo la barra: abajo chocaba con la etiqueta
+                      // de la temporada cuando la peor era la primera ("2012-13-47").
+                      y={r.run_diff >= 0 ? Y(r.run_diff) - 6 : Y(0) - 6}
                       fontSize={12}
                       fontWeight={700}
                       fill="rgb(var(--fg))"

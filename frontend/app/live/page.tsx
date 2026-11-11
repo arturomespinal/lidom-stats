@@ -1,6 +1,5 @@
 import Navbar from "@/components/Navbar";
 import LiveGames from "@/components/LiveGames";
-import { DEFAULT_SEASON } from "@/lib/constants";
 
 interface Props {
   searchParams: Promise<{ season?: string }>;
@@ -12,7 +11,7 @@ interface Props {
    después se queda escuchando el flujo SSE. */
 export default async function LivePage(props: Props) {
   const searchParams = await props.searchParams;
-  const season = searchParams.season ?? DEFAULT_SEASON;
+  const season = searchParams.season;
 
   return (
     <>

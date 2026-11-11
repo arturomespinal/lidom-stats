@@ -7,7 +7,6 @@ import Seccion from "@/components/ficha/Seccion";
 import Refresco from "@/components/hoy/Refresco";
 import { Figuras, FranjaFechas, Proximos, TarjetaDestacado, TarjetaJuego } from "@/components/hoy/Jornada";
 import { fetchDay } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Hoy · Deportiv" };
 
@@ -28,7 +27,7 @@ interface Props {
  */
 export default async function HoyPage(props: Props) {
   const searchParams = await props.searchParams;
-  const season = searchParams.season ?? DEFAULT_SEASON;
+  const season = searchParams.season;
   const fecha = searchParams.fecha;
   const jornada = await fetchDay(fecha);
 
@@ -92,8 +91,10 @@ export default async function HoyPage(props: Props) {
           )}
         </header>
 
-        {/* El destacado y el resto, lado a lado en pantalla ancha. */}
-        <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:gap-6">
+        {/* El destacado y el resto, lado a lado en pantalla ancha. Cada
+            columna con su alto (`items-start`): estirado hasta el alto de la
+            lista, el destacado dejaba un bloque blanco vacío bajo su franja. */}
+        <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
           {destacado && jornada.featured && (
             <TarjetaDestacado juego={destacado} destacado={jornada.featured} />
           )}

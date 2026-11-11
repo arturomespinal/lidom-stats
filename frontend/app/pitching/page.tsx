@@ -44,7 +44,7 @@ export default async function PitchingPage(props: Props) {
         {pitching.length === 0 ? (
           <EmptyState message="No hay datos de pitcheo disponibles." />
         ) : (
-          <PitchingTable data={pitching} />
+          <PitchingTable data={pitching} season={season} />
         )}
       </main>
     </>

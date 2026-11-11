@@ -26,7 +26,7 @@ export default function TeamHeader({ equipo }: { equipo: TeamProfile }) {
   return (
     <Heroe color={color} marca={code}>
       <ColumnaHeroe>
-        <p className="truncate text-[11px] uppercase tracking-[0.08em] text-ink-dim">
+        <p className="text-[11px] uppercase leading-snug tracking-[0.08em] text-ink-dim">
           {[equipo.city, equipo.founded_year && `desde ${equipo.founded_year}`].filter(Boolean).join(" · ")}
         </p>
         <NombreHeroe>{equipo.team_name}</NombreHeroe>

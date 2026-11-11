@@ -52,12 +52,14 @@ function CutlineRow({ span }: { span: number }) {
             viewport: centrada, el texto quedaba fuera de vista hasta que el
             usuario hiciera scroll horizontal, justo la etiqueta que más
             importa. Pegada a la izquierda se ve siempre. */}
+        {/* `pos`, el verde del tema: el esmeralda de Tailwind que hubo aquí
+            venía del tema oscuro y sobre este fondo daba 1.9:1. */}
         <div className="flex items-center gap-3">
-          <div className="h-px w-6 shrink-0 bg-emerald-500/40" />
-          <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-emerald-400">
+          <div className="h-px w-6 shrink-0 bg-pos/40" />
+          <span className="whitespace-nowrap text-[10px] font-bold uppercase tracking-wider text-pos">
             Clasifican al round robin
           </span>
-          <div className="h-px flex-1 bg-emerald-500/40" />
+          <div className="h-px flex-1 bg-pos/40" />
         </div>
       </td>
     </tr>
@@ -82,15 +84,15 @@ export default function StandingsTable({
       <table className="w-full text-sm whitespace-nowrap">
         <thead>
           <tr className="bg-header text-dim text-xs uppercase tracking-wider">
-            <th className="px-3 py-3 text-center w-8">#</th>
-            <th className="px-4 py-3 text-left">Equipo</th>
-            <th className="px-3 py-3 text-center">JJ</th>
-            <th className="px-3 py-3 text-center text-fg">G</th>
-            <th className="px-3 py-3 text-center">P</th>
-            <th className="px-3 py-3 text-center text-fg">PCT</th>
-            <th className="px-3 py-3 text-center">GB</th>
+            <th className="w-8 px-2 py-3 text-center sm:px-3">#</th>
+            <th className="px-2 py-3 text-left sm:px-4">Equipo</th>
+            <th className="hidden px-3 py-3 text-center sm:table-cell">JJ</th>
+            <th className="px-1.5 py-3 text-center text-fg sm:px-3">G</th>
+            <th className="px-1.5 py-3 text-center sm:px-3">P</th>
+            <th className="px-1.5 py-3 text-center text-fg sm:px-3">PCT</th>
+            <th className="px-1.5 py-3 text-center sm:px-3">GB</th>
             <th
-              className="px-3 py-3 text-center text-fg"
+              className="px-1.5 py-3 text-center text-fg sm:px-3"
               title="Juegos de ventaja sobre el primer equipo fuera, o de atraso contra el último clasificado"
             >
               CLAS
@@ -108,7 +110,7 @@ export default function StandingsTable({
                   row.playoff_spot ? "bg-card" : "bg-sunken"
                 }`}
               >
-                <td className="px-3 py-3 text-center text-xs">
+                <td className="px-2 py-3 text-center text-xs sm:px-3">
                   <span
                     className={
                       row.playoff_spot
@@ -119,8 +121,8 @@ export default function StandingsTable({
                     {i + 1}
                   </span>
                 </td>
-                <td className="py-3 pr-4">
-                  <div className="flex items-center gap-3">
+                <td className="py-3 pr-2 sm:pr-4">
+                  <div className="flex items-center gap-2 sm:gap-3">
                     {/* El color oficial del equipo como borde estructural de la
                         fila: es lo que distingue esta tabla de cualquier otra
                         tabla oscura. */}
@@ -135,30 +137,35 @@ export default function StandingsTable({
                         después de leer una tabla de posiciones. */}
                     <Link
                       href={`/teams/${row.team_id}?season=${season}`}
-                      className="flex items-center gap-3 underline-offset-2 hover:underline"
+                      className="flex items-center gap-2 underline-offset-2 hover:underline sm:gap-3"
                     >
                       <TeamBadge code={row.team_id} />
-                      <span className="font-medium">{row.team_name}</span>
+                      {/* En el teléfono, el nombre corto ("Águilas") y sin la
+                          columna JJ: así G, P, PCT, GB y CLAS caben en 390 px
+                          sin deslizar. Con el nombre completo solo se veían
+                          JJ y G, y lo que se viene a mirar quedaba fuera. */}
+                      <span className="font-medium sm:hidden">{row.short_name ?? row.team_name}</span>
+                      <span className="hidden font-medium sm:inline">{row.team_name}</span>
                     </Link>
                   </div>
                 </td>
-                <td className="px-3 py-3 text-center text-dim tabular-nums">
+                <td className="hidden px-3 py-3 text-center text-dim tabular-nums sm:table-cell">
                   {fmt.num(row.games_played)}
                 </td>
-                <td className="px-3 py-3 text-center font-bold tabular-nums">
+                <td className="px-1.5 py-3 text-center font-bold tabular-nums sm:px-3">
                   {row.wins}
                 </td>
-                <td className="px-3 py-3 text-center text-dim tabular-nums">
+                <td className="px-1.5 py-3 text-center text-dim tabular-nums sm:px-3">
                   {row.losses}
                 </td>
-                <td className="px-3 py-3 text-center font-bold tabular-nums">
+                <td className="px-1.5 py-3 text-center font-bold tabular-nums sm:px-3">
                   {fmt.pct(row.win_loss_pct)}
                 </td>
-                <td className="px-3 py-3 text-center text-dim tabular-nums">
+                <td className="px-1.5 py-3 text-center text-dim tabular-nums sm:px-3">
                   {row.games_back === "-" ? "—" : row.games_back}
                 </td>
                 <td
-                  className={`px-3 py-3 text-center font-bold tabular-nums ${clasColor(
+                  className={`px-1.5 py-3 text-center font-bold tabular-nums sm:px-3 ${clasColor(
                     row.playoff_games
                   )}`}
                 >

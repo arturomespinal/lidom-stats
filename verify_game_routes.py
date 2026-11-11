@@ -641,6 +641,14 @@ check("cifras de la cabecera: la última temporada, equipos sumados",
 jf = call("/players/juan-francisco-1987-06-24")["context"]["latest"]
 check("la cabecera salta las temporadas mínimas (menos de 50 AP)",
       (jf["season_id"], jf["team_code"], jf["pa"]), ("2022-23", "GIG", 89))
+# La cabecera, la curva y la tabla de temporadas de una misma ficha dicen el
+# mismo OPS. Munguia 2025-26: OBP .4695 y SLG .4338 dan .903 sumados sin
+# redondear y .904 como lo publica la MLB (.470 + .434).
+mu = call("/players/ismael-munguia-1998-10-19")
+fila_mu = next(f for f in mu["batting"] if f["season_id"] == "2025-26")
+curva_mu = next(c for c in mu["context"]["curve"]["points"] if c["season_id"] == "2025-26")
+check("el OPS de la cabecera, el de la curva y el de la tabla coinciden (.904, no .903)",
+      (mu["context"]["latest"]["ops"], curva_mu["value"], fila_mu["ops"]), (0.904, 0.904, 0.904))
 
 print("\n━━━ la jornada: portada Hoy ━━━")
 import glob as _glob

@@ -108,6 +108,10 @@ def get(path, ip=None, **k):
 
 check("/docs no se publica", get("/docs").status_code, 404)
 check("/openapi.json no se publica", get("/openapi.json").status_code, 404)
+# La API no sirve archivos: el montaje /static/crests se quitó (11-nov-2026).
+check("no hay montaje de archivos estáticos",
+      (get("/static/crests/README.md").status_code, get("/static/crests/..%2f..%2fapi%2fmain.py").status_code),
+      (404, 404))
 
 h = get("/health").json()
 check("/health sin clave: solo 'ok'", h, {"status": "ok"})

@@ -203,7 +203,7 @@ la 2015-16. No cambiar esa clave.
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
-| `verify_seguridad.py` | 49 comprobaciones de la API levantada en modo producción |
+| `verify_seguridad.py` | 50 comprobaciones de la API levantada en modo producción |
 | `.env.example` | Las variables de entorno de producción, con lo que hace cada una |
 | `src/clients/digimetrics.py` | Cliente de estadisticas.lidom.com: POST, 1 pedido/s, caché en disco, tope de tamaño |
 | `src/scrapers/digimetrics.py` | Parser de las tablas de DIGIMETRICS: columnas por encabezado y tasas recalculadas |
@@ -335,7 +335,7 @@ Nota de alcance: esto prueba que la agregación es correcta, **no** que los dato
 
 ### Next.js 16 — lo que cambió y por qué importa
 
-La web corre en **Next 16.3.5 con React 19.3**. Cuatro cosas de la migración que
+La web corre en **Next 16.4.6 con React 19.3**. Cuatro cosas de la migración que
 hay que tener en la cabeza al escribir código nuevo:
 
 1. **`params` y `searchParams` son promesas.** Una página que los reciba tiene que
@@ -387,7 +387,7 @@ porque la repetición avanzó entre una captura y otra.
 Los escudos oficiales se quitaron (ver "Antes de monetizar"). `TeamBadge`, en
 las dos plataformas, dibuja el código de tres letras en una teja del color del
 club — marca propia, sin archivo que pedirle al backend. `static/crests/` y el
-montaje `/static` pueden desaparecer sin tocar ningún cliente.
+montaje `/static` de la API se quitaron el 11-nov-2026.
 
 Los colores de club viven en `TEAM_STYLES` (web `frontend/lib/constants.ts`,
 móvil `mobile/src/constants.ts`, **los mismos valores**). El azul oficial de
@@ -1894,6 +1894,97 @@ cabeceras. Daría sensación de seguridad sin darla. Si un día hace falta
 distinguir clientes (terceros, un plan de pago), el camino es un token firmado
 de corta vida emitido por un servidor nuestro.
 
+## Revisión de seguridad y de estética (11-nov-2026)
+
+Pedida por Arturo con la web ya en Vercel y antes de terminar el despliegue
+de la API.
+
+### Seguridad: lo que se encontró y se cambió
+
+- **Dependencias de la API.** `pip-audit` daba 14 avisos, todos de Starlette
+  0.37.2 (la que arrastraba FastAPI 0.111). Ahora `fastapi==0.162.4`,
+  `starlette==1.10.0` (fijada a mano: FastAPI solo pide un mínimo) y
+  `pydantic==2.14.3`. `pip-audit -r requirements-orquestacion.txt`: sin
+  avisos. Al subir FastAPI, subir Starlette con él y volver a auditar.
+- **Dependencias de la web.** `npm audit` daba 1 crítica y 4 altas en Next
+  (la crítica, ejecución remota en funciones `use cache`, que la app no usa).
+  Next y `eslint-config-next` a 16.4.6. Quedan 8 moderadas, todas de
+  `minimatch` dentro de ESLint: herramienta de desarrollo, no llega al sitio.
+- **Dependencias del móvil.** 15 avisos (1 crítico), todos en herramientas de
+  compilación (Metro y la CLI de Expo: `shell-quote`, `node-forge`, `zod`),
+  no en el código que corre en el teléfono. `npm audit fix` reescribía medio
+  `package-lock.json` y metía un segundo Expo anidado: se dejó como estaba.
+  Se arreglan con el siguiente parche de Expo (`npx expo install --check`).
+- **La API ya no sirve archivos.** El montaje `/static/crests` no lo pedía
+  ningún cliente y `StaticFiles` es de donde salen varios avisos de
+  Starlette. `verify_seguridad.py` comprueba que da 404.
+- **Cabeceras de la web** (`frontend/next.config.mjs`): Content-Security-Policy
+  (código, estilos e imágenes solo del propio sitio; conexiones solo a la
+  API), `frame-ancestors 'none'` y `X-Frame-Options: DENY`, `nosniff`,
+  `Referrer-Policy`, `Permissions-Policy`, HSTS, y sin `X-Powered-By`.
+  `script-src` lleva `'unsafe-inline'`: es lo que pide Next sin nonces, y con
+  nonces todas las páginas pasarían por un middleware. El día que haya
+  anuncios o analítica de terceros, sus dominios se añaden ahí uno por uno.
+- **Lo que se revisó y estaba bien:** ningún secreto en el árbol ni en el
+  historial de git; `.env`, la base, DuckDB y Parquet ignorados; el SQL
+  dinámico solo interpola listas cerradas (`sort_by`, dirección) y el resto
+  va con parámetros; la web no usa `dangerouslySetInnerHTML`; el flujo de
+  Actions tiene `permissions: contents: read`; el servicio de systemd corre
+  sin privilegios y solo escribe en `data/`.
+- **Probado de punta a punta**: `next build` y `next start` contra la API en
+  modo producción (CORS, clave del servidor, límite): diez páginas, ordenar
+  una tabla, el buscador y el selector, sin un error de consola ni de CSP.
+  Aquí el build se hizo con webpack y las fuentes simuladas (Google Fonts
+  está bloqueado); el de Turbopack lo corre Actions y Vercel.
+- **Pendiente de Arturo:** regenerar el token de DuckDNS (salió en una
+  captura); `data/lidom_stats.db` de abril (487 KB, agregados viejos) sigue
+  en el historial del repositorio público, y quitarlo pide reescribir el
+  historial; un build de producción del móvil necesita
+  `EXPO_PUBLIC_API_URL` con https (el respaldo es una IP de la casa por http).
+
+### Estética: lo que se cambió
+
+Revisado con capturas de cada pantalla a 390 y a 1280 px (web) y en el arnés
+del móvil, con la base real.
+
+- **La barra de la web en el teléfono.** Las cinco pestañas compartían fila
+  con el logotipo y el buscador y a 390 px solo se veía "Hoy". Ahora van en
+  su propia fila pegada arriba, repartidas, de 44 px; el logotipo y el
+  buscador, en la fila de encima, que se va con el scroll. Las barras
+  pegadas de debajo (fechas, temporada) bajan a `top-11` en el teléfono.
+- **La temporada de la barra.** Las páginas sin temporada propia mandaban
+  "2025" fija en los enlaces: con la 2026-27 en marcha, tocar "Posiciones"
+  desde la portada abría la tabla del año pasado. Ahora `Navbar` recibe la
+  temporada solo si la página tiene una, y sin ella los enlaces van sin
+  `?season=`. La ficha de equipo sin temporada abre en la más reciente.
+- **Líderes de Bateo y de Pitcheo en la web** (`components/TablaLideres.tsx`,
+  una sola tabla para las dos). En el teléfono la columna del orden (OPS,
+  efectividad) quedaba fuera de la pantalla y la lista parecía desordenada.
+  Ahora el equipo y los juegos van bajo el nombre, caben las cuatro primeras
+  cifras, el nombre se queda fijo al deslizar y hay columna de puesto. La
+  columna elegida se resalta entera, sea cual sea. Cifras en la fuente del
+  texto con ancho tabular (iban en monoespaciada). Los encabezados son
+  botones (teclado, lector de pantalla).
+- **Las siglas, en español en toda la app**: CI, BR, AP, EFE, K, G, JI. Las
+  tablas de líderes de la web y las pantallas de Bateo y Pitcheo del móvil
+  decían RBI, SB, PA, ERA, SO, W.
+- **El OPS sin el cero de delante** (".904"; "1.195" si pasa de uno), como el
+  promedio: en líderes salía "0.904" junto a ".368". Y el mismo OPS en toda
+  la ficha: la cabecera sumaba OBP y SLG sin redondear y daba .903 donde la
+  tabla decía .904 (`_ops()` en `src/contexto.py`, con su comprobación).
+- **Posiciones en el teléfono**: nombre corto y sin la columna JJ, para que
+  G, P, PCT, GB y CLAS quepan sin deslizar. "Clasifican al round robin" en
+  el verde del tema (`pos`): el esmeralda de Tailwind daba 1.9:1.
+- **Portada**: un juego por empezar decía la hora dos veces (en la teja del
+  estado y en grande); queda la grande. En pantalla ancha el destacado ya no
+  se estira hasta el alto de la lista.
+- **Ficha de equipo**: la ciudad y el año bajan de línea en vez de cortarse
+  ("DESDE 19…"); con cinco destacados en dos columnas, el quinto ocupa la
+  fila; la cifra de una barra negativa va sobre la línea del cero (chocaba
+  con la etiqueta "2012-13").
+- **Móvil**: lo mismo donde aplica (la hora una sola vez, el OPS, las
+  siglas) y, en el buscador vacío, el noveno récord ocupa la fila entera.
+
 ## La capa histórica (DIGIMETRICS) (30-sep-2026)
 
 `estadisticas.lidom.com` ("DIGIMETRICS") es el portal de estadísticas oficial
@@ -2505,8 +2596,8 @@ apunta a `gdx.mlb.com/components/copyright.txt`, donde MLBAM permite solo uso
 **individual, no comercial y no masivo**. Este pipeline incumple las tres en
 cuanto haya un banner.
 
-`static/crests/` puede vaciarse sin tocar código: `TeamBadge` cae a las siglas
-por su cuenta en las dos plataformas. Eso fue diseño deliberado, no casualidad.
+`static/crests/` ya no existe ni la API lo sirve: `TeamBadge` dibuja las
+siglas en las dos plataformas.
 
 La guía completa, con fuentes y precedentes, está en el proyecto de Claude como
 `claude/guia-legal-ads.md`.

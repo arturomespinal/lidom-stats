@@ -41,7 +41,7 @@ const TABS = [
 
 type TabKey = (typeof TABS)[number]["key"];
 
-export default function GameDetail({ gamePk, season }: { gamePk: number; season: string }) {
+export default function GameDetail({ gamePk, season }: { gamePk: number; season?: string }) {
   const router = useRouter();
   const pathname = usePathname();
   const params = useSearchParams();
@@ -115,7 +115,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season:
 
   const volver = (
     <Link
-      href={`/live?season=${season}`}
+      href={season ? `/live?season=${season}` : "/live"}
       className="inline-flex min-h-[44px] items-center gap-1 text-xs text-ink-dim transition-colors hover:text-ink-fg"
     >
       <span aria-hidden>←</span> En Vivo

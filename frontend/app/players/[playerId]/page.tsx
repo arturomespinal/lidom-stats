@@ -10,7 +10,6 @@ import CurvaCarrera from "@/components/ficha/CurvaCarrera";
 import Trayectoria from "@/components/ficha/Trayectoria";
 import JuegoAJuego from "@/components/ficha/JuegoAJuego";
 import { fetchGamelog, fetchPlayerProfile } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
 import { entradas } from "@/lib/formato";
 
 // En Next 16 `params` es una promesa. Declararlo sin `Promise` compila y falla
@@ -35,7 +34,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function PlayerPage(props: Props) {
   const { playerId } = await props.params;
   const searchParams = await props.searchParams;
-  const season = searchParams.season ?? DEFAULT_SEASON;
+  const season = searchParams.season;
 
   const perfil = await fetchPlayerProfile(playerId);
   if (!perfil) notFound();

@@ -48,7 +48,7 @@ export function enlaceJuego(j: JuegoJornada): string | null {
  */
 export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: string }) {
   return (
-    <nav aria-label="Fecha" className="sticky top-14 z-[5] border-b border-line bg-bg/95 backdrop-blur">
+    <nav aria-label="Fecha" className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
       <div className="mx-auto grid max-w-5xl grid-cols-7 gap-1 px-4 py-2">
         {dias.map((d) => {
           const es = d.date === activa;
@@ -202,7 +202,11 @@ export function TarjetaDestacado({
     <article className="overflow-hidden rounded-xl border border-line bg-card">
       <div className="flex items-center justify-between gap-2 px-4 pt-3">
         <span className="text-[11px] uppercase tracking-[0.08em] text-dim">{etiqueta}</span>
-        <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
+        {/* Un juego por empezar lleva su hora en grande, abajo: repetirla
+            aquí en la teja del estado era decirla dos veces. */}
+        {!(juego.status === "scheduled" && juego.time_local) && (
+          <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
+        )}
       </div>
       <div className="px-4 pb-1 pt-2">
         <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} grande temporada={juego.season_id} />

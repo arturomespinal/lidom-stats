@@ -5,7 +5,6 @@ import Navbar from "@/components/Navbar";
 import EmptyState from "@/components/EmptyState";
 import Seccion from "@/components/ficha/Seccion";
 import { fetchCalendar } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
 
 export const metadata: Metadata = { title: "Calendario · Deportiv" };
 
@@ -26,7 +25,7 @@ const DIAS = ["L", "M", "M", "J", "V", "S", "D"];
  */
 export default async function CalendarioPage(props: Props) {
   const sp = await props.searchParams;
-  const season = sp.season ?? DEFAULT_SEASON;
+  const season = sp.season;
   const cal = await fetchCalendar(sp.temporada);
   const activa = sp.activa;
 
@@ -39,7 +38,7 @@ export default async function CalendarioPage(props: Props) {
         </main>
       ) : (
         <>
-          <nav aria-label="Temporada" className="sticky top-14 z-[5] border-b border-line bg-bg/95 backdrop-blur">
+          <nav aria-label="Temporada" className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
             <div className="mx-auto flex max-w-5xl overflow-x-auto px-4">
               {cal.seasons.map((s) => {
                 const es = s === cal.season_id;

@@ -192,7 +192,11 @@ export function TarjetaDestacado({
     <View style={styles.tarjeta}>
       <View style={styles.cabeza}>
         <Text style={styles.micro}>{etiqueta}</Text>
-        <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
+        {/* Un juego por empezar lleva su hora en grande, abajo: repetirla
+            aquí en la teja del estado era decirla dos veces. */}
+        {!(juego.status === 'scheduled' && !!juego.time_local) && (
+          <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
+        )}
       </View>
       <View style={styles.cuerpo}>
         <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={!!juego.winner && juego.winner !== juego.away.code} grande temporada={temporada} />

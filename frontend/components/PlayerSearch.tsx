@@ -109,7 +109,7 @@ export default function PlayerSearch() {
                 : `/historia/jugador/${historicos[0].id_miembro}`
             );
         }}
-        className="w-32 rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:w-48 focus:border-fg2 focus:outline-none sm:w-40 sm:focus:w-56"
+        className="w-40 rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:w-48 focus:border-fg2 focus:outline-none sm:w-40 sm:focus:w-56"
       />
 
       {abierto && q.trim().length >= 2 && (

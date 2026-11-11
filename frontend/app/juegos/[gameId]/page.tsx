@@ -6,7 +6,6 @@ import Seccion from "@/components/ficha/Seccion";
 import BoxScore from "@/components/game/BoxScore";
 import { Figuras, TarjetaDestacado } from "@/components/hoy/Jornada";
 import { fetchGame } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
 
 // En Next 16 `params` es una promesa. Ver CLAUDE.md.
 interface Props {
@@ -37,7 +36,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
 export default async function JuegoPage(props: Props) {
   const { gameId } = await props.params;
   const searchParams = await props.searchParams;
-  const season = searchParams.season ?? DEFAULT_SEASON;
+  const season = searchParams.season;
   const juego = await fetchGame(gameId);
   if (!juego) notFound();
 

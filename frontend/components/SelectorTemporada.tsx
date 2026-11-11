@@ -96,7 +96,7 @@ export function SelectorOpciones({
   if (opciones.length < 2) return null;
 
   return (
-    <div className="sticky top-14 z-[5] border-b border-line bg-bg/95 backdrop-blur">
+    <div className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-2">
         {antes}
         <div ref={caja} className="relative inline-block">

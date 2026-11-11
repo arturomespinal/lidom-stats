@@ -8,7 +8,7 @@ import Seccion from "@/components/ficha/Seccion";
 import Trayectoria from "@/components/ficha/Trayectoria";
 import { BattingSeasons, PitchingSeasons } from "@/components/player/SeasonTable";
 import { fetchMiembroHistorico } from "@/lib/api";
-import { DEFAULT_SEASON, TEAM_STYLES } from "@/lib/constants";
+import { TEAM_STYLES } from "@/lib/constants";
 import { entradas, epocaHistorica, num, pct3 } from "@/lib/formato";
 
 // En Next 16 `params` es una promesa: ver CLAUDE.md.
@@ -62,7 +62,7 @@ export default async function MiembroPage(props: Props) {
 
   return (
     <>
-      <Navbar season={DEFAULT_SEASON} />
+      <Navbar />
       <Heroe color={color} lado={<Monograma nombre={m.player.name} />}>
         <ColumnaHeroe>
           <p className="truncate text-[11px] uppercase tracking-[0.08em] text-ink-dim">

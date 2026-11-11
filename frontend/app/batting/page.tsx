@@ -44,7 +44,7 @@ export default async function BattingPage(props: Props) {
         {batting.length === 0 ? (
           <EmptyState message="No hay datos de bateo disponibles." />
         ) : (
-          <BattingTable data={batting} />
+          <BattingTable data={batting} season={season} />
         )}
       </main>
     </>

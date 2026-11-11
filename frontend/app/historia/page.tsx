@@ -9,7 +9,6 @@ import ListaLideres from "@/components/historia/ListaLideres";
 import ListaTemporadas from "@/components/historia/ListaTemporadas";
 import TarjetasRecord from "@/components/historia/TarjetasRecord";
 import { fetchLideresHistoricos, fetchMejoresTemporadas, fetchResumenHistorico } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
 import type { GrupoHistorico } from "@/lib/types";
 
 export const metadata: Metadata = {
@@ -52,7 +51,7 @@ export default async function HistoriaPage(props: Props) {
 
   return (
     <>
-      <Navbar season={sp.season ?? DEFAULT_SEASON} />
+      <Navbar season={sp.season} />
       <Heroe>
         <div className="space-y-2 sm:w-[70%]">
           <p className="text-[11px] uppercase tracking-[0.08em] text-ink-dim">LIDOM · Serie regular · desde 1951</p>

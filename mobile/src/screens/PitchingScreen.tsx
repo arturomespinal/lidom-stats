@@ -32,12 +32,13 @@ interface SortOption {
 
 
 const SORT_OPTIONS: SortOption[] = [
-  { key: 'era',               label: 'ERA',  fmt: r => r.era?.toFixed(2)               ?? '—', ascending: true  },
+  // Las siglas, en español como en las fichas y en la web: EFE, K, G.
+  { key: 'era',               label: 'EFE',  fmt: r => r.era?.toFixed(2)               ?? '—', ascending: true  },
   { key: 'whip',              label: 'WHIP', fmt: r => r.whip?.toFixed(2)              ?? '—', ascending: true  },
   { key: 'strikeouts_per_nine', label: 'K/9', fmt: r => r.strikeouts_per_nine?.toFixed(1) ?? '—', ascending: false },
-  { key: 'strikeouts',        label: 'SO',   fmt: r => String(r.strikeouts),                    ascending: false },
+  { key: 'strikeouts',        label: 'K',    fmt: r => String(r.strikeouts),                    ascending: false },
   { key: 'innings_pitched',   label: 'IP',   fmt: r => entradas(r.innings_pitched),               ascending: false },
-  { key: 'wins',              label: 'W',    fmt: r => String(r.wins),                          ascending: false },
+  { key: 'wins',              label: 'G',    fmt: r => String(r.wins),                          ascending: false },
   { key: 'saves',             label: 'SV',   fmt: r => String(r.saves),                         ascending: false },
   { key: 'walks_per_nine',    label: 'BB/9', fmt: r => r.walks_per_nine?.toFixed(1)  ?? '—', ascending: true  },
 ];
@@ -102,7 +103,7 @@ function PitcherRow({
           <Text style={styles.statLabel}>K </Text>
           <Text style={styles.statVal}>{item.strikeouts}</Text>
           <Text style={styles.dot}> · </Text>
-          <Text style={styles.statLabel}>W </Text>
+          <Text style={styles.statLabel}>G </Text>
           <Text style={styles.statVal}>{item.wins}</Text>
           <Text style={styles.dot}> · </Text>
           <Text style={styles.statLabel}>SV </Text>

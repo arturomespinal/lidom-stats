@@ -32,6 +32,9 @@ function valor(stat: string, v: number): string {
  * `min-h-[72px]`: la tarjeta ENTERA es el área táctil, y por debajo de 44 px
  * de alto deja de serlo en un teléfono.
  */
+/** En dos columnas (teléfono), la tarjeta impar del final ocupa la fila. */
+const ultimaSola = "max-sm:[&>*:last-child:nth-child(odd)]:col-span-2";
+
 function Tarjeta({ l }: { l: TeamLeader }) {
   return (
     <Link
@@ -78,18 +81,19 @@ export default function Leaders({
         {/* Rejilla de 2 columnas en teléfono y 5 en escritorio. Con
             `flex-wrap` las cinco tarjetas entraban a la fuerza en 390 px —
             70 px cada una— y todos los nombres salían cortados en "Ader…".
-            El número de categorías varía cuando nadie alcanza el mínimo; la
-            rejilla lo aguanta dejando la última fila incompleta, que se lee
-            mucho mejor que cinco nombres truncados. */}
+            El número de categorías varía cuando nadie alcanza el mínimo. En
+            el teléfono, si queda una tarjeta sola en la última fila ocupa
+            las dos columnas (`ultimaSola`): una tarjeta suelta con un hueco
+            al lado se leía como si faltara algo. */}
         {leaders.batting.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 ${ultimaSola}`}>
             {leaders.batting.map((l) => (
               <Tarjeta key={`b-${l.stat}`} l={l} />
             ))}
           </div>
         )}
         {leaders.pitching.length > 0 && (
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
+          <div className={`grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5 ${ultimaSola}`}>
             {leaders.pitching.map((l) => (
               <Tarjeta key={`p-${l.stat}`} l={l} />
             ))}

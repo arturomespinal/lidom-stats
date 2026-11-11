@@ -322,10 +322,12 @@ function PanelRecords({
       </Text>
       <Text style={styles.panelSub}>LIDOM desde 1951 · serie regular</Text>
       <View style={styles.rejilla}>
-        {todas.map(c => (
+        {todas.map((c, i) => (
           <Tocable
             key={`${c.grupo}-${c.stat}`}
-            contenedor={{ width: '48.5%' }}
+            // Con un número impar de categorías, la última ocupa la fila
+            // entera: suelta, con un hueco al lado, parecía que faltaba una.
+            contenedor={{ width: todas.length % 2 === 1 && i === todas.length - 1 ? '100%' : '48.5%' }}
             onPress={() => onAbrir(c.grupo, c.stat)}
             style={({ pressed }) => [styles.tarjeta, pressed && styles.presionada]}
             accessibilityRole="button"

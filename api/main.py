@@ -1,10 +1,8 @@
 # api/main.py — API REST LIDOM Stats
 from contextlib import asynccontextmanager
-from pathlib import Path
 
 from fastapi import FastAPI, Query, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 # Registrar flat_models en Base.metadata antes de init_db()
@@ -80,22 +78,10 @@ app.include_router(historia_router)
 app.include_router(live_router)
 
 
-# ── Escudos de los equipos ────────────────────────────────────────────────────
-#
-# Se sirven desde el backend y NO se empaquetan en los clientes, por tres
-# razones prácticas:
-#
-#   1. Un solo lugar para los seis archivos, compartido por la web y el móvil.
-#   2. Cambiar un escudo no obliga a recompilar la app ni a publicar una
-#      versión nueva en Expo: se reemplaza el PNG y listo.
-#   3. En React Native, `require()` de un archivo que no existe revienta el
-#      empaquetado. Sirviéndolos por URL, un escudo que falta simplemente no
-#      carga y el badge cae a las siglas, que es justo lo que queremos.
-#
-# La carpeta puede estar vacía: TeamBadge maneja el 404 sin romperse.
-_CRESTS_DIR = Path(__file__).resolve().parent.parent / "static" / "crests"
-_CRESTS_DIR.mkdir(parents=True, exist_ok=True)
-app.mount("/static/crests", StaticFiles(directory=_CRESTS_DIR), name="crests")
+# No se sirven archivos estáticos. Hubo un montaje `/static/crests` para los
+# escudos; los escudos se quitaron (guía legal) y ningún cliente lo pedía. Un
+# servidor de archivos que nadie usa es superficie de ataque gratis: varios
+# avisos de seguridad de Starlette son de `StaticFiles`.
 
 
 def query_db(sql: str, params: dict = {}) -> list[dict]:

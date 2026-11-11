@@ -63,12 +63,10 @@ COMMIT_MSG.txt
 fixtures/
 
 # ── Escudos de los equipos ───────────────────────────────────────────────────
-# Marcas registradas de los seis clubes, no del proyecto, y este repositorio es
-# público. Se despliegan con static/, no se versionan. Si decides lo contrario,
-# borra estas dos líneas — es reversible; lo que no conviene es que pase sin
-# haberlo decidido. Ver static/crests/README.md.
-static/crests/*
-!static/crests/README.md
+# Marcas registradas de los seis clubes, no del proyecto. La app no los usa
+# (ver la guía legal) y la API ya no sirve esta carpeta; si alguien la vuelve
+# a crear, que no llegue al repositorio.
+static/
 
 # ── Dagster ──────────────────────────────────────────────────────────────────
 # Historial de ejecuciones y checks (DAGSTER_HOME) y la carpeta temporal que

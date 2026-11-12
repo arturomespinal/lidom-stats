@@ -49,20 +49,16 @@ export default function PuestoLiga({ ranking }: { ranking: PlayerRanking }) {
                 className="block h-full rounded"
                 style={{
                   width: `${Math.max(lleno, 3)}%`,
-                  backgroundColor: podio ? "rgb(var(--ink))" : "#7A879B",
+                  backgroundColor: podio ? "rgb(var(--accent))" : "#7A879B",
                 }}
               />
             </span>
             {podio ? (
-              // El podio en teja navy con la esquina cortada: la firma
-              // reservada a tejas y estados, aquí marca un estado.
+              // El podio en pastilla clara, como todo lo destacado del look
+              // Pizarra: aquí marca un estado.
               <span
                 aria-hidden="true"
-                className="flex h-7 min-w-[34px] items-center justify-center bg-ink px-1 font-cond text-xl leading-none text-ink-fg"
-                style={{
-                  borderRadius: 5,
-                  clipPath: "polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%)",
-                }}
+                className="flex h-7 min-w-[34px] items-center justify-center rounded-md bg-accent px-1 font-cond font-bold text-xl leading-none text-accent-on"
               >
                 <Rango n={it.rank} />
               </span>

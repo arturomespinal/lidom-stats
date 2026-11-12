@@ -33,7 +33,7 @@ export default function UltimosDiez({
             accessibilityLabel={`${g ? 'Ganó' : 'Perdió'} ${j.runs_for}-${j.runs_against} ${j.home ? 'contra' : 'en casa de'} ${j.opponent}, ${j.date}${onJuego ? '. Abrir el juego' : ''}`}
           >
             <View style={[styles.cuadro, g ? styles.ganado : styles.perdido]}>
-              <Text style={[styles.letra, { color: g ? COLORS.inkFg : COLORS.textSecondary }]}>{j.result}</Text>
+              <Text style={[styles.letra, { color: g ? COLORS.accentOn : COLORS.textSecondary }]}>{j.result}</Text>
             </View>
             <Text style={styles.rival}>{j.opponent}</Text>
           </Tocable>
@@ -48,8 +48,8 @@ const styles = StyleSheet.create({
   caja: { flex: 1 },
   celda: { alignItems: 'center', gap: 4 },
   cuadro: { alignSelf: 'stretch', height: 32, borderRadius: 4, alignItems: 'center', justifyContent: 'center' },
-  ganado: { backgroundColor: COLORS.ink },
+  ganado: { backgroundColor: COLORS.accent },
   perdido: { backgroundColor: COLORS.bgCard, borderWidth: 1, borderColor: COLORS.border },
-  letra: { fontFamily: FONTS.display, fontSize: 20 },
+  letra: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20 },
   rival: { fontSize: 10, color: COLORS.textSecondary },
 });

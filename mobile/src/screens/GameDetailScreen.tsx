@@ -72,7 +72,7 @@ export default function GameDetailScreen({ route }: Props) {
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
+      return () => setStatusBarStyle('light');
     }, []),
   );
 
@@ -405,10 +405,10 @@ const styles = StyleSheet.create({
   nombre: { color: COLORS.inkFg, fontSize: 14, fontWeight: '700', marginTop: 2 },
   extra: { color: COLORS.inkDim, fontSize: 11, fontVariant: ['tabular-nums'] },
   centro: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  // El marcador en Bebas Neue, sin fontWeight (ver FONTS).
+  // El marcador en Barlow Condensed, sin fontWeight (ver FONTS).
   carreras: {
     color: COLORS.inkFg,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 56,
     lineHeight: 56,
     // Espacio para dibujar el remate de las cifras redondas en iOS sin mover
@@ -419,7 +419,7 @@ const styles = StyleSheet.create({
     minWidth: 28,
     textAlign: 'center',
   },
-  guion: { color: COLORS.inkDim, fontFamily: FONTS.display, fontSize: 36, lineHeight: 40 },
+  guion: { color: COLORS.inkDim, fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 36, lineHeight: 40 },
   apagado: { color: COLORS.inkDim },
   marca: { width: 10, color: COLORS.inkFg, fontSize: 14 },
 

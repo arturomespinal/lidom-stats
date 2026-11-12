@@ -48,7 +48,7 @@ export function enlaceJuego(j: JuegoJornada): string | null {
  */
 export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: string }) {
   return (
-    <nav aria-label="Fecha" className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
+    <nav aria-label="Fecha" className="sticky top-0 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
       <div className="mx-auto grid max-w-5xl grid-cols-7 gap-1 px-4 py-2">
         {dias.map((d) => {
           const es = d.date === activa;
@@ -56,15 +56,17 @@ export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: stri
           const [dia, num] = d.label.split(" ");
           const cuerpo = (
             <>
-              <span className={`text-[11px] ${es ? "text-ink-fg" : "text-dim"}`}>{dia}</span>
-              <span className={`font-cond text-[22px] leading-none ${es ? "text-ink-fg" : "text-fg"}`}>{num}</span>
-              <span className={`num text-[10px] ${es ? "text-ink-dim" : "text-dim"}`}>
+              <span className={`text-[10px] font-semibold uppercase tracking-[0.08em] ${es ? "text-accent-on" : "text-dim"}`}>{dia}</span>
+              <span className={`font-cond font-bold text-[22px] leading-none ${es ? "text-accent-on" : "text-fg"}`}>{num}</span>
+              <span className={`num text-[10px] ${es ? "font-semibold text-accent-on" : "text-dim"}`}>
                 {vacio ? "—" : `${d.games} ${d.games === 1 ? "juego" : "juegos"}`}
               </span>
             </>
           );
+          // El día elegido es la pastilla CLARA del look Pizarra: lo
+          // seleccionado se rellena de claro, con el texto grafito encima.
           const clase = `flex min-h-[60px] flex-col items-center justify-center gap-0.5 rounded-lg ${
-            es ? "bg-ink" : vacio ? "opacity-45" : "hover:bg-raised"
+            es ? "bg-accent" : vacio ? "opacity-45" : "hover:bg-raised"
           }`;
           if (vacio || es) {
             return (
@@ -110,7 +112,7 @@ function FilaEquipo({
         className="group flex min-w-0 flex-1 items-center gap-3"
         aria-label={`Abrir ${lado.name}`}
       >
-        <TeamBadge code={lado.code} size={grande ? "md" : "sm"} variant={grande ? "solid" : "outline"} />
+        <TeamBadge code={lado.code} size={grande ? "md" : "sm"} variant="solid" />
         <span
           className={`min-w-0 flex-1 truncate font-semibold group-hover:underline ${grande ? "text-lg" : "text-[15px]"} ${
             perdio ? "text-dim" : "text-fg"
@@ -121,7 +123,7 @@ function FilaEquipo({
       </Link>
       {lado.runs != null && (
         <span
-          className={`num font-cond leading-none ${grande ? "text-[52px]" : "text-[32px]"} ${
+          className={`num font-cond font-bold leading-none ${grande ? "text-[52px]" : "text-[32px]"} ${
             perdio ? "text-dim" : "text-fg"
           }`}
         >
@@ -155,7 +157,7 @@ function Decisiones({ d }: { d: NonNullable<JuegoJornada["decisions"]> }) {
   );
 }
 
-/** La franja navy de contexto, el pie de tarjeta del kit. */
+/** El pie de tarjeta: estadio a la izquierda, la acción a la derecha. */
 function Banda({
   venue,
   href,
@@ -166,7 +168,7 @@ function Banda({
   accion?: string;
 }) {
   return (
-    <div className="flex min-h-11 items-center gap-3 bg-ink px-4">
+    <div className="flex min-h-11 items-center gap-3 border-t border-line px-4">
       <span className="min-w-0 flex-1 truncate text-[10px] uppercase tracking-[0.08em] text-ink-dim">
         {venue ?? "Estadio por confirmar"}
       </span>
@@ -192,7 +194,7 @@ export function TarjetaDestacado({
   destacado: Pick<NonNullable<Jornada["featured"]>, "headline" | "win_prob">;
   /** Lo que dice arriba a la izquierda. En la página del juego, la fecha. */
   etiqueta?: string;
-  /** A dónde lleva la franja navy. Por defecto, `enlaceJuego`. */
+  /** A dónde lleva el pie de la tarjeta. Por defecto, `enlaceJuego`. */
   href?: string | null;
   accion?: string;
 }) {

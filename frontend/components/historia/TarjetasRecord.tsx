@@ -33,16 +33,16 @@ export default function TarjetasRecord({
                 scroll={false}
                 aria-current={activa ? "true" : undefined}
                 className={`tocable block h-full rounded-xl border px-3 py-2.5 ${
-                  activa ? "border-ink bg-ink text-ink-fg" : "border-line bg-card text-fg hover:border-fg2"
+                  activa ? "border-accent bg-accent text-accent-on" : "border-line bg-card text-fg hover:border-fg2"
                 }`}
               >
-                <span className={`block truncate text-[10px] font-semibold uppercase tracking-[0.08em] ${activa ? "text-ink-dim" : "text-dim"}`}>
+                <span className={`block truncate text-[10px] font-semibold uppercase tracking-[0.08em] ${activa ? "text-accent-on" : "text-dim"}`}>
                   {c.label}
                 </span>
                 <span className="num mt-1 block font-cond text-[34px] leading-none">
                   {c.leader ? valorHistorico(c.stat, c.leader.value) : "—"}
                 </span>
-                <span className={`mt-1 block truncate text-xs ${activa ? "text-ink-dim" : "text-fg2"}`}>
+                <span className={`mt-1 block truncate text-xs ${activa ? "text-accent-on" : "text-fg2"}`}>
                   {c.leader?.name ?? "Sin datos"}
                 </span>
               </Link>

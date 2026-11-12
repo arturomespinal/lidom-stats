@@ -44,7 +44,7 @@ function TeamRow({
       {/* La flecha marca quién batea; ocupa espacio siempre para que las dos
           filas queden alineadas aunque nadie esté bateando. */}
       <span className="w-2 text-[10px] text-warn">{batting ? "▸" : ""}</span>
-      <TeamBadge code={team.team_code} />
+      <TeamBadge code={team.team_code} variant="solid" />
       <span
         className={`flex-1 text-sm truncate ${
           won ? "text-fg font-semibold" : "text-fg2"

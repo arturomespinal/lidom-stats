@@ -143,8 +143,8 @@ export function FilaCifras({ titulo, children }: { titulo?: string; children: Re
  * El nombre grande de la cabecera, del tamaño que quepa en la columna.
  *
  * El móvil tiene `adjustsFontSizeToFit`; la web no. Aquí el tamaño sale de la
- * palabra más larga: Bebas mide ~0.46 em por mayúscula, así que la letra no
- * pasa de ancho-de-columna ÷ (0.46 × letras). "RODRÍGUEZ" a 52 px no cabe en
+ * palabra más larga: Barlow Condensed en 700 mide ~0.5 em por mayúscula, así
+ * que la letra no pasa de ancho-de-columna ÷ (0.5 × letras). "RODRÍGUEZ" a 52 px no cabe en
  * la columna del 52% de un teléfono de 390, y partirla a media palabra sería
  * peor que achicarla. El tope (52 / 76 px) es el tamaño de diseño.
  */
@@ -153,7 +153,7 @@ export function NombreHeroe({ children }: { children: string }) {
   return (
     <h1
       className="pt-1 font-cond leading-[0.92] tracking-[0.01em] text-ink-fg text-[length:min(52px,calc((100vw_-_32px)*0.52/var(--l)))] sm:text-[length:min(76px,calc((min(100vw,1024px)_-_32px)*0.58/var(--l)))]"
-      style={{ ["--l" as string]: (0.46 * largo).toFixed(2) }}
+      style={{ ["--l" as string]: (0.5 * largo).toFixed(2) }}
     >
       {children}
     </h1>

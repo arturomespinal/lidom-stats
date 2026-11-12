@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   valor: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   cuadro: { width: 10, height: 10, borderRadius: 2 },
-  codigo: { color: COLORS.textSupport, fontSize: 15, fontFamily: FONTS.display, letterSpacing: 0.5 },
+  codigo: { color: COLORS.textSupport, fontSize: 15, fontFamily: FONTS.display, textTransform: 'uppercase', letterSpacing: 0.5 },
   pct: {
     color: COLORS.textPrimary,
     fontSize: 14,
@@ -389,7 +389,7 @@ const styles = StyleSheet.create({
     left: 8,
     color: COLORS.textSecondary,
     fontSize: 13,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
   ladoArriba: { top: 6 },

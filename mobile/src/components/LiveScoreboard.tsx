@@ -35,7 +35,7 @@ function TeamRow({
       {/* La flecha ocupa su ancho siempre, para que las dos filas queden
           alineadas aunque nadie esté bateando. */}
       <Text style={styles.battingArrow}>{batting ? '▸' : ''}</Text>
-      <TeamBadge code={team.team_code} size={32} />
+      <TeamBadge code={team.team_code} size={32} variant="solid" />
       <Text
         style={[styles.teamName, won && styles.teamNameWon]}
         numberOfLines={1}
@@ -291,8 +291,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.ink,
   },
   bandaEstadio: { flex: 1, color: COLORS.inkDim, fontSize: 10, letterSpacing: 0.8 },
-  // Bebas Neue, sin fontWeight (ver FONTS).
-  bandaAccion: { color: COLORS.inkFg, fontFamily: FONTS.display, fontSize: 16, letterSpacing: 0.6 },
+  // Barlow Condensed, sin fontWeight (ver FONTS).
+  bandaAccion: { color: COLORS.inkFg, fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 16, letterSpacing: 0.6 },
 
   header: {
     flexDirection: 'row',
@@ -336,13 +336,13 @@ const styles = StyleSheet.create({
   battingArrow: { width: 10, color: COLORS.warning, fontSize: 11 },
   teamName: { flex: 1, color: COLORS.textSupport, fontSize: 14 },
   teamNameWon: { color: COLORS.textPrimary, fontWeight: '700' },
-  // El marcador en Bebas Neue, sin fontWeight (ver FONTS).
+  // El marcador en Barlow Condensed, sin fontWeight (ver FONTS).
   runs: {
     width: 30,
     textAlign: 'right',
     color: COLORS.textSupport,
     fontSize: 24,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontVariant: ['tabular-nums'],
   },
   runsWon: { color: COLORS.textPrimary },

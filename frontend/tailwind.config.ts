@@ -23,6 +23,12 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      // Look "Pizarra": tarjetas de 16 px de radio y controles de 12. Se suben
+      // los dos peldaños que usa la app en vez de tocar cada componente.
+      borderRadius: {
+        lg: "0.75rem",
+        xl: "1rem",
+      },
       fontFamily: {
         sans: ["var(--font-archivo)", "ui-sans-serif", "system-ui", "sans-serif"],
         cond: ["var(--font-cond)", "var(--font-archivo)", "sans-serif"],

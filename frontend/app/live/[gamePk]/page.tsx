@@ -24,7 +24,7 @@ export default async function GamePage(props: Props) {
   // fichas, y arma su propia columna debajo.
   return (
     <>
-      <Navbar season={season} />
+      <Navbar season={season} barraInferior={false} />
       <GameDetail gamePk={gamePk} season={season} />
     </>
   );

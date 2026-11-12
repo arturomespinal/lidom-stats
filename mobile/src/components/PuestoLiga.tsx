@@ -41,7 +41,7 @@ export default function PuestoLiga({ ranking }: { ranking: PlayerRanking }) {
               <View
                 style={[
                   styles.relleno,
-                  { width: `${Math.max(lleno, 3)}%`, backgroundColor: podio ? COLORS.ink : '#7A879B' },
+                  { width: `${Math.max(lleno, 3)}%`, backgroundColor: podio ? COLORS.accent : '#7A879B' },
                 ]}
               />
             </View>
@@ -82,23 +82,22 @@ const styles = StyleSheet.create({
   },
   pista: { flex: 1, height: 8, borderRadius: 4, backgroundColor: COLORS.bgSunken, overflow: 'hidden' },
   relleno: { height: '100%', borderRadius: 4 },
-  // El podio en teja navy con la esquina cortada: la firma, reservada a
-  // tejas y estados, aquí marca un estado — estar entre los tres primeros.
+  // El podio en pastilla clara, como todo lo destacado del look Pizarra:
+  // aquí marca un estado — estar entre los tres primeros.
   chip: {
     minWidth: 34,
     height: 28,
     paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: COLORS.ink,
+    backgroundColor: COLORS.accent,
     borderRadius: 6,
-    borderBottomRightRadius: 12,
   },
-  chipTexto: { fontFamily: FONTS.display, fontSize: 20, color: COLORS.inkFg },
+  chipTexto: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20, color: COLORS.accentOn },
   puesto: {
     minWidth: 34,
     textAlign: 'center',
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 20,
     color: COLORS.textSupport,
   },

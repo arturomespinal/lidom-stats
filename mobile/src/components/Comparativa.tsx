@@ -32,7 +32,7 @@ function Barra({ valor, maximo, gana, lado }: { valor: number; maximo: number; g
           style={[
             styles.barra,
             lado === 'izq' ? styles.barraIzq : styles.barraDer,
-            { width: `${ancho}%`, backgroundColor: gana ? COLORS.ink : COLORS.border },
+            { width: `${ancho}%`, backgroundColor: gana ? COLORS.accent : COLORS.border },
           ]}
         />
       )}

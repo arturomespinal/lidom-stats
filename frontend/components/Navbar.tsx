@@ -8,13 +8,16 @@ import { etiquetaTemporada } from "@/lib/formato";
 
 // "Hoy" es la portada, como la primera pestaña del móvil. Los marcadores en
 // vivo (/live) se abren desde ahí cuando hay juegos en curso.
+//
+// `icono` es el trazo que lleva cada pestaña en la barra del pie del teléfono
+// (viewBox 24, trazo 2, sin relleno): los mismos dibujos que la app móvil.
 const TABS = [
-  { label: "Hoy", href: "/" },
-  { label: "Posiciones", href: "/posiciones" },
-  { label: "Bateo", href: "/batting" },
-  { label: "Pitcheo", href: "/pitching" },
+  { label: "Hoy", href: "/", icono: "M4 7h16v13H4zM4 11h16M8 3v4M16 3v4" },
+  { label: "Posiciones", href: "/posiciones", icono: "M5 20V10M12 20V4M19 20v-7" },
+  { label: "Bateo", href: "/batting", icono: "M4 20l9-9M13 11l5-5a2 2 0 013 3l-5 5M6 18l-2 2" },
+  { label: "Pitcheo", href: "/pitching", icono: "M12 21a9 9 0 100-18 9 9 0 000 18zM7 6c2 3 2 9 0 12M17 6c-2 3-2 9 0 12" },
   // Los récords de todos los tiempos (DIGIMETRICS desde 1951 + MLB API).
-  { label: "Historia", href: "/historia" },
+  { label: "Historia", href: "/historia", icono: "M12 7v5l3 2M3.5 12a8.5 8.5 0 102.6-6.1L3.5 8.5M3.5 4v4.5H8" },
 ];
 
 interface Props {
@@ -30,49 +33,55 @@ interface Props {
    * (11-nov-2026).
    */
   season?: string;
+  /**
+   * La barra de secciones del pie, en el teléfono. La página de un juego en
+   * vivo la apaga: ahí el pie es de las pestañas del juego (Relato, Boxscore,
+   * Alineación), y dos barras fijas una sobre otra se comerían la pantalla.
+   */
+  barraInferior?: boolean;
 }
 
-export default function Navbar({ season }: Props) {
+export default function Navbar({ season, barraInferior = true }: Props) {
   const pathname = usePathname();
   const consulta = season ? `?season=${season}` : "";
+  const activa = (href: string) =>
+    // Historia tiene páginas debajo (la ficha de un histórico): la pestaña
+    // sigue marcada en ellas.
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
-  // Las pestañas se pintan en dos sitios (ver abajo); una sola definición.
-  const pestanas = (clase: string) =>
-    TABS.map((tab) => {
-      // Historia tiene páginas debajo (la ficha de un histórico): la
-      // pestaña sigue marcada en ellas.
-      const isActive =
-        tab.href === "/" ? pathname === "/" : pathname === tab.href || pathname.startsWith(`${tab.href}/`);
-      return (
-        <Link
-          key={tab.href}
-          href={`${tab.href}${consulta}`}
-          // whitespace-nowrap: sin esto una etiqueta de dos palabras se parte
-          // en dos líneas y desalinea toda la barra en pantallas angostas.
-          className={`flex items-center justify-center whitespace-nowrap text-sm font-medium transition-colors ${clase} ${
-            isActive
-              ? "text-fg shadow-[inset_0_-2px_0_rgb(var(--accent))]"
-              : "text-dim hover:text-fg"
-          }`}
-          aria-current={isActive ? "page" : undefined}
-        >
-          {tab.label}
-        </Link>
-      );
-    });
+  // Desde `sm`: pestañas de texto con subrayado, dentro de la barra de arriba.
+  const pestanas = TABS.map((tab) => {
+    const isActive = activa(tab.href);
+    return (
+      <Link
+        key={tab.href}
+        href={`${tab.href}${consulta}`}
+        // whitespace-nowrap: sin esto una etiqueta de dos palabras se parte
+        // en dos líneas y desalinea toda la barra en pantallas angostas.
+        className={`flex items-center justify-center whitespace-nowrap px-3 text-sm font-medium transition-colors ${
+          isActive
+            ? "text-fg shadow-[inset_0_-2px_0_rgb(var(--accent))]"
+            : "text-dim hover:text-fg"
+        }`}
+        aria-current={isActive ? "page" : undefined}
+      >
+        {tab.label}
+      </Link>
+    );
+  });
 
   return (
     <>
       {/* Desde `sm`, una sola barra pegada arriba: logotipo, pestañas,
           buscador y temporada. En el teléfono esta fila lleva solo el
           logotipo y el buscador, y se va con el scroll. */}
-      <header className="z-10 border-b border-line bg-card sm:sticky sm:top-0">
+      <header className="z-10 border-b border-line bg-bg sm:sticky sm:top-0">
         <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4">
           {/* Logotipo. El punto verde es la ÚNICA pieza de marca que entra a la
               interfaz, y va pegado al nombre — ver la nota en globals.css sobre
               por qué el verde de Deportiv no baja al contenido. */}
           <Link href={`/${consulta}`} className="mr-4 flex shrink-0 items-baseline gap-1.5">
-            <span className="font-cond text-[26px] leading-none tracking-[0.02em] text-fg">DEPORTIV</span>
+            <span className="font-cond font-bold text-[26px] leading-none tracking-[0.06em] text-fg">DEPORTIV</span>
             <span className="h-1.5 w-1.5 self-center rounded-full bg-brand" aria-hidden="true" />
           </Link>
 
@@ -80,7 +89,7 @@ export default function Navbar({ season }: Props) {
               píldoras. Ocupan todo el alto de la barra para que la raya caiga
               sobre el borde inferior. */}
           <nav aria-label="Secciones" className="hidden h-full min-w-0 items-stretch gap-1 sm:flex">
-            {pestanas("px-3")}
+            {pestanas}
           </nav>
 
           {/* Buscador y temporada. Con 2.253 nombres en la base no hay listado
@@ -96,15 +105,49 @@ export default function Navbar({ season }: Props) {
         </div>
       </header>
 
-      {/* En el teléfono las pestañas van en su propia fila, pegada arriba, y
-          se reparten el ancho: las cinco a la vista. Antes compartían fila con
-          el logotipo y el buscador y a 390 px solo se veía "Hoy"; las otras
-          cuatro quedaban detrás de un scroll que nada anunciaba, y la pestaña
-          en la que uno estaba ni se veía marcada (11-nov-2026). 44 px de
-          alto: el mínimo para el pulgar. */}
-      <nav aria-label="Secciones" className="sticky top-0 z-10 flex h-11 border-b border-line bg-card px-2 sm:hidden">
-        {pestanas("flex-1 px-1")}
-      </nav>
+      {/* En el teléfono las secciones van en una barra fija al PIE, con
+          icono y nombre, como la app: es donde llega el pulgar, y deja la
+          parte de arriba para el contenido (look "Pizarra", 12-nov-2026).
+          Antes eran una fila de texto pegada arriba. 64 px de alto, más el
+          margen seguro de los teléfonos con gesto de inicio; el <body> reserva
+          ese mismo espacio para que la barra no tape el final de la página
+          (app/layout.tsx). */}
+      {barraInferior && (
+        <nav
+          aria-label="Secciones"
+          className="fixed inset-x-0 bottom-0 z-20 flex border-t border-line bg-bg pb-[env(safe-area-inset-bottom)] sm:hidden"
+        >
+          {TABS.map((tab) => {
+            const isActive = activa(tab.href);
+            return (
+              <Link
+                key={tab.href}
+                href={`${tab.href}${consulta}`}
+                className={`flex h-16 min-w-0 flex-1 flex-col items-center justify-center gap-1 transition-colors ${
+                  isActive ? "text-fg" : "text-faint hover:text-fg"
+                }`}
+                aria-current={isActive ? "page" : undefined}
+              >
+                <svg
+                  aria-hidden="true"
+                  viewBox="0 0 24 24"
+                  className="h-[22px] w-[22px]"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth={isActive ? 2.4 : 2}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d={tab.icono} />
+                </svg>
+                <span className={`text-[10px] tracking-[0.04em] ${isActive ? "font-bold" : "font-semibold"}`}>
+                  {tab.label}
+                </span>
+              </Link>
+            );
+          })}
+        </nav>
+      )}
     </>
   );
 }

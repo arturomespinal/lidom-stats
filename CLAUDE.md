@@ -397,6 +397,9 @@ club ganó una tinta (`text`) para texto sobre blanco. Ver "La paleta".
 
 ## La paleta: tema claro, tinta navy
 
+> **En la rama `nuevo-look` esta sección describe `main`.** El look de la
+> rama está en "El look \"Pizarra\"", más abajo.
+
 **Decidido el 25-sep-2026, después de probar el navy oscuro ese mismo día.** La
 dirección visual sale de un kit de referencia de apps deportivas (Sportify, de
 Visiata, en Figma Community): fondos claros, títulos en **Bebas Neue**, franjas
@@ -2574,6 +2577,125 @@ día, y cualquier otra hace fallar la suite y el check de Dagster.
 
 `verify_winprob.py` y las tres suites del motor en vivo necesitan `fixtures/`
 (`python capture_gumbo.py && python capture_diffs.py`).
+
+## El look "Pizarra" (rama `nuevo-look`, 12-nov-2026)
+
+**Esta rama es una prueba.** Arturo pidió un look nuevo sin descartar el
+anterior. Se le mostraron tres direcciones sobre pantallas reales (Pizarra,
+Anotador y Estadio, en el lienzo de diseño "Deportiv - nuevo look") y eligió
+Pizarra. El look claro con tinta navy y Bebas Neue sigue intacto en `main`:
+esta rama no se mezcla hasta que él lo decida. Todo lo que dicen "La paleta" y
+"La tipografía: Bebas Neue", más arriba, describe `main`; aquí manda esta
+sección.
+
+Qué es: una pizarra de estadio. Fondo grafito, tarjetas un paso más claras con
+borde fino, cifras grandes en Barlow Condensed y lo seleccionado **relleno de
+claro** con texto grafito. Solo cambia la presentación: ni la API ni los datos
+ni la estructura de las pantallas.
+
+### La paleta
+
+| Token (web / móvil) | Valor | Para qué |
+|---|---|---|
+| `bg` / `bgPage` | `#0D1014` | Fondo de página |
+| `card` / `bgCard` | `#161A20` | Tarjetas |
+| `raised` / `bgRaised` | `#1E242C` | Presionado, hover |
+| `sunken` / `bgSunken` | `#090B0E` | Filas fuera de la clasificación |
+| `line` / `border` | `#2A313B` | Bordes |
+| `fg`, `fg2`, `dim`, `faint` | `#F3F5F7`, `#C9D0DA`, `#A7B0BD`, `#8E98A6` | Texto, de más a menos peso |
+| `accent` / `accent-on` | `#F3F5F7` / `#0D1014` | Lo seleccionado: pastilla clara, texto grafito |
+| `ink`, `ink-fg`, `ink-dim` | `#232A33`, `#F3F5F7`, `#A7B0BD` | La franja de contexto (cabeceras de ficha y de juego, la jugada) |
+| `pos`, `neg`, `warn`, `live` | `#4CC38A`, `#F0808F`, `#E3B341`, `#FF5A4F` | Semánticos, aclarados |
+
+- **El grafito es neutro a propósito.** El navy oscuro que Arturo rechazó el
+  25-sep teñía todo de azul; aquí ningún club se confunde con el fondo.
+- **Sigue sin haber color de acento**, por la misma razón de siempre: caería
+  cerca de un club. El acento es el claro.
+- **Contraste medido**: todo token de texto pasa 4.5:1 sobre las cinco
+  superficies (la tabla está en `globals.css`; el peor caso, `live` sobre la
+  franja, 4.7). "EN VIVO" lleva el texto grafito sobre el rojo (6.2:1; el
+  blanco daría 3.3).
+- **`ink` ya no es "tinta".** En `main` hacía dos papeles: la franja de
+  contexto y el trazo de los datos (la curva del jugador, las barras, la teja
+  de un juego ganado, el strike). Sobre grafito el segundo tiene que ser
+  claro, así que esos usos pasaron a `accent` o a `fg`; `ink` quedó solo para
+  la franja. Los comentarios que todavía dicen "franja navy" hablan de ese
+  token.
+- **`TEAM_STYLES`**: `primary` y `on` no cambian. `text` es ahora la tinta de
+  cada club para fondo oscuro (AGU `#F2A71B`, TOR `#EA6A85`, EST `#2FCB8D`,
+  GIG `#EC69A3`, ESC `#F46A6A`, LIC `#6FA3F5`; la peor, Toros, 4.8:1 sobre la
+  franja) y el lavado sube de 12% a 16%. Los mismos valores en las dos
+  plataformas.
+- El terreno del juego tiene sus tonos oscuros (`--campo-*` / `campo*`).
+
+### La tipografía: Barlow Condensed
+
+Reemplaza a Bebas Neue en títulos, marcadores, códigos y estados. Tiene pesos
+de verdad y minúsculas, y eso cambia las dos reglas de Bebas:
+
+- **Web**: `.font-cond` pone `text-transform: uppercase` y peso 600; con
+  `font-bold` o con `.num` (toda cifra de pizarra) sube a 700. Se cargan 500,
+  600 y 700 con `next/font`.
+- **Móvil**: cada peso es una familia. `FONTS.display` (700) para marcadores,
+  cifras, códigos y nombres grandes; `FONTS.displayMedia` (600) para títulos
+  de sección, estados y acciones. **Sigue sin `fontWeight`**, y ahora
+  **siempre con `textTransform: 'uppercase'`**: sin eso "Estrellas" saldría en
+  minúsculas. Paquete nuevo: `@expo-google-fonts/barlow-condensed` (hay que
+  correr `npm install` en `mobile/` al cambiar a la rama).
+- **La tabla de anchos** (`frontend/lib/bebas.ts`, `mobile/src/components/
+  Ajuste.tsx`) es ahora la de Barlow Condensed 700, sacada del archivo de la
+  fuente; las cifras cuentan 0.5 (su ancho tabular). El archivo y
+  `anchoBebas()` conservan el nombre para que la rama no renombre nada.
+- En el móvil, el código gigante del plano se apoya en 0.9 del alto de línea
+  (Barlow tiene la línea de base más abajo que Bebas).
+- El cuerpo no cambia: Archivo en la web, la del sistema en el móvil.
+
+### Las formas
+
+- **La teja de equipo es un cuadrado redondeado** (radio de un cuarto del
+  lado), sólida o perfilada. La esquina cortada se fue, también de los
+  estados (`StatusBadge`, 6 px de radio), del monograma y del podio.
+- **Tejas sólidas donde manda el marcador**: tarjetas de juego, la tabla de
+  posiciones (que ya no lleva la raya de color en el borde de la fila: decía
+  lo mismo dos veces) y la tarjeta en vivo. Perfiladas en las listas largas.
+- **Lo seleccionado es una pastilla clara**: el día de la franja y del
+  calendario, la temporada elegida, la categoría de récords, un juego ganado
+  en los últimos diez, el podio.
+- **Radios**: tarjetas de 16 px y controles de 12 (en la web, subiendo `xl` y
+  `lg` en `tailwind.config.ts`).
+- **Las cifras de la tabla de posiciones van en Barlow Condensed** (con ancho
+  tabular), en las dos plataformas. Las tablas de líderes y los boxscores
+  siguen en la fuente del texto.
+- **La web en el teléfono lleva las secciones en una barra fija al pie**, con
+  icono y nombre, como la app (`Navbar`). El `<body>` reserva su alto. La
+  página de un juego en vivo la apaga (`barraInferior={false}`): ahí el pie es
+  de las pestañas del juego. Las barras pegadas arriba (fechas, temporada)
+  vuelven a `top-0` en el teléfono.
+- El pie de las tarjetas de juego (estadio y "Ver el juego ›") es una raya
+  fina, no una franja rellena. La diagonal de las cabeceras de ficha se queda.
+
+### Comprobado y por comprobar
+
+- Web: capturas de doce de las trece rutas (falta la ficha de un histórico,
+  que usa las mismas piezas) a 390 y 1280 px con la base real y un
+  juego en vivo sembrado desde `fixtures/`; `tsc`, `eslint` y `next build`
+  (aquí con webpack y las fuentes simuladas) y el build servido con
+  `next start`, sin errores de consola ni de CSP ni desbordes.
+- Móvil: `tsc` y el arnés web (react-native-web) en las pantallas
+  principales, incluido el juego en vivo.
+- **Sin probar en un teléfono.** Lo que hay que mirar en el iPhone: que el
+  remate de las cifras grandes no se recorte (los `paddingTop` de aire eran
+  para Bebas), el código gigante de la cabecera de equipo, y la barra de
+  estado.
+- **La pantalla de arranque sigue clara** (el ícono trae su fondo de papel):
+  de ahí a la app oscura hay un salto. Si el look se queda, pide un ícono con
+  fondo grafito.
+- **Si el look se queda**: quitar `@expo-google-fonts/bebas-neue`, renombrar
+  `bebas.ts` y `anchoBebas`, poner al día los comentarios que dicen "navy" y
+  "esquina cortada", y reescribir "La paleta" de este archivo.
+
+Para comparar: `git checkout main` y `git checkout nuevo-look`. La web no pide
+nada más; el móvil, `npm install` la primera vez en la rama.
 
 ## Próximos pasos
 

@@ -284,7 +284,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   panel: { paddingHorizontal: 16, paddingTop: 8 },
-  panelTitulo: { fontFamily: FONTS.display, fontSize: 28, lineHeight: 30, paddingTop: 2, color: COLORS.textPrimary },
+  panelTitulo: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 28, lineHeight: 30, paddingTop: 2, color: COLORS.textPrimary },
   panelSub: { fontSize: 13, color: COLORS.textSecondary, marginTop: 2, marginBottom: 12 },
   rejilla: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   tarjeta: {
@@ -296,8 +296,8 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   tarjetaEtiqueta: { fontSize: 10, fontWeight: '700', letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.textSecondary },
-  // Bebas sin fontWeight (ver FONTS).
-  tarjetaValor: { fontFamily: FONTS.display, fontSize: 32, lineHeight: 34, paddingTop: 4, color: COLORS.textPrimary },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  tarjetaValor: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 32, lineHeight: 34, paddingTop: 4, color: COLORS.textPrimary },
   tarjetaNombre: { fontSize: 12, color: COLORS.textSupport },
 });
 

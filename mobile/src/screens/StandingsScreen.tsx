@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchStandings } from '../api';
-import { COLORS, TEAM_STYLES } from '../constants';
+import { COLORS, FONTS } from '../constants';
 import { useFichas } from '../navigation';
 import { StandingRow } from '../types';
 import EmptyState from '../components/EmptyState';
@@ -92,8 +92,6 @@ function TeamRow({
   // El color oficial del equipo como borde estructural de la fila, no solo
   // dentro del cuadrito de las siglas. Es lo único que distingue una tabla de
   // LIDOM de cualquier otra tabla oscura.
-  const accent = TEAM_STYLES[item.team_id]?.primary ?? COLORS.border;
-
   return (
     // La fila entera abre la ficha del equipo. Es la entrada natural: quien
     // mira la tabla y ve a su equipo quinto quiere saber por qué.
@@ -107,8 +105,6 @@ function TeamRow({
       accessibilityRole="button"
       accessibilityLabel={`${rank}. ${item.short_name ?? item.team_name}, ${item.wins} ganados, ${item.losses} perdidos. Abrir equipo`}
     >
-      <View style={[styles.teamStripe, { backgroundColor: accent }]} />
-
       <Text
         style={[
           styles.rankCol,
@@ -119,7 +115,9 @@ function TeamRow({
       </Text>
 
       <View style={styles.teamCell}>
-        <TeamBadge code={item.team_id} size={34} />
+        {/* La teja sólida lleva el color del club: en el look Pizarra
+            reemplaza a la raya de color del borde de la fila. */}
+        <TeamBadge code={item.team_id} size={34} variant="solid" />
         <View style={{ flex: 1 }}>
           <Text style={styles.teamName} numberOfLines={1}>
             {item.short_name ?? item.team_name}
@@ -307,13 +305,6 @@ const styles = StyleSheet.create({
   // Quien está fuera se hunde un tono contra el fondo de la página.
   rowOut: { backgroundColor: COLORS.bgPage },
   rowPressed: { backgroundColor: COLORS.bgRaised },
-  teamStripe: {
-    position: 'absolute',
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 3,
-  },
   rankIn: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700' },
   rankOut: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '400' },
 
@@ -328,20 +319,23 @@ const styles = StyleSheet.create({
   teamName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
   diffLabel: { fontSize: 10, marginTop: 1 },
 
+  // Las cifras de la tabla van en la letra de la pizarra, sin fontWeight
+  // (ver FONTS) y con ancho tabular para que cuadren en columna.
   statBold: {
     color: COLORS.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.display,
+    fontSize: 20,
     fontVariant: ['tabular-nums'],
   },
   statDim: {
     color: COLORS.textSecondary,
-    fontSize: 14,
+    fontFamily: FONTS.displayMedia,
+    fontSize: 20,
     fontVariant: ['tabular-nums'],
   },
   statClas: {
-    fontSize: 14,
-    fontWeight: '700',
+    fontFamily: FONTS.display,
+    fontSize: 18,
     fontVariant: ['tabular-nums'],
   },
 

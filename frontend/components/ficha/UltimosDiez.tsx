@@ -27,7 +27,7 @@ export default function UltimosDiez({ juegos }: { juegos: LastGame[] }) {
             <span
               aria-hidden="true"
               className={`flex h-9 w-full items-center justify-center rounded font-cond text-xl leading-none transition-opacity group-hover:opacity-75 ${
-                g ? "bg-ink text-ink-fg" : "border border-line bg-card text-dim"
+                g ? "bg-accent font-bold text-accent-on" : "border border-line bg-card text-dim"
               }`}
             >
               {j.result}

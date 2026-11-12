@@ -29,9 +29,9 @@ const y = (pz: number) => ALTO - ((pz - Z_MIN) / (Z_MAX - Z_MIN)) * ALTO;
 const recorta = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 const ESTILO: Record<PitchLine["kind"], { fill: string; stroke: string; texto: string; nombre: string }> = {
-  strike: { fill: "rgb(var(--ink))", stroke: "rgb(var(--ink))", texto: "#fff", nombre: "Strike" },
-  bola: { fill: "rgb(var(--card))", stroke: "rgb(var(--ink))", texto: "rgb(var(--ink))", nombre: "Bola" },
-  en_juego: { fill: "rgb(var(--warn))", stroke: "rgb(var(--warn))", texto: "#fff", nombre: "En juego" },
+  strike: { fill: "rgb(var(--accent))", stroke: "rgb(var(--accent))", texto: "rgb(var(--accent-on))", nombre: "Strike" },
+  bola: { fill: "rgb(var(--card))", stroke: "rgb(var(--accent))", texto: "rgb(var(--fg))", nombre: "Bola" },
+  en_juego: { fill: "rgb(var(--warn))", stroke: "rgb(var(--warn))", texto: "rgb(var(--accent-on))", nombre: "En juego" },
 };
 
 export default function ZonaStrike({ turno }: { turno: AtBat }) {
@@ -89,7 +89,7 @@ export default function ZonaStrike({ turno }: { turno: AtBat }) {
               <g key={p.number}>
                 {/* El último lleva un anillo: es el que se acaba de ver. */}
                 {esUltimo && (
-                  <circle cx={cx} cy={cy} r={12.5} fill="none" stroke="rgb(var(--ink))" strokeWidth={1.5} />
+                  <circle cx={cx} cy={cy} r={12.5} fill="none" stroke="rgb(var(--accent))" strokeWidth={1.5} />
                 )}
                 <circle cx={cx} cy={cy} r={8.5} fill={e.fill} stroke={e.stroke} strokeWidth={1.5} />
                 <text

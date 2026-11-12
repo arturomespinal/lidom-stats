@@ -43,7 +43,7 @@ const C = {
   base: "rgb(var(--faint))",
   ocupada: "rgb(var(--warn))",
   texto: "rgb(var(--fg))",
-  corredor: "rgb(var(--ink))",
+  corredor: "rgb(var(--accent))",
   anillo: "rgb(var(--card))",
 };
 

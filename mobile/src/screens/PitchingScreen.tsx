@@ -236,8 +236,8 @@ const styles = StyleSheet.create({
   // y nunca son color de texto.
   dot: { color: COLORS.textFaint, fontSize: 12 },
   primaryStat: { alignItems: 'flex-end', minWidth: 58 },
-  // Bebas Neue, sin fontWeight (ver FONTS).
-  primaryVal: { color: COLORS.accent, fontSize: 28, fontFamily: FONTS.display, fontVariant: ['tabular-nums'] },
+  // Barlow Condensed, sin fontWeight (ver FONTS).
+  primaryVal: { color: COLORS.accent, fontSize: 28, fontFamily: FONTS.display, textTransform: 'uppercase', fontVariant: ['tabular-nums'] },
   primaryKey: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   sep: { height: 1, backgroundColor: COLORS.border },
 });

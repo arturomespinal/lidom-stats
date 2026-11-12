@@ -66,7 +66,7 @@ export default function HistoricoScreen({ route, navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
+      return () => setStatusBarStyle('light');
     }, []),
   );
 
@@ -216,7 +216,7 @@ const styles = StyleSheet.create({
   // Columna del 52 %: el resto es del plano del club (ver Heroe.tsx).
   nombreCaja: { width: '52%', gap: 6 },
   micro: { fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.inkDim },
-  nombre: { fontFamily: FONTS.display, paddingTop: 4, color: COLORS.inkFg },
+  nombre: { fontFamily: FONTS.display, textTransform: 'uppercase', paddingTop: 4, color: COLORS.inkFg },
   meta: { fontSize: 13, lineHeight: 18, color: COLORS.inkDim },
   fuente: { fontSize: 11, lineHeight: 16, color: COLORS.textFaint, paddingHorizontal: 16, marginTop: 16 },
   vacio: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32, backgroundColor: COLORS.bgPage },

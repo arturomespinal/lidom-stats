@@ -49,6 +49,6 @@ const styles = StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4, paddingHorizontal: 16 },
   tramo: { flexBasis: 0, minWidth: 56, minHeight: 44, gap: 6 },
   barra: { height: 12, borderRadius: 3 },
-  codigo: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 20 },
+  codigo: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20, lineHeight: 20 },
   detalle: { fontSize: 11, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
 });

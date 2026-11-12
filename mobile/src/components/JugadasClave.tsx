@@ -65,10 +65,10 @@ const styles = StyleSheet.create({
   jugada: { color: COLORS.textPrimary, fontSize: 14 },
   evento: { fontWeight: '600' },
   contexto: { color: COLORS.textSecondary, fontSize: 12, fontVariant: ['tabular-nums'], marginTop: 1 },
-  // Bebas, sin fontWeight (ver FONTS).
+  // Barlow Condensed, sin fontWeight (ver FONTS).
   cambio: {
     color: COLORS.textPrimary,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 26,
     lineHeight: 26,
     paddingTop: 4,

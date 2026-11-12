@@ -50,7 +50,7 @@ export default function JuegoAJuego({
               </Text>
             </View>
             <View style={[styles.resultado, g ? styles.ganado : styles.perdido]}>
-              <Text style={[styles.resultadoTexto, { color: g ? COLORS.inkFg : COLORS.textSecondary }]}>
+              <Text style={[styles.resultadoTexto, { color: g ? COLORS.accentOn : COLORS.textSecondary }]}>
                 {f.result ?? '—'} {f.runs_for}-{f.runs_against}
               </Text>
             </View>
@@ -97,10 +97,10 @@ const styles = StyleSheet.create({
   fechaTexto: { fontSize: 13, fontWeight: '600', color: COLORS.textPrimary },
   rival: { fontSize: 11, color: COLORS.textSecondary },
   resultado: { minWidth: 58, height: 28, borderRadius: 4, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 6 },
-  ganado: { backgroundColor: COLORS.ink },
+  ganado: { backgroundColor: COLORS.accent },
   perdido: { borderWidth: 1, borderColor: COLORS.border },
-  // Bebas sin fontWeight (ver FONTS).
-  resultadoTexto: { fontFamily: FONTS.display, fontSize: 17, letterSpacing: 0.3 },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  resultadoTexto: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 17, letterSpacing: 0.3 },
   linea: { flex: 1, fontSize: 13, color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
   flecha: { fontSize: 18, color: COLORS.textSecondary },
   verTodos: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },

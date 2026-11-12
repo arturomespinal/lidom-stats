@@ -9,35 +9,40 @@
    Tailwind componga opacidad sobre el token (`bg-card/50`) con
    rgb(var(--x) / <alpha-value>).
 
-   ── Tema claro, tinta navy (decidido el 25-sep-2026) ──────────────────────
-   La dirección visual sale de un kit de referencia de apps deportivas: fondos
-   claros, títulos en Bebas Neue, franjas oscuras de contexto y una diagonal
-   como firma. Ese kit tiñe su negro con su rojo de marca (#150000); aquí el
-   negro se tiñe con el navy de Deportiv. Misma lógica, nuestra marca.
+   ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ────────────────────────
+   Arturo eligió esta dirección entre tres propuestas: una pizarra de estadio.
+   Fondo grafito, tarjetas un paso más claras con borde fino, cifras grandes en
+   Barlow Condensed y lo seleccionado RELLENO DE CLARO con texto oscuro.
 
-   ── Sin color de acento, todavía ─────────────────────────────────────────
-   El kit usa un coral (#FF5050) como acento, y se midió contra los clubes:
-   ΔE 3.3 contra Escogido — el mismo color —, 13.1 contra Toros y 12.7
-   contra Gigantes. Con ese acento cada botón se leería como de Escogido, y un
-   fanático del Licey abriría una app con los colores del rival. El acento es
-   la TINTA navy: lo activo es navy sobre claro, y ningún club se apropia de
-   la interfaz.
+   El look anterior (tema claro, tinta navy, Bebas Neue, 25-sep-2026) sigue
+   intacto en `main`. Esta rama no lo borra: lo reemplaza para poder comparar.
+
+   El grafito es NEUTRO a propósito. El navy oscuro que se rechazó el 25-sep
+   teñía toda la interfaz de azul; aquí ningún color de club —ni el azul del
+   Licey— se confunde con el fondo.
+
+   ── Sin color de acento ──────────────────────────────────────────────────
+   Igual que antes, y por la misma razón: cualquier acento cromático cae cerca
+   de un club (el coral del kit era Escogido, ΔE 3.3). El acento es el CLARO:
+   lo activo es una pastilla clara con texto grafito, y ningún club se apropia
+   de la interfaz.
 
    ── Contraste medido, no a ojo ───────────────────────────────────────────
-   Todo token de texto pasa 4.5:1 sobre las CUATRO superficies claras, incluida
-   la hundida (filas fuera de la clasificación), que es la más oscura:
+   Todo token de texto pasa 4.5:1 sobre las cinco superficies, incluida la
+   franja (--ink), que es la más clara de las oscuras:
 
-     token   --bg   --card  --raised  --sunken
-     fg      16.2   17.7    15.5      14.9
-     fg2      9.0    9.8     8.6       8.3
-     dim      5.6    6.1     5.3       5.1
-     faint    5.1    5.6     4.9       4.7
+     token   --bg   --sunken  --card  --raised  --ink
+     fg      17.4   18.0      16.0    14.3      13.2
+     fg2     12.3   12.7      11.2    10.1       9.3
+     dim      8.7    9.0       8.0     7.1       6.6
+     faint    6.5    6.7       6.0     5.4       5.0
+     pos      8.6    8.9       7.9     7.1       6.5
+     neg      7.4    7.7       6.8     6.1       5.6
+     warn     9.8   10.1       9.0     8.0       7.4
+     live     6.2    6.4       5.7     5.1       4.7
 
-   Los semánticos se oscurecieron hasta pasar sobre el fondo: el verde de
-   "positivo" de la paleta oscura daba 1.9:1 sobre blanco.
-
-   Sobre la franja navy (--ink) el texto va en --ink-fg (17:1) y lo secundario
-   en --ink-dim (8.3:1).
+   Sobre la pastilla clara (--accent) el texto va en --accent-on (17.4:1), y
+   sobre el rojo de EN VIVO también (6.2:1; el blanco daría 3.3:1).
 
    ── El color de club NUNCA identifica solo ───────────────────────────────
    Toros, Escogido y Gigantes caen los tres en la familia roja-magenta y no se
@@ -45,42 +50,44 @@
    club lleva su código escrito.
    ───────────────────────────────────────────────────────────────────────── */
 :root {
-  --bg:        243 245 248;   /* #F3F5F8 — fondo de página            */
-  --sunken:    232 236 241;   /* #E8ECF1 — filas hundidas, fondo de gráfica */
-  --card:      255 255 255;   /* #FFFFFF — superficie principal       */
-  --raised:    237 240 244;   /* #EDF0F4 — hover / presionado         */
-  --header:    243 245 248;   /* #F3F5F8 — cabeceras de tabla         */
-  --line:      213 220 229;   /* #D5DCE5 — bordes y separadores       */
-  --line-soft: 231 235 240;   /* #E7EBF0 — separadores de fila        */
+  color-scheme: dark;
 
-  --fg:         11  24  48;   /* #0B1830 — tinta: negro teñido de navy */
-  --fg2:        54  68  92;   /* #36445C — texto de apoyo             */
-  --dim:        86  99 122;   /* #56637A — etiquetas, datos menores   */
-  --faint:      92 105 127;   /* #5C697F — micro-etiquetas (≥4.7)     */
+  --bg:         13  16  20;   /* #0D1014 — fondo de página            */
+  --sunken:      9  11  14;   /* #090B0E — filas hundidas, fondo de gráfica */
+  --card:       22  26  32;   /* #161A20 — superficie principal       */
+  --raised:     30  36  44;   /* #1E242C — hover / presionado         */
+  --header:     18  22  27;   /* #12161B — cabeceras de tabla         */
+  --line:       42  49  59;   /* #2A313B — bordes y separadores       */
+  --line-soft:  32  38  46;   /* #20262E — separadores de fila        */
 
-  /* El acento es la tinta navy: lo seleccionado se rellena de navy. */
-  --accent:      9  28  58;   /* #091C3A — navy Deportiv              */
-  --accent-on: 255 255 255;   /* texto sobre relleno navy             */
+  --fg:        243 245 247;   /* #F3F5F7 — texto                      */
+  --fg2:       201 208 218;   /* #C9D0DA — texto de apoyo             */
+  --dim:       167 176 189;   /* #A7B0BD — etiquetas, datos menores   */
+  --faint:     142 152 166;   /* #8E98A6 — micro-etiquetas (≥5.0)     */
 
-  /* La franja oscura de contexto (pie de tarjeta, cabecera de tabla por
-     equipo). Es el #150000 del kit de referencia, en navy. */
-  --ink:         9  28  58;   /* #091C3A                              */
-  --ink-fg:    255 255 255;   /* texto sobre la franja (17:1)         */
-  --ink-dim:   169 182 204;   /* #A9B6CC — secundario sobre la franja */
+  /* El acento es el claro: lo seleccionado se rellena de claro. */
+  --accent:    243 245 247;   /* #F3F5F7                              */
+  --accent-on:  13  16  20;   /* #0D1014 — texto sobre la pastilla    */
 
-  /* Semánticos, oscurecidos para fondo claro. Significan algo. */
-  --pos:        35 125  86;   /* #237D56 — bueno, ventaja, clasifica  */
-  --neg:       178  80  94;   /* #B2505E — malo, atraso               */
-  --warn:      138 106  33;   /* #8A6A21 — base ocupada, dato viejo   */
-  --live:      212  49  40;   /* #D43128 — en vivo, ahora mismo       */
+  /* La franja de contexto (pie de tarjeta, cabecera de tabla por equipo, la
+     jugada que entra). Un paso por encima de --raised. */
+  --ink:        35  42  51;   /* #232A33                              */
+  --ink-fg:    243 245 247;   /* texto sobre la franja (13.2:1)       */
+  --ink-dim:   167 176 189;   /* #A7B0BD — secundario sobre la franja */
+
+  /* Semánticos, aclarados para fondo oscuro. Significan algo. */
+  --pos:        76 195 138;   /* #4CC38A — bueno, ventaja, clasifica  */
+  --neg:       240 128 143;   /* #F0808F — malo, atraso               */
+  --warn:      227 179  65;   /* #E3B341 — base ocupada, dato viejo   */
+  --live:      255  90  79;   /* #FF5A4F — en vivo, ahora mismo       */
 
   /* El terreno dibujado de la situación del juego (game/Campo.tsx). Fondo,
-     no dato: tonos lavados para que encima se lean las bases y los nombres.
+     no dato: tonos apagados para que encima se lean las bases y los nombres.
      Ningún club se identifica por ellos. Los mismos que el móvil. */
-  --campo-pasto:  220 233 223;   /* #DCE9DF */
-  --campo-franja: 211 227 215;   /* #D3E3D7 — el corte de la grama */
-  --campo-tierra: 234 223 203;   /* #EADFCB */
-  --campo-linea:  255 255 255;   /* #FFFFFF */
+  --campo-pasto:   27  42  34;   /* #1B2A22 */
+  --campo-franja:  32  49  40;   /* #203128 — el corte de la grama */
+  --campo-tierra:  58  49  38;   /* #3A3126 */
+  --campo-linea:  142 152 166;   /* #8E98A6 */
 
   /* Marca. El verde, SOLO cascarón: el punto del logotipo. */
   --brand:       3 218  88;   /* #03DA58 — verde Deportiv             */
@@ -96,11 +103,25 @@ body {
   color: rgb(var(--fg));
 }
 
-/* Bebas Neue tiene un solo peso. Sin esto, cada `font-bold` o `font-semibold`
-   que conviva con `font-cond` pediría una negrita que no existe y el
-   navegador la fabricaría engordando los trazos. */
+/* Barlow Condensed lleva títulos, marcadores, códigos y estados, SIEMPRE en
+   mayúsculas: así se escribía con Bebas Neue (que no tiene minúsculas) y el
+   texto de los componentes sigue escrito normal. Peso 600 de base; un
+   `font-bold` al lado lo sube a 700, que es el de los marcadores. Solo se
+   cargan 500, 600 y 700: `font-synthesis: none` impide que el navegador
+   fabrique cualquier otro. */
 .font-cond {
   font-synthesis: none;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+.font-cond.font-medium {
+  font-weight: 500;
+}
+.font-cond.font-bold,
+/* Toda cifra en la letra de la pizarra —marcadores, récords, porcentajes— va
+   en 700 sin que cada componente lo pida. */
+.font-cond.num {
+  font-weight: 700;
 }
 
 /* Las cifras se comparan en columna: alineadas o no se pueden leer. */

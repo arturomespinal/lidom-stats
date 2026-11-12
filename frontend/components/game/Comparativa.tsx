@@ -25,7 +25,7 @@ function Barra({ valor, maximo, gana, lado }: { valor: number; maximo: number; g
   return (
     <div className={`flex h-2 flex-1 ${lado === "izq" ? "justify-end" : "justify-start"}`}>
       <div
-        className={`h-2 ${lado === "izq" ? "rounded-l-full" : "rounded-r-full"} ${gana ? "bg-ink" : "bg-line"}`}
+        className={`h-2 ${lado === "izq" ? "rounded-l-full" : "rounded-r-full"} ${gana ? "bg-accent" : "bg-line"}`}
         style={{ width: `${ancho}%` }}
       />
     </div>

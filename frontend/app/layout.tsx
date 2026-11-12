@@ -1,22 +1,21 @@
 import type { Metadata } from "next";
-import { Archivo, Bebas_Neue } from "next/font/google";
+import { Archivo, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
 
 /**
  * Dos familias con papeles distintos.
  *
  * Archivo lleva el texto y —lo que más importa en una app de estadísticas—
- * los números: tiene cifras tabulares de verdad, que es lo que permite
- * comparar una columna de promedios de un vistazo.
+ * los números de las tablas: tiene cifras tabulares de verdad, que es lo que
+ * permite comparar una columna de promedios de un vistazo.
  *
- * Bebas Neue lleva títulos, marcadores, códigos de equipo y estados. Viene
- * del kit de referencia del tema claro, y reemplazó a Barlow Condensed: es la
- * pieza que más carácter le da a la app. Condensada, así que "ESTRELLAS
- * ORIENTALES" cabe en 390 px y un código de tres letras en una teja de 32.
+ * Barlow Condensed lleva títulos, marcadores, códigos de equipo y estados. Es
+ * la letra del look "Pizarra" (12-nov-2026): la de una pizarra de estadio,
+ * con pesos de verdad —500, 600 y 700— y cifras tabulares. Reemplaza a Bebas
+ * Neue, que sigue en `main`. Condensada, así que "ESTRELLAS ORIENTALES" cabe
+ * en 390 px y un código de tres letras en una teja de 32.
  *
- * Tiene UN solo peso y solo mayúsculas. Un `font-bold` encima haría que el
- * navegador sintetizara una negrita falsa; `font-synthesis: none` en
- * globals.css lo impide para toda la app.
+ * Va siempre en mayúsculas (`.font-cond` en globals.css).
  */
 const archivo = Archivo({
   subsets: ["latin"],
@@ -24,9 +23,9 @@ const archivo = Archivo({
   display: "swap",
 });
 
-const bebas = Bebas_Neue({
+const cond = Barlow_Condensed({
   subsets: ["latin"],
-  weight: "400",
+  weight: ["500", "600", "700"],
   variable: "--font-cond",
   display: "swap",
 });
@@ -44,7 +43,9 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body
-        className={`${archivo.variable} ${bebas.variable} font-sans bg-bg text-fg min-h-screen`}
+        // El relleno de abajo, solo en el teléfono, es el alto de la barra
+        // de secciones fija al pie (components/Navbar.tsx).
+        className={`${archivo.variable} ${cond.variable} font-sans bg-bg text-fg min-h-screen pb-[calc(4rem+env(safe-area-inset-bottom))] sm:pb-0`}
       >
         {children}
       </body>

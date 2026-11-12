@@ -182,7 +182,7 @@ export default function PlayerScreen({ route, navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
+      return () => setStatusBarStyle('light');
     }, []),
   );
 
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
     color: COLORS.inkDim,
   },
   nombre: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     paddingTop: 4,
     color: COLORS.inkFg,
   },

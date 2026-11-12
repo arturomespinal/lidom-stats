@@ -135,7 +135,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
-    shadowColor: '#091C3A',
+    shadowColor: '#000000',
     shadowOpacity: 0.18,
     shadowRadius: 24,
     shadowOffset: { width: 0, height: -4 },
@@ -143,6 +143,6 @@ const styles = StyleSheet.create({
   },
   cabeza: { alignItems: 'center', paddingTop: 8, paddingBottom: 12, paddingHorizontal: 24 },
   manija: { width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.border, marginBottom: 16 },
-  titulo: { fontFamily: FONTS.display, fontSize: 28, lineHeight: 30, color: COLORS.textPrimary },
+  titulo: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 28, lineHeight: 30, color: COLORS.textPrimary },
   subtitulo: { marginTop: 2, fontSize: 13, color: COLORS.textSecondary },
 });

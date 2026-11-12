@@ -176,13 +176,13 @@ const styles = StyleSheet.create({
   celda: { flex: 1, minHeight: 44 },
   caja: { flex: 1 },
   dia: { alignItems: 'center', justifyContent: 'center', borderRadius: 8 },
-  diaActivo: { backgroundColor: COLORS.ink },
-  diaHoy: { borderWidth: 1.5, borderColor: COLORS.ink },
+  diaActivo: { backgroundColor: COLORS.accent },
+  diaHoy: { borderWidth: 1.5, borderColor: COLORS.accent },
   presionado: { backgroundColor: COLORS.bgRaised },
-  // Bebas sin fontWeight (ver FONTS).
-  numero: { fontFamily: FONTS.display, fontSize: 20, lineHeight: 22, color: COLORS.textPrimary },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  numero: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20, lineHeight: 22, color: COLORS.textPrimary },
   vacio: { color: COLORS.textSecondary, opacity: 0.45 },
   juegos: { fontSize: 10, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
-  textoActivo: { color: COLORS.inkFg },
-  subActivo: { color: COLORS.inkDim },
+  textoActivo: { color: COLORS.accentOn },
+  subActivo: { color: COLORS.accentOn },
 });

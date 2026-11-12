@@ -157,7 +157,7 @@ export default function TeamScreen({ route, navigation }: Props) {
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');
-      return () => setStatusBarStyle('dark');
+      return () => setStatusBarStyle('light');
     }, []),
   );
 
@@ -474,19 +474,19 @@ const styles = StyleSheet.create({
     color: COLORS.inkDim,
   },
   nombre: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     paddingTop: 4,
     color: COLORS.inkFg,
   },
   meta: { fontSize: 13, color: COLORS.inkDim },
   record: { flexDirection: 'row', alignItems: 'flex-end', gap: 16 },
-  // lineHeight por debajo del alto natural de Bebas (1.2 em) aprieta la fila,
+  // lineHeight por debajo del alto natural de Barlow Condensed (1.2 em) aprieta la fila,
   // pero en iOS el texto se recorta a su caja: el remate de arriba del "2" y
   // del "7" salía cortado (iPhone de Arturo, 30-sep). paddingTop le da a la
   // caja espacio por arriba para dibujar y marginTop lo devuelve: la cifra no
-  // se mueve. Mismo truco que el paddingTop de los demás textos en Bebas.
+  // se mueve. Mismo truco que el paddingTop de los demás textos en Barlow Condensed.
   recordValor: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 84,
     lineHeight: 76,
     paddingTop: 12,
@@ -495,17 +495,16 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   recordLado: { gap: 6, paddingBottom: 6, flexShrink: 1 },
-  // Chip blanco con la esquina cortada: es un estado (el puesto), y la
-  // esquina cortada está reservada a tejas y estados.
+  // Chip claro: es un estado (el puesto), como todo lo destacado del look
+  // Pizarra.
   chip: {
     alignSelf: 'flex-start',
     paddingHorizontal: 10,
     paddingVertical: 2,
     backgroundColor: COLORS.inkFg,
     borderRadius: 3,
-    borderBottomRightRadius: 9,
   },
-  chipTexto: { fontFamily: FONTS.display, fontSize: 16, color: COLORS.ink },
+  chipTexto: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 16, color: COLORS.ink },
 
   etiqueta: {
     fontSize: 11,
@@ -531,7 +530,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   destacadoValor: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 28,
     color: COLORS.textPrimary,
     fontVariant: ['tabular-nums'],
@@ -571,7 +570,7 @@ const styles = StyleSheet.create({
   },
   clave: { alignItems: 'flex-end', minWidth: 48 },
   claveValor: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 22,
     color: COLORS.textPrimary,
     fontVariant: ['tabular-nums'],

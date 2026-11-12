@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 
 /**
- * Título de sección de las fichas, en Bebas como los de la web.
+ * Título de sección de las fichas, en Barlow Condensed como los de la web.
  *
  * `titular` es la frase que escribe el dato ("Tercer mejor OPS de la liga, a
  * los 38."): la compone el servidor, este componente solo la pone donde se lee
@@ -46,8 +46,8 @@ const styles = StyleSheet.create({
     alignItems: 'baseline',
     justifyContent: 'space-between',
   },
-  // Sin fontWeight: Bebas tiene un solo peso (ver FONTS).
-  titulo: { fontFamily: FONTS.display, fontSize: 22, letterSpacing: 0.4, color: COLORS.textPrimary },
+  // Sin fontWeight: el peso lo pone la familia (ver FONTS).
+  titulo: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 22, letterSpacing: 1.3, color: COLORS.textPrimary },
   nota: { fontSize: 11, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
   titular: { fontSize: 14, fontWeight: '700', lineHeight: 19, color: COLORS.textPrimary },
   sub: { fontSize: 11, lineHeight: 16, color: COLORS.textSecondary },

@@ -1,11 +1,15 @@
 import React, { useEffect } from 'react';
 import { Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import { BebasNeue_400Regular, useFonts } from '@expo-google-fonts/bebas-neue';
+import {
+  BarlowCondensed_600SemiBold,
+  BarlowCondensed_700Bold,
+  useFonts,
+} from '@expo-google-fonts/barlow-condensed';
 import * as SplashScreen from 'expo-splash-screen';
 import HoyScreen from './src/screens/HoyScreen';
 import LiveScreen from './src/screens/LiveScreen';
@@ -23,7 +27,7 @@ import HistoricoScreen from './src/screens/HistoricoScreen';
 import RecordsScreen from './src/screens/RecordsScreen';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
 
-// La pantalla de arranque se queda hasta que Bebas Neue esté cargada. Sin
+// La pantalla de arranque se queda hasta que Barlow Condensed esté cargada. Sin
 // esto, la primera pantalla aparece un instante con la fuente del sistema y
 // luego "salta" a la buena.
 SplashScreen.preventAutoHideAsync().catch(() => {
@@ -176,13 +180,15 @@ const PitcheoTab = crearPila(PitchingScreen);
 const BuscarTab = crearPila(SearchScreen);
 
 /**
- * El tema de navegación sale de COLORS, así que sigue a la paleta sola: pasó a
- * claro sin tocar nada más que este nombre, que decía "Dark".
+ * El tema de navegación sale de COLORS, así que sigue a la paleta sola. Parte
+ * de `DarkTheme` porque el look "Pizarra" es oscuro: eso le dice a la
+ * navegación (y por ella al sistema) que las barras y los menús nativos van
+ * en oscuro.
  */
 const TemaDeportiv = {
-  ...DefaultTheme,
+  ...DarkTheme,
   colors: {
-    ...DefaultTheme.colors,
+    ...DarkTheme.colors,
     background: COLORS.bgPage,
     card: COLORS.bgCard,
     text: COLORS.textPrimary,
@@ -202,12 +208,12 @@ const TAB_ICONS: Record<string, { active: IoniconName; inactive: IoniconName }> 
   Buscar:     { active: 'search',         inactive: 'search-outline' },
 };
 
-/** DEPORTIV en Bebas Neue con el punto verde: el mismo logotipo que la web. */
+/** DEPORTIV en Barlow Condensed con el punto verde: el mismo logotipo que la web. */
 function Logotipo() {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
       <Text
-        style={{ fontFamily: FONTS.display, fontSize: 22, letterSpacing: 0.5, color: COLORS.textPrimary }}
+        style={{ fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 24, letterSpacing: 1.4, color: COLORS.textPrimary }}
         accessibilityRole="header"
       >
         DEPORTIV
@@ -218,7 +224,7 @@ function Logotipo() {
 }
 
 export default function App() {
-  const [fuentesListas, errorFuentes] = useFonts({ BebasNeue_400Regular });
+  const [fuentesListas, errorFuentes] = useFonts({ BarlowCondensed_600SemiBold, BarlowCondensed_700Bold });
 
   useEffect(() => {
     // Si la fuente falla, la app arranca igual con la del sistema: un título
@@ -230,7 +236,7 @@ export default function App() {
 
   return (
     <NavigationContainer theme={TemaDeportiv}>
-      <StatusBar style="dark" />
+      <StatusBar style="light" />
       <Tab.Navigator
         screenOptions={({ route }) => ({
           // La cabecera la pone cada pila (ver HoyTab). El logotipo va en la
@@ -238,12 +244,12 @@ export default function App() {
           // que la guía legal marca como uso de marca ajena.
           headerShown: false,
           tabBarStyle: {
-            backgroundColor: COLORS.bgCard,
+            backgroundColor: COLORS.bgPage,
             borderTopColor: COLORS.border,
             borderTopWidth: 1,
           },
           tabBarActiveTintColor: COLORS.accent,
-          tabBarInactiveTintColor: COLORS.textSecondary,
+          tabBarInactiveTintColor: COLORS.textFaint,
           tabBarIcon: ({ color, size, focused }) => {
             const icons = TAB_ICONS[route.name];
             return (

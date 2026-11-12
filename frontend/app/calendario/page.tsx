@@ -38,7 +38,7 @@ export default async function CalendarioPage(props: Props) {
         </main>
       ) : (
         <>
-          <nav aria-label="Temporada" className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
+          <nav aria-label="Temporada" className="sticky top-0 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
             <div className="mx-auto flex max-w-5xl overflow-x-auto px-4">
               {cal.seasons.map((s) => {
                 const es = s === cal.season_id;
@@ -48,7 +48,7 @@ export default async function CalendarioPage(props: Props) {
                     href={`/calendario?temporada=${s}${activa ? `&activa=${activa}` : ""}`}
                     aria-current={es ? "page" : undefined}
                     className={`num flex h-11 shrink-0 items-center border-b-2 px-3 text-sm ${
-                      es ? "border-ink font-bold text-fg" : "border-transparent text-dim hover:text-fg"
+                      es ? "border-accent font-bold text-fg" : "border-transparent text-dim hover:text-fg"
                     }`}
                   >
                     {s}
@@ -92,16 +92,16 @@ export default async function CalendarioPage(props: Props) {
                         const es = c.date === activa;
                         const cuerpo = (
                           <>
-                            <span className={`font-cond text-xl leading-none ${es ? "text-ink-fg" : hay ? "text-fg" : "text-dim opacity-45"}`}>
+                            <span className={`font-cond text-xl leading-none ${es ? "font-bold text-accent-on" : hay ? "text-fg" : "text-dim opacity-45"}`}>
                               {c.day}
                             </span>
                             {hay && (
-                              <span className={`num text-[10px] ${es ? "text-ink-dim" : "text-dim"}`}>{c.games}</span>
+                              <span className={`num text-[10px] ${es ? "font-semibold text-accent-on" : "text-dim"}`}>{c.games}</span>
                             )}
                           </>
                         );
                         const clase = `flex min-h-11 flex-col items-center justify-center rounded-lg ${
-                          es ? "bg-ink" : c.is_today ? "ring-[1.5px] ring-inset ring-ink" : ""
+                          es ? "bg-accent" : c.is_today ? "ring-[1.5px] ring-inset ring-accent" : ""
                         }`;
                         if (!hay) {
                           return (

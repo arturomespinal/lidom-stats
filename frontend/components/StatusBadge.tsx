@@ -9,28 +9,21 @@ interface Props {
 /**
  * El estado de un juego: EN VIVO, FINAL o PREVIA.
  *
- * ── La esquina cortada es la firma ────────────────────────────────────────
- * Vive en DOS sitios de toda la app: las tejas de equipo (TeamBadge) y esto.
- * Reservada así se vuelve reconocible; repetida en cada tarjeta dejaría de
- * significar algo. Antes había cuatro copias de esta píldora entre la web y
- * el móvil, y cada una con su propio rojo — por eso ahora es un componente.
+ * Antes había cuatro copias de esta etiqueta entre la web y el móvil, y cada
+ * una con su propio rojo — por eso es un componente.
  *
- * El corte es de 6 px FIJOS (`calc`), no un porcentaje: "FINAL (10)" es el
- * doble de ancho que "FINAL", y con un porcentaje la diagonal crecería con el
- * texto y dejaría de leerse como la misma marca.
- *
- * Sin borde: `clip-path` no recorta el borde, lo corta — la diagonal quedaría
- * sin trazo y las otras tres aristas con él. El relleno solo basta.
+ * ── Look "Pizarra": una etiqueta de 6 px de radio ─────────────────────────
+ * La esquina cortada del look anterior (sigue en `main`) se fue con la de las
+ * tejas. Sin borde: el relleno solo basta.
  */
-const CORTE = "polygon(0 0, 100% 0, 100% 62%, calc(100% - 6px) 100%, 0 100%)";
 
-// EN VIVO va SÓLIDO: en el tema claro, rojo sobre rojo al 16% daba 3.95:1.
-// Blanco sobre el rojo, 5.0:1 — y es como lo marcan casi todas las apps.
+// EN VIVO va SÓLIDO, con el texto GRAFITO encima: 6.2:1. El blanco sobre este
+// rojo daría 3.3:1.
 const ESTILO: Record<LiveStatus, string> = {
   live: "bg-live text-accent-on",
-  final: "bg-raised text-dim",
+  final: "bg-line text-fg",
   preview: "bg-fg/10 text-fg2",
-  other: "bg-raised text-dim",
+  other: "bg-line text-dim",
 };
 
 const TEXTO: Record<LiveStatus, string> = {
@@ -43,8 +36,7 @@ const TEXTO: Record<LiveStatus, string> = {
 export default function StatusBadge({ status, label }: Props) {
   return (
     <span
-      className={`inline-flex items-center gap-1.5 py-0.5 pl-2 pr-3 font-cond text-[14px] uppercase leading-4 tracking-[0.08em] ${ESTILO[status]}`}
-      style={{ clipPath: CORTE }}
+      className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-[3px] font-cond text-[14px] leading-4 tracking-[0.08em] ${ESTILO[status]}`}
     >
       {status === "live" && (
         // El punto que late. `motion-safe`: quien pidió menos movimiento en su

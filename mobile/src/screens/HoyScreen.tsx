@@ -255,8 +255,8 @@ const styles = StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   atenuado: { opacity: 0.5 },
   encabezado: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, gap: 2 },
-  // Bebas sin fontWeight (ver FONTS).
-  titulo: { fontFamily: FONTS.display, fontSize: 34, lineHeight: 36, color: COLORS.textPrimary },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  titulo: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 34, lineHeight: 36, color: COLORS.textPrimary },
   nota: { fontSize: 12, lineHeight: 17, color: COLORS.textSecondary },
   tituloFila: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 12 },
   calendario: {

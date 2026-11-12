@@ -104,7 +104,7 @@ export default function SelectorTemporada({
                   {!!o.nota && <Text style={[styles.filaNota, es && styles.notaActiva]}>{o.nota}</Text>}
                 </View>
                 {marcarPrimera && i === 0 && !es && <Text style={styles.reciente}>ACTUAL</Text>}
-                {es && <Ionicons name="checkmark-circle" size={22} color={COLORS.inkFg} />}
+                {es && <Ionicons name="checkmark-circle" size={22} color={COLORS.accentOn} />}
               </Pressable>
             );
           })}
@@ -138,8 +138,8 @@ const styles = StyleSheet.create({
   },
   presionado: { backgroundColor: COLORS.bgRaised },
   botonEtiqueta: { fontSize: 11, letterSpacing: 0.8, color: COLORS.textSecondary, fontWeight: '600' },
-  // Bebas sin fontWeight (ver FONTS).
-  botonValor: { fontFamily: FONTS.display, fontSize: 22, lineHeight: 24, color: COLORS.textPrimary, paddingTop: 2 },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  botonValor: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 22, lineHeight: 24, color: COLORS.textPrimary, paddingTop: 2 },
   lista: { paddingHorizontal: 16, paddingBottom: 8, gap: 4 },
   fila: {
     height: FILA - 4,
@@ -149,10 +149,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     borderRadius: 14,
   },
-  filaActiva: { backgroundColor: COLORS.ink },
-  filaValor: { fontFamily: FONTS.display, fontSize: 26, lineHeight: 28, color: COLORS.textPrimary, paddingTop: 2 },
+  filaActiva: { backgroundColor: COLORS.accent },
+  filaValor: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 26, lineHeight: 28, color: COLORS.textPrimary, paddingTop: 2 },
   filaNota: { fontSize: 12, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
-  textoActivo: { color: COLORS.inkFg },
-  notaActiva: { color: COLORS.inkDim },
+  textoActivo: { color: COLORS.accentOn },
+  notaActiva: { color: COLORS.accentOn },
   reciente: { fontSize: 10, letterSpacing: 0.8, fontWeight: '700', color: COLORS.textSecondary },
 });

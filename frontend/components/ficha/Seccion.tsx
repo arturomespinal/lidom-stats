@@ -20,7 +20,7 @@ export default function Seccion({
   return (
     <div className="mb-3 space-y-1">
       <div className="flex items-baseline justify-between gap-3">
-        <h2 className="font-cond text-2xl leading-none tracking-[0.02em] text-fg">{titulo}</h2>
+        <h2 className="font-cond text-[22px] leading-none tracking-[0.06em] text-fg">{titulo}</h2>
         {nota && <span className="num shrink-0 text-xs text-dim">{nota}</span>}
       </div>
       {titular && <p className="text-[15px] font-bold leading-snug text-fg">{titular}</p>}

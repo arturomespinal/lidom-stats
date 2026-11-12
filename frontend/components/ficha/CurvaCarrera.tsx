@@ -9,8 +9,8 @@ import { useAncho } from "./useAncho";
 
 const ALTO = 240;
 const M = { izq: 40, der: 48, arriba: 14, abajo: 40 };
-const LIGA = "#7A879B"; // 3.6:1 sobre blanco: se distingue sin competir
-const TINTA = "rgb(var(--ink))";
+const LIGA = "#7A879B"; // 4.4:1 sobre la tarjeta: se distingue sin competir
+const TINTA = "rgb(var(--fg))";
 
 /**
  * La carrera en una curva: su OPS (o su efectividad) temporada a temporada
@@ -138,7 +138,7 @@ export default function CurvaCarrera({
         ) : (
           <>
             <span className="flex items-center gap-1.5">
-              <span className="inline-block h-[3px] w-4 bg-ink" /> El jugador
+              <span className="inline-block h-[3px] w-4 bg-fg" /> El jugador
             </span>
             <span className="flex items-center gap-1.5">
               <span className="inline-block h-0.5 w-4" style={{ backgroundColor: LIGA }} /> Promedio de la liga
@@ -159,7 +159,7 @@ export default function CurvaCarrera({
               `Última: ${fmt(ultimo.value)} en ${ultimo.season_id}. ` +
               "Flechas izquierda y derecha para recorrer las temporadas."
             }
-            className="touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
+            className="touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
             onPointerMove={alMover}
             onPointerDown={alMover}
             onPointerLeave={() => setSel(null)}
@@ -236,7 +236,7 @@ export default function CurvaCarrera({
               const i = idx(p.season_id);
               const grande = p === ultimo || i === sel;
               return p.small_sample ? (
-                <circle key={p.season_id} cx={X(i)} cy={Y(p.value)} r={grande ? 5 : 4} fill="#FFFFFF" stroke={TINTA} strokeWidth={2} />
+                <circle key={p.season_id} cx={X(i)} cy={Y(p.value)} r={grande ? 5 : 4} fill="rgb(var(--card))" stroke={TINTA} strokeWidth={2} />
               ) : (
                 <circle
                   key={p.season_id}
@@ -244,7 +244,7 @@ export default function CurvaCarrera({
                   cy={Y(p.value)}
                   r={grande ? 5.5 : 4}
                   fill={TINTA}
-                  stroke="#FFFFFF"
+                  stroke="rgb(var(--card))"
                   strokeWidth={2}
                 />
               );

@@ -42,7 +42,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
   const propia = carrera.find((c) => c.team_code === equipo);
   if (!propia || propia.series.length < 3) return null;
 
-  const tinta = TEAM_STYLES[equipo]?.text ?? "rgb(var(--ink))";
+  const tinta = TEAM_STYLES[equipo]?.text ?? "rgb(var(--fg))";
   const todos = carrera.flatMap((c) => c.series);
   const hi = Math.max(...todos, 1) + 1;
   const lo = Math.min(...todos, -1) - 1;
@@ -132,7 +132,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
               etiquetas.map((e) => `${e.code} ${signo(e.fin)}`).join(", ") +
               ". Flechas izquierda y derecha para recorrer los juegos."
             }
-            className="touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
+            className="touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
             onPointerMove={alMover}
             onPointerDown={alMover}
             onPointerLeave={() => setSel(null)}
@@ -175,11 +175,11 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
               />
             ))}
             {sel != null && sel < propia.series.length && (
-              <circle cx={X(sel)} cy={Y(propia.series[sel])} r={5} fill={tinta} stroke="#FFFFFF" strokeWidth={2} />
+              <circle cx={X(sel)} cy={Y(propia.series[sel])} r={5} fill={tinta} stroke="rgb(var(--card))" strokeWidth={2} />
             )}
             {pico > 0 && (
               <>
-                <circle cx={X(ip)} cy={Y(pico)} r={5} fill={tinta} stroke="#FFFFFF" strokeWidth={2} />
+                <circle cx={X(ip)} cy={Y(pico)} r={5} fill={tinta} stroke="rgb(var(--card))" strokeWidth={2} />
                 <text x={X(ip)} y={Y(pico) - 10} fontSize={13} fontWeight={700} fill={tinta} textAnchor="middle" className="num">
                   {record(ip, pico)}
                 </text>

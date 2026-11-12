@@ -30,10 +30,10 @@ interface Props {
  * `solid` grita y sirve para cabeceras; `outline` susurra y es lo que va en
  * una lista de veinte filas — veinte tejas sólidas serían un arcoíris.
  *
- * La esquina inferior derecha lleva más radio que las otras tres. Es el eco
- * del corte diagonal de la maqueta: React Native no tiene `clip-path`, y
- * montar un cuadrado rotado encima para recortar una esquina es mucho aparato
- * para un detalle de 32 px. El radio asimétrico da la misma lectura.
+ * ── Look "Pizarra": un cuadrado redondeado ────────────────────────────────
+ * Las dos son la misma forma, con el radio a un cuarto del lado, igual que
+ * frontend/components/TeamBadge.tsx. La esquina con más radio del look
+ * anterior (sigue en `main`) se fue con él.
  */
 export default function TeamBadge({ code, size = 32, variant = 'outline' }: Props) {
   // Respaldo para un código fuera del catálogo: gris de la paleta, nunca un
@@ -45,7 +45,7 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
     on: COLORS.bgCard,
   };
 
-  const radio = Math.round(size * 0.22);
+  const radio = Math.round(size * 0.25);
   const solido = variant === 'solid';
 
   return (
@@ -56,7 +56,6 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
           width: size,
           height: size,
           borderRadius: radio,
-          borderBottomRightRadius: Math.round(size * 0.42),
           backgroundColor: solido ? style.primary : style.tint,
           borderColor: solido ? style.primary : style.primary,
           borderWidth: solido ? 0 : 1.5,
@@ -70,7 +69,7 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
           {
             // Por club: sobre el amarillo de Águilas el blanco daría 2:1.
             color: solido ? style.on : style.text,
-            fontSize: Math.round(size * 0.44),
+            fontSize: Math.round(size * 0.4),
           },
         ]}
       >
@@ -86,10 +85,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  // Bebas Neue y SIN fontWeight: en Android un peso pedido a una fuente de un
-  // solo peso la cambia por la del sistema.
+  // SIN fontWeight: el peso lo pone la familia. Ver FONTS en constants.ts.
   texto: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
 });

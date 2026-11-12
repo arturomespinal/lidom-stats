@@ -70,15 +70,16 @@ export default function Heroe({
  *
  * A 150 pt fijos "TOR" medía 175 pt y el plano deja unos 110: la R quedaba
  * cortada por el borde de la pantalla (capturas de Arturo, 30-sep). Ahora el
- * tamaño sale del ancho real del código en Bebas (Ajuste.tsx) contra el ancho
- * que deja el plano, que por la diagonal crece hacia abajo: 80 pt arriba y
+ * tamaño sale del ancho real del código en Barlow Condensed (Ajuste.tsx)
+ * contra el ancho que deja el plano, que por la diagonal crece hacia abajo: 80 pt arriba y
  * ~27 pt más por cada 100 de alto. La letra se apoya abajo, donde el plano es
  * más ancho, y su borde superior es el que manda:
  *
  *   ancho(código) + MARGEN ≤ 80 + 0.267 × (y del borde superior)
  *
- * que despejado da el divisor de abajo. Bebas con lineHeight = tamaño deja la
- * letra entre 0.1 y 0.8 del alto de la línea (mayúsculas de 0.7 em).
+ * que despejado da el divisor de abajo. Barlow Condensed con lineHeight =
+ * tamaño deja la letra entre 0.2 y 0.9 del alto de la línea (mayúsculas de
+ * 0.7 em, línea de base a 0.9; con Bebas Neue iba entre 0.1 y 0.8).
  *
  * El margen pasó de 10 a 24 pt (iPhone de Arturo, 30-sep): con 10 la R
  * quedaba pegada al borde y a la barra de desplazamiento de iOS, que aparece
@@ -88,10 +89,10 @@ const MARGEN_MARCA = 24;
 
 function medidaMarca(marca: string) {
   const t = Math.min(150, Math.floor((124 - MARGEN_MARCA) / (anchoBebas(marca) + 0.19)));
-  return { fontSize: t, lineHeight: t, top: Math.round(146 - 0.8 * t) };
+  return { fontSize: t, lineHeight: t, top: Math.round(146 - 0.9 * t) };
 }
 
-/** Una cifra grande de la cabecera: valor en Bebas, etiqueta chica debajo. */
+/** Una cifra grande de la cabecera: valor en Barlow Condensed, etiqueta chica debajo. */
 export function CifraHeroe({
   valor,
   etiqueta,
@@ -104,7 +105,7 @@ export function CifraHeroe({
   return (
     <View style={styles.cifra} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
       {/* Sin adjustsFontSizeToFit: en iOS dejaba las cifras a 6 pt. El
-          tamaño se calcula con los anchos de Bebas (Ajuste.tsx). */}
+          tamaño se calcula con los anchos de Barlow Condensed (Ajuste.tsx). */}
       <CifraAjustada
         valor={valor}
         tamano={grande ? 84 : 40}
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
   marca: {
     position: 'absolute',
     right: MARGEN_MARCA,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     color: 'rgba(9, 28, 58, 0.16)',
   },
   contenido: { gap: 16 },

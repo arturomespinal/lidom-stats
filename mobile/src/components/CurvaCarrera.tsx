@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native-svg';
-import { COLORS, TEAM_STYLES } from '../constants';
+import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 import { marcasRedondas, pct3 } from '../formato';
 import type { PlayerCurve } from '../types';
 
 const ALTO = 200;
 const M = { izq: 34, der: 44, arriba: 12, abajo: 38 };
-const LIGA = '#7A879B'; // 3.6:1 sobre blanco: se distingue sin competir
+const LIGA = '#7A879B'; // 4.4:1 sobre la tarjeta: se distingue sin competir
 
 /**
  * La carrera en una curva: su OPS (o su efectividad) temporada a temporada
@@ -100,7 +100,7 @@ export default function CurvaCarrera({
     <View style={styles.tarjeta}>
       <View style={styles.leyenda}>
         <View style={styles.leyendaItem}>
-          <View style={[styles.muestra, { height: 3, backgroundColor: COLORS.ink }]} />
+          <View style={[styles.muestra, { height: 3, backgroundColor: COLORS.textPrimary }]} />
           <Text style={styles.leyendaTexto}>El jugador</Text>
         </View>
         <View style={styles.leyendaItem}>
@@ -131,7 +131,7 @@ export default function CurvaCarrera({
                       x={(x0 + x1) / 2}
                       y={ALTO - 4}
                       fontSize={13}
-                      fontFamily="BebasNeue_400Regular"
+                      fontFamily={FONTS.display}
                       fill={st?.text ?? COLORS.textSecondary}
                       textAnchor="middle"
                     >
@@ -170,7 +170,7 @@ export default function CurvaCarrera({
                   key={k}
                   points={t.map(p => `${X(p.i)},${Y(p.v)}`).join(' ')}
                   fill="none"
-                  stroke={COLORS.ink}
+                  stroke={COLORS.textPrimary}
                   strokeWidth={2.5}
                   strokeLinejoin="round"
                 />
@@ -178,15 +178,15 @@ export default function CurvaCarrera({
             {puntos.map(p => {
               const es = p === ultimo;
               return p.small_sample ? (
-                <Circle key={p.season_id} cx={X(idx(p.season_id))} cy={Y(p.value)} r={3.5} fill="#FFFFFF" stroke={COLORS.ink} strokeWidth={1.8} />
+                <Circle key={p.season_id} cx={X(idx(p.season_id))} cy={Y(p.value)} r={3.5} fill={COLORS.bgCard} stroke={COLORS.textPrimary} strokeWidth={1.8} />
               ) : (
                 <Circle
                   key={p.season_id}
                   cx={X(idx(p.season_id))}
                   cy={Y(p.value)}
                   r={es ? 5 : 3.5}
-                  fill={COLORS.ink}
-                  stroke="#FFFFFF"
+                  fill={COLORS.textPrimary}
+                  stroke={COLORS.bgCard}
                   strokeWidth={es ? 2 : 1.2}
                 />
               );

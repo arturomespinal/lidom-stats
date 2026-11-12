@@ -86,7 +86,7 @@ export default function BarrasDiferencial({
               `la peor, ${conSigno(peor.run_diff)} en ${peor.season_id}. ` +
               "Flechas para recorrer, Enter para abrir la temporada."
             }
-            className="cursor-pointer touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-ink/40"
+            className="cursor-pointer touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-accent/60"
             onPointerMove={alMover}
             onPointerLeave={() => setSel(null)}
             onClick={(e) => {
@@ -106,7 +106,7 @@ export default function BarrasDiferencial({
               return (
                 <Fragment key={r.season_id}>
                   {sel === i && <rect x={i * paso} y={M.arriba - 18} width={paso} height={ph + 18} fill="rgb(var(--raised))" />}
-                  <rect x={x} y={y0} width={bw} height={h} rx={3} fill={r.run_diff > 0 ? "rgb(var(--ink))" : GRIS} />
+                  <rect x={x} y={y0} width={bw} height={h} rx={3} fill={r.run_diff > 0 ? "rgb(var(--fg))" : GRIS} />
                   {marcadas.has(r.season_id) && (
                     <text
                       x={x + bw / 2}

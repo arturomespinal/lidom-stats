@@ -3,7 +3,6 @@
 import { Fragment } from "react";
 import Link from "next/link";
 import TeamBadge from "@/components/TeamBadge";
-import { TEAM_STYLES } from "@/lib/constants";
 import { StandingRow } from "@/lib/types";
 
 /* Tokens de la paleta, no colores crudos de Tailwind: `pos`, `neg` y `warn`
@@ -121,25 +120,18 @@ export default function StandingsTable({
                     {i + 1}
                   </span>
                 </td>
-                <td className="py-3 pr-2 sm:pr-4">
+                <td className="py-2.5 pl-1 pr-2 sm:pr-4">
                   <div className="flex items-center gap-2 sm:gap-3">
-                    {/* El color oficial del equipo como borde estructural de la
-                        fila: es lo que distingue esta tabla de cualquier otra
-                        tabla oscura. */}
-                    <div
-                      className="h-9 w-[3px] shrink-0 rounded-r"
-                      style={{
-                        backgroundColor:
-                          TEAM_STYLES[row.team_id]?.primary ?? "rgb(var(--line))",
-                      }}
-                    />
                     {/* El equipo lleva a su ficha: es el gesto natural
                         después de leer una tabla de posiciones. */}
                     <Link
                       href={`/teams/${row.team_id}?season=${season}`}
                       className="flex items-center gap-2 underline-offset-2 hover:underline sm:gap-3"
                     >
-                      <TeamBadge code={row.team_id} />
+                      {/* La teja sólida lleva el color del club: en el look
+                          Pizarra reemplaza a la raya de color que abría la
+                          fila, que decía lo mismo dos veces. */}
+                      <TeamBadge code={row.team_id} variant="solid" />
                       {/* En el teléfono, el nombre corto ("Águilas") y sin la
                           columna JJ: así G, P, PCT, GB y CLAS caben en 390 px
                           sin deslizar. Con el nombre completo solo se veían
@@ -152,20 +144,20 @@ export default function StandingsTable({
                 <td className="hidden px-3 py-3 text-center text-dim tabular-nums sm:table-cell">
                   {fmt.num(row.games_played)}
                 </td>
-                <td className="px-1.5 py-3 text-center font-bold tabular-nums sm:px-3">
+                <td className="num px-1.5 py-3 text-center font-cond font-bold text-[20px] leading-none sm:px-3">
                   {row.wins}
                 </td>
-                <td className="px-1.5 py-3 text-center text-dim tabular-nums sm:px-3">
+                <td className="num px-1.5 py-3 text-center font-cond text-[20px] leading-none text-dim sm:px-3">
                   {row.losses}
                 </td>
-                <td className="px-1.5 py-3 text-center font-bold tabular-nums sm:px-3">
+                <td className="num px-1.5 py-3 text-center font-cond font-bold text-[20px] leading-none sm:px-3">
                   {fmt.pct(row.win_loss_pct)}
                 </td>
-                <td className="px-1.5 py-3 text-center text-dim tabular-nums sm:px-3">
+                <td className="num px-1.5 py-3 text-center font-cond text-[18px] leading-none text-dim sm:px-3">
                   {row.games_back === "-" ? "—" : row.games_back}
                 </td>
                 <td
-                  className={`px-1.5 py-3 text-center font-bold tabular-nums sm:px-3 ${clasColor(
+                  className={`num px-1.5 py-3 text-center font-cond font-bold text-[18px] leading-none sm:px-3 ${clasColor(
                     row.playoff_games
                   )}`}
                 >

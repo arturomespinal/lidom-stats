@@ -27,9 +27,15 @@ interface Props {
  * identidad de los clubes.
  *
  * ── Dos pesos, no dos componentes ─────────────────────────────────────────
- * `solid` (relleno del color, letras oscuras, esquina cortada) grita, y sirve
- * para cabeceras. `outline` (aro y relleno al 14%) susurra, y es lo que va en
- * una lista de veinte filas — veinte tejas sólidas serían un arcoíris.
+ * `solid` (relleno del color, letras encima) grita: marcadores, la tabla de
+ * posiciones, cabeceras. `outline` (aro y relleno al 16%) susurra, y es lo
+ * que va en una lista de veinte filas — veinte tejas sólidas serían un
+ * arcoíris.
+ *
+ * ── Look "Pizarra": un cuadrado redondeado ────────────────────────────────
+ * Las dos son la misma forma, con el radio a un cuarto del lado. La esquina
+ * cortada del look anterior (sigue en `main`) se fue con él: en la pizarra
+ * todo es ortogonal, y la teja se reconoce por el código en Barlow Condensed.
  */
 export default function TeamBadge({
   code,
@@ -46,30 +52,20 @@ export default function TeamBadge({
   };
 
   const dim =
-    size === "sm" ? "w-8 h-8 text-[11px]" : "w-10 h-10 text-[13px]";
+    size === "sm" ? "w-8 h-8 text-[13px]" : "w-11 h-11 text-[17px]";
 
-  // La perfilada no puede llevar `clip-path`: el recorte cortaría el borde
-  // justo en la diagonal y dejaría la marca sin trazo en esa arista. Lleva el
-  // mismo eco que el móvil —la esquina inferior derecha con casi el doble de
-  // radio— y así las dos plataformas dibujan la misma teja. Los valores son
-  // los de mobile/src/components/TeamBadge.tsx: 0.22 y 0.42 del lado.
-  const radio =
-    size === "sm"
-      ? "rounded-[7px] rounded-br-[13px]"
-      : "rounded-[9px] rounded-br-[17px]";
+  // Un cuarto del lado, igual que mobile/src/components/TeamBadge.tsx.
+  const radio = size === "sm" ? "rounded-[8px]" : "rounded-[11px]";
 
   if (variant === "solid") {
     return (
       <span
-        className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.04em] ${dim}`}
+        className={`inline-flex shrink-0 items-center justify-center font-cond font-bold tracking-[0.03em] ${dim} ${radio}`}
         style={{
           backgroundColor: style.primary,
           // Por club y no un color fijo: sobre el amarillo de Águilas el
           // blanco daría 2:1, y sobre el vino de Toros la tinta, 3.2:1.
           color: style.on,
-          // La esquina cortada es lo que hace que la teja se lea como una
-          // marca y no como un cuadrado de color cualquiera.
-          clipPath: "polygon(0 0, 100% 0, 100% 76%, 76% 100%, 0 100%)",
         }}
       >
         {code}

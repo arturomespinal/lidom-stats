@@ -107,7 +107,7 @@ function FilaEquipo({
         accessibilityRole="link"
         accessibilityLabel={`Abrir ${lado.name}`}
       >
-        <TeamBadge code={lado.code} size={grande ? 36 : 28} variant={grande ? 'solid' : 'outline'} />
+        <TeamBadge code={lado.code} size={grande ? 44 : 32} variant="solid" />
         <Text style={[styles.equipo, grande && styles.equipoGrande, perdio && styles.apagado]} numberOfLines={1}>
           {grande ? lado.name : lado.short_name}
         </Text>
@@ -422,13 +422,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     gap: 1,
   },
-  diaActivo: { backgroundColor: COLORS.ink },
+  diaActivo: { backgroundColor: COLORS.accent },
   diaNombre: { fontSize: 11, color: COLORS.textSecondary },
-  // Bebas sin fontWeight (ver FONTS).
-  diaNumero: { fontFamily: FONTS.display, fontSize: 22, lineHeight: 24, color: COLORS.textPrimary },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  diaNumero: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 22, lineHeight: 24, color: COLORS.textPrimary },
   diaJuegos: { fontSize: 10, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
-  diaTextoActivo: { color: COLORS.inkFg },
-  diaSubActivo: { color: COLORS.inkDim },
+  diaTextoActivo: { color: COLORS.accentOn },
+  diaSubActivo: { color: COLORS.accentOn },
   diaVacio: { opacity: 0.45 },
 
   tarjeta: {
@@ -472,7 +472,7 @@ const styles = StyleSheet.create({
   equipo: { flex: 1, fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
   equipoGrande: { fontSize: 17 },
   carreras: {
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 30,
     lineHeight: 32,
     color: COLORS.textPrimary,
@@ -481,7 +481,7 @@ const styles = StyleSheet.create({
   carrerasGrande: { fontSize: 48, lineHeight: 50 },
   apagado: { color: COLORS.textSecondary },
   marcaGanador: { width: 10, fontSize: 12, color: COLORS.textPrimary },
-  hora: { fontFamily: FONTS.display, fontSize: 28, color: COLORS.textPrimary, marginTop: 4 },
+  hora: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 28, color: COLORS.textPrimary, marginTop: 4 },
 
   franjaWp: { paddingHorizontal: 12, paddingTop: 8 },
   titular: {
@@ -502,14 +502,15 @@ const styles = StyleSheet.create({
     gap: 12,
     minHeight: 44,
     paddingHorizontal: 12,
-    backgroundColor: COLORS.ink,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.border,
   },
   bandaEstadio: { flex: 1, color: COLORS.inkDim, fontSize: 10, letterSpacing: 0.8 },
-  bandaAccion: { color: COLORS.inkFg, fontFamily: FONTS.display, fontSize: 16, letterSpacing: 0.6 },
+  bandaAccion: { color: COLORS.inkFg, fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 16, letterSpacing: 0.6 },
   abrir: {
     paddingHorizontal: 12,
     paddingBottom: 10,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 15,
     letterSpacing: 0.5,
     color: COLORS.textPrimary,

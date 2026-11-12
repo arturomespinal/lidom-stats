@@ -96,7 +96,7 @@ export function SelectorOpciones({
   if (opciones.length < 2) return null;
 
   return (
-    <div className="sticky top-11 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
+    <div className="sticky top-0 z-[5] sm:top-14 border-b border-line bg-bg/95 backdrop-blur">
       <div className="mx-auto flex max-w-5xl flex-wrap items-center gap-3 px-4 py-2">
         {antes}
         <div ref={caja} className="relative inline-block">
@@ -149,14 +149,14 @@ export function SelectorOpciones({
                     role="option"
                     aria-selected={es}
                     onClick={() => setAbierto(false)}
-                    className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-1.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ink ${
-                      es ? "bg-ink text-ink-fg" : "text-fg hover:bg-raised focus-visible:bg-raised"
+                    className={`flex min-h-12 items-center gap-3 rounded-xl px-3 py-1.5 outline-none transition-colors focus-visible:ring-2 focus-visible:ring-accent ${
+                      es ? "bg-accent text-accent-on" : "text-fg hover:bg-raised focus-visible:bg-raised"
                     }`}
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block font-cond text-[24px] leading-none">{o.label}</span>
                       {o.nota && (
-                        <span className={`num mt-0.5 block text-xs ${es ? "text-ink-dim" : "text-dim"}`}>{o.nota}</span>
+                        <span className={`num mt-0.5 block text-xs ${es ? "text-accent-on" : "text-dim"}`}>{o.nota}</span>
                       )}
                     </span>
                     {i === 0 && !es && (

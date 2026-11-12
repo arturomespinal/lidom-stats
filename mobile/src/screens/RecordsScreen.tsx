@@ -34,7 +34,7 @@ type Fila = { tipo: 'carrera'; l: LiderHistorico } | { tipo: 'temporada'; t: Tem
  *
  * Arriba, Bateo | Pitcheo (dos opciones: pestañas) y la categoría (trece:
  * botón + hoja inferior, regla 7). El primero va en una tarjeta navy con la
- * cifra en Bebas; el resto, en filas de 56 pt que abren la ficha: la de la
+ * cifra en Barlow Condensed; el resto, en filas de 56 pt que abren la ficha: la de la
  * MLB API si el jugador está enlazado, la histórica si no.
  *
  * ── Carrera | Una temporada ────────────────────────────────────────────────
@@ -309,10 +309,10 @@ const styles = StyleSheet.create({
   record: { backgroundColor: COLORS.ink, borderRadius: 12, padding: 16 },
   recordTitulo: { fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.inkDim },
   recordFila: { flexDirection: 'row', alignItems: 'flex-end', gap: 16, marginTop: 8 },
-  // Bebas sin fontWeight (ver FONTS).
-  recordNombre: { fontFamily: FONTS.display, fontSize: 32, lineHeight: 32, paddingTop: 4, color: COLORS.inkFg },
+  // Barlow Condensed sin fontWeight (ver FONTS).
+  recordNombre: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 32, lineHeight: 32, paddingTop: 4, color: COLORS.inkFg },
   recordEpoca: { fontSize: 13, color: COLORS.inkDim, marginTop: 4, fontVariant: ['tabular-nums'] },
-  recordValor: { fontFamily: FONTS.display, fontSize: 56, lineHeight: 56, paddingTop: 6, color: COLORS.inkFg },
+  recordValor: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 56, lineHeight: 56, paddingTop: 6, color: COLORS.inkFg },
   recordEquipos: {
     flexDirection: 'row',
     gap: 8,
@@ -354,6 +354,6 @@ const styles = StyleSheet.create({
   fuente: { fontSize: 11, lineHeight: 16, color: COLORS.textFaint, padding: 16 },
   vacio: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 16, padding: 32 },
   vacioTexto: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center' },
-  boton: { minHeight: 44, paddingHorizontal: 24, justifyContent: 'center', borderRadius: 8, backgroundColor: COLORS.ink },
-  botonTexto: { color: COLORS.inkFg, fontSize: 14, fontWeight: '600' },
+  boton: { minHeight: 44, paddingHorizontal: 24, justifyContent: 'center', borderRadius: 8, backgroundColor: COLORS.accent },
+  botonTexto: { color: COLORS.accentOn, fontSize: 14, fontWeight: '600' },
 });

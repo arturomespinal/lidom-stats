@@ -4,13 +4,14 @@ import { COLORS, FONTS } from '../constants';
 import { iniciales } from '../formato';
 
 /**
- * El monograma del jugador: sus iniciales en una teja navy con la esquina
- * cortada. Ocupa el lugar de la foto — que no podemos usar — con una marca
- * propia, igual que las tejas de equipo ocupan el de los escudos.
+ * El monograma del jugador: sus iniciales en una teja grafito redondeada.
+ * Ocupa el lugar de la foto — que no podemos usar — con una marca propia,
+ * igual que las tejas de equipo ocupan el de los escudos.
  *
- * Navy con letra blanca (16.9:1) y no el color del club: va encima del plano
- * del club en la cabecera, y así se recorta contra él con cualquiera de los
- * seis. `tinta` permite otra letra cuando va sobre fondo claro.
+ * Grafito con letra clara (17.4:1) y no el color del club: va encima del
+ * plano del club en la cabecera, y así se recorta contra él con cualquiera de
+ * los seis. Radio de un cuarto del lado, como en `TeamBadge`. `tinta` permite
+ * otra letra.
  */
 export default function Monograma({
   nombre,
@@ -21,10 +22,10 @@ export default function Monograma({
   size?: number;
   tinta?: string;
 }) {
-  const r = Math.round(size * 0.11);
+  const r = Math.round(size * 0.25);
   return (
     <View
-      style={[styles.teja, { width: size, height: size, borderRadius: r, borderBottomRightRadius: r * 2 }]}
+      style={[styles.teja, { width: size, height: size, borderRadius: r }]}
       accessibilityElementsHidden
       importantForAccessibility="no-hide-descendants"
     >
@@ -36,6 +37,6 @@ export default function Monograma({
 }
 
 const styles = StyleSheet.create({
-  teja: { backgroundColor: COLORS.ink, alignItems: 'center', justifyContent: 'center' },
-  letras: { fontFamily: FONTS.display, letterSpacing: 0.5 },
+  teja: { backgroundColor: COLORS.bgPage, alignItems: 'center', justifyContent: 'center' },
+  letras: { fontFamily: FONTS.display, textTransform: 'uppercase', letterSpacing: 0.5 },
 });

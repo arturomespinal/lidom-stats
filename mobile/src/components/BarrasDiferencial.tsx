@@ -57,7 +57,7 @@ export default function BarrasDiferencial({
               const h = Math.max(Math.abs(Y(f.run_diff) - Y(0)), 1);
               return (
                 <React.Fragment key={f.season_id}>
-                  <Rect x={x} y={y0} width={bw} height={h} rx={2} fill={f.run_diff > 0 ? COLORS.ink : '#9AA6B8'} />
+                  <Rect x={x} y={y0} width={bw} height={h} rx={2} fill={f.run_diff > 0 ? COLORS.textPrimary : '#9AA6B8'} />
                   {marcadas.has(f.season_id) && (
                     <SvgText
                       x={x + bw / 2}

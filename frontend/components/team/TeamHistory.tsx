@@ -88,7 +88,7 @@ export default function TeamHistory({ history, teamCode, elegida }: Props) {
                   aria-current={es ? "true" : undefined}
                   className={`border-b border-line-soft last:border-0 ${es ? "bg-raised" : "hover:bg-raised"}`}
                 >
-                  <td className={`num px-3 py-2 text-fg ${es ? "shadow-[inset_3px_0_0_rgb(var(--ink))]" : ""}`}>
+                  <td className={`num px-3 py-2 text-fg ${es ? "shadow-[inset_3px_0_0_rgb(var(--accent))]" : ""}`}>
                     {es ? (
                       <b>{f.season_id}</b>
                     ) : (

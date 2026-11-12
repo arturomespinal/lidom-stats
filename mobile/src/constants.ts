@@ -4,9 +4,9 @@ export interface TeamStyle {
   /** El mismo color al 12%, para el relleno de la teja perfilada. */
   tint: string;
   /**
-   * Tinta del club para TEXTO y trazos finos sobre fondo claro: el primario
-   * oscurecido hasta pasar 4.5:1 sobre blanco. El amarillo de Águilas da
-   * 2.0:1 tal cual; como texto no se leería.
+   * Tinta del club para TEXTO y trazos finos sobre el fondo grafito: el
+   * primario aclarado hasta pasar 4.5:1 sobre la superficie más clara de las
+   * oscuras. El vino de Toros da 2.9:1 tal cual; como texto no se leería.
    */
   text: string;
   /** Color del texto ENCIMA de la teja sólida: el que más contraste da. */
@@ -40,14 +40,20 @@ export interface TeamStyle {
  * el que más contraste dé. Gigantes pasó de #D6357F a #D2327C: visualmente
  * igual (ΔE < 1), pero con el primero el blanco encima daba 4.49:1.
  *
+ * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
+ * `primary` y `on` no cambian: la teja sólida es la misma. `text` es ahora la
+ * tinta de cada club para fondo OSCURO, aclarada hasta pasar 4.5:1 sobre las
+ * cinco superficies (la peor, la franja #232A33): AGU 7.1, TOR 4.8, EST 6.9,
+ * GIG 4.9, ESC 4.9, LIC 5.7. El lavado sube de 12% a 16%: sobre grafito el
+ * 12% casi no se veía.
  */
 export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.12)', text: '#9D6D12', on: '#0B1830' },
-  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.12)',  text: '#C7304F', on: '#FFFFFF' },
-  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.12)', text: '#0F8659', on: '#0B1830' },
-  GIG: { primary: '#D2327C', tint: 'rgba(210,50,124,0.12)', text: '#D2327C', on: '#FFFFFF' },
-  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.12)',  text: '#D24242', on: '#0B1830' },
-  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.12)', text: '#3E75CA', on: '#0B1830' },
+  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.16)', text: '#F2A71B', on: '#0B1830' },
+  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.16)',  text: '#EA6A85', on: '#FFFFFF' },
+  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.16)', text: '#2FCB8D', on: '#0B1830' },
+  GIG: { primary: '#D2327C', tint: 'rgba(210,50,124,0.16)', text: '#EC69A3', on: '#FFFFFF' },
+  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.16)',  text: '#F46A6A', on: '#0B1830' },
+  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.16)', text: '#6FA3F5', on: '#0B1830' },
 };
 
 /**
@@ -69,15 +75,19 @@ export const TEAM_SHORT_NAMES: Record<string, string> = {
  * Paleta de Deportiv — fuente única para el móvil. Los MISMOS valores que
  * frontend/app/globals.css; la tabla de contraste completa vive allá.
  *
- * ── Tema claro, tinta navy (25-sep-2026) ──────────────────────────────────
- * Fondos claros, títulos en Bebas Neue y franjas navy de contexto, tomados de
- * un kit de referencia. El kit tiñe su negro con su rojo de marca; aquí se
- * tiñe con el navy de Deportiv.
+ * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
+ * Una pizarra de estadio: fondo grafito, tarjetas un paso más claras con
+ * borde fino, cifras grandes en Barlow Condensed y lo seleccionado RELLENO DE
+ * CLARO con texto grafito. El look anterior (tema claro, tinta navy, Bebas
+ * Neue) sigue intacto en `main`.
+ *
+ * El grafito es neutro a propósito: el navy oscuro que se rechazó el 25-sep
+ * teñía la interfaz de azul.
  *
  * ── Sin color de acento ───────────────────────────────────────────────────
- * El coral del kit (#FF5050) es el mismo color que Escogido (ΔE 3.3). El
- * acento es la tinta navy: lo seleccionado se rellena de navy con texto
- * blanco (accentOn).
+ * Cualquier acento cromático cae cerca de un club (el coral del kit era
+ * Escogido, ΔE 3.3). El acento es el claro: lo seleccionado se rellena de
+ * claro (accent) con texto grafito (accentOn).
  *
  * ── El color de club NUNCA identifica solo ────────────────────────────────
  * Toros, Escogido y Gigantes no se distinguen ni con visión normal. Toda
@@ -87,40 +97,41 @@ export const TEAM_SHORT_NAMES: Record<string, string> = {
  * equipo (TEAM_STYLES) o falta un token.
  */
 export const COLORS = {
-  bgPage:   '#F3F5F8',
-  bgSunken: '#E8ECF1',   // filas hundidas (fuera de la clasificación), fondo de gráfica
-  bgCard:   '#FFFFFF',
-  bgRaised: '#EDF0F4',   // presionado
-  bgHeader: '#F3F5F8',
-  border:   '#D5DCE5',
-  borderSoft: '#E7EBF0', // separadores de fila
+  bgPage:   '#0D1014',
+  bgSunken: '#090B0E',   // filas hundidas (fuera de la clasificación), fondo de gráfica
+  bgCard:   '#161A20',
+  bgRaised: '#1E242C',   // presionado
+  bgHeader: '#12161B',
+  border:   '#2A313B',
+  borderSoft: '#20262E', // separadores de fila
 
-  textPrimary:   '#0B1830',  // tinta: negro teñido de navy
-  textSupport:   '#36445C',
-  textSecondary: '#56637A',
-  textFaint:     '#5C697F',  // micro-etiquetas (≥4.7 sobre todas las superficies)
+  textPrimary:   '#F3F5F7',
+  textSupport:   '#C9D0DA',
+  textSecondary: '#A7B0BD',
+  textFaint:     '#8E98A6',  // micro-etiquetas (≥5.0 sobre todas las superficies)
 
-  accent:   '#091C3A',   // navy Deportiv: lo seleccionado se rellena de esto
-  accentOn: '#FFFFFF',
+  accent:   '#F3F5F7',   // lo seleccionado se rellena de claro
+  accentOn: '#0D1014',   // y lleva el texto grafito (17.4:1)
 
-  // La franja navy de contexto y su texto.
-  ink:    '#091C3A',
-  inkFg:  '#FFFFFF',
-  inkDim: '#A9B6CC',
+  // La franja de contexto (cabeceras, pie de tarjeta, la jugada que entra) y
+  // su texto. Un paso por encima de bgRaised.
+  ink:    '#232A33',
+  inkFg:  '#F3F5F7',
+  inkDim: '#A7B0BD',
 
-  // Semánticos, oscurecidos para fondo claro.
-  positive: '#237D56',
-  negative: '#B2505E',
-  warning:  '#8A6A21',
-  live:     '#D43128',
+  // Semánticos, aclarados para fondo oscuro.
+  positive: '#4CC38A',
+  negative: '#F0808F',
+  warning:  '#E3B341',
+  live:     '#FF5A4F',
 
   // El terreno dibujado de la situación del juego (Campo.tsx). Fondo, no
-  // dato: tonos lavados para que encima se lean las bases y los nombres.
+  // dato: tonos apagados para que encima se lean las bases y los nombres.
   // Ningún club se identifica por ellos.
-  campoPasto:  '#DCE9DF',
-  campoFranja: '#D3E3D7',  // las franjas del corte de la grama
-  campoTierra: '#EADFCB',
-  campoLinea:  '#FFFFFF',
+  campoPasto:  '#1B2A22',
+  campoFranja: '#203128',  // las franjas del corte de la grama
+  campoTierra: '#3A3126',
+  campoLinea:  '#8E98A6',
 
   // Marca. El verde, SOLO cascarón.
   brand:     '#03DA58',
@@ -130,21 +141,29 @@ export const COLORS = {
 /**
  * Familias tipográficas.
  *
- * `display` es Bebas Neue: títulos, marcadores, códigos de equipo y estados.
- * Tiene UN solo peso (400) y solo mayúsculas. Dos reglas que no se pueden
- * olvidar al usarla:
+ * La letra de títulos, marcadores, códigos de equipo y estados es Barlow
+ * Condensed (look "Pizarra"; reemplaza a Bebas Neue, que sigue en `main`).
+ * Se cargan dos pesos, y cada uno es una FAMILIA aparte:
  *
- * - **Nunca con `fontWeight`.** En Android, pedir '700' u '800' a una fuente
- *   propia de un solo peso hace que el sistema la sustituya por la suya, sin
- *   error y sin aviso: el texto sale en Roboto negrita.
- * - El texto se escribe normal y la fuente lo pone en mayúsculas sola.
+ * - `display` (700): marcadores, cifras, códigos de equipo, nombres grandes.
+ * - `displayMedia` (600): títulos de sección, estados y acciones.
+ *
+ * Dos reglas que no se pueden olvidar al usarlas:
+ *
+ * - **Nunca con `fontWeight`.** El peso lo elige la familia. En Android,
+ *   pedir '700' a una fuente propia hace que el sistema la sustituya por la
+ *   suya, sin error y sin aviso: el texto sale en Roboto negrita.
+ * - **Siempre con `textTransform: 'uppercase'`.** Bebas no tenía minúsculas y
+ *   el texto de los componentes sigue escrito normal; Barlow sí las tiene, y
+ *   sin la transformación "Estrellas" saldría en minúsculas.
  *
  * El cuerpo sigue en la fuente del sistema: San Francisco y Roboto tienen
  * cifras tabulares (`fontVariant: ['tabular-nums']`), que es lo que importa en
  * una app de estadísticas.
  */
 export const FONTS = {
-  display: 'BebasNeue_400Regular',
+  display: 'BarlowCondensed_700Bold',
+  displayMedia: 'BarlowCondensed_600SemiBold',
 };
 
 /** Transparencias derivadas, para no repetir el sufijo alfa por ahí suelto. */

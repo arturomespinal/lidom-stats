@@ -48,25 +48,25 @@ function PulsingDot() {
 /**
  * El estado de un juego: EN VIVO, FINAL o PREVIA.
  *
- * La esquina cortada es la firma de Deportiv y vive en DOS sitios: las tejas
- * de equipo y esto. Antes había dos copias de esta píldora en el móvil (y dos
- * más en la web), cada una con su propio relleno — ahora es una.
+ * Antes había dos copias de esta etiqueta en el móvil (y dos más en la web),
+ * cada una con su propio relleno — ahora es una.
  *
- * React Native no tiene `clip-path`, así que el corte es el mismo eco que en
- * TeamBadge: la esquina inferior derecha con más radio que las otras tres. Y
- * sin borde, igual que en la web: el relleno solo basta.
+ * Look "Pizarra": una etiqueta de 6 pt de radio, sin borde, igual que en la
+ * web. La esquina con más radio del look anterior sigue en `main`.
  */
 export default function StatusBadge({ status, label }: Props) {
-  // EN VIVO va SÓLIDO: en el tema claro, rojo sobre rojo al 15% daba menos
-  // de 4:1. Blanco sobre el rojo, 5.0:1.
+  // EN VIVO va SÓLIDO, con el texto grafito encima: 6.2:1. El blanco sobre
+  // este rojo daría 3.3:1.
   const fondo =
-    status === 'live' ? COLORS.live : status === 'preview' ? ALPHA.neutral15 : COLORS.bgRaised;
+    status === 'live' ? COLORS.live : status === 'preview' ? ALPHA.neutral15 : COLORS.border;
   const tinta =
     status === 'live'
       ? COLORS.accentOn
       : status === 'preview'
         ? COLORS.textSupport
-        : COLORS.textSecondary;
+        : status === 'final'
+          ? COLORS.textPrimary
+          : COLORS.textSecondary;
 
   return (
     <View
@@ -88,14 +88,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    paddingLeft: 8,
-    paddingRight: 10,
+    paddingHorizontal: 9,
     paddingVertical: 3,
-    borderRadius: 3,
-    borderBottomRightRadius: 9,
+    borderRadius: 6,
   },
-  // Bebas Neue y SIN fontWeight: en Android un peso pedido a una fuente de un
-  // solo peso la cambia por la del sistema. Ver FONTS en constants.ts.
-  texto: { fontFamily: FONTS.display, fontSize: 13, letterSpacing: 0.8 },
+  // SIN fontWeight: el peso lo pone la familia. Ver FONTS en constants.ts.
+  texto: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 14, letterSpacing: 0.9 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accentOn },
 });

@@ -242,7 +242,7 @@ export default function TablaTemporadas<T>({
   );
 }
 
-// Sin Bebas en la tabla, a propósito: sus cifras son de ancho variable, y en
+// Sin Barlow Condensed en la tabla, a propósito: sus cifras son de ancho variable, y en
 // columnas alineadas a la derecha un 1 y un 8 no quedan uno sobre otro. La
 // fuente del sistema sí trae tabulares.
 const styles = StyleSheet.create({

@@ -27,7 +27,7 @@ function FilaJuego({ f }: { f: Fila }) {
         <span
           aria-hidden="true"
           className={`num flex h-7 min-w-[60px] items-center justify-center rounded px-1.5 font-cond text-[17px] leading-none tracking-[0.02em] ${
-            g ? "bg-ink text-ink-fg" : "border border-line text-dim"
+            g ? "bg-accent font-bold text-accent-on" : "border border-line text-dim"
           }`}
         >
           {f.result ?? "—"} {f.runs_for}-{f.runs_against}

@@ -15,7 +15,7 @@ import ZonaStrike from './ZonaStrike';
  *
  * ── La jugada que se mueve ──────────────────────────────────────────────────
  * Cuando la última jugada completa es sencillo, doble, triple, jonrón o
- * ponche, entra una franja navy con corte en diagonal con la jugada en Bebas,
+ * ponche, entra una franja navy con corte en diagonal con la jugada en Barlow Condensed,
  * el bateador, las carreras y el batazo, y se va sola a los ~3,6 s. En los
  * batazos un corredor recorre el terreno hasta su base (el jonrón da la
  * vuelta) y la base se enciende cuando llega. La franja ocupa la mitad de
@@ -358,10 +358,10 @@ const styles = StyleSheet.create({
   etiqueta: { color: COLORS.textFaint, fontSize: 10, letterSpacing: 0.6, marginRight: 2 },
   out: { width: 10, height: 10, borderRadius: 5, backgroundColor: COLORS.border },
   outOn: { backgroundColor: COLORS.warning },
-  // Bebas, sin fontWeight (ver FONTS). Aire arriba para iOS.
+  // Barlow Condensed, sin fontWeight (ver FONTS). Aire arriba para iOS.
   cuenta: {
     color: COLORS.textPrimary,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 26,
     lineHeight: 26,
     paddingTop: 4,
@@ -409,10 +409,10 @@ const styles = StyleSheet.create({
     transform: [{ skewX: '-12deg' }],
   },
   franjaTexto: { paddingLeft: 40, paddingRight: 16 },
-  // Bebas, sin fontWeight. Aire arriba para que iOS no recorte el remate.
+  // Barlow Condensed, sin fontWeight. Aire arriba para que iOS no recorte el remate.
   franjaTitulo: {
     color: COLORS.inkFg,
-    fontFamily: FONTS.display,
+    fontFamily: FONTS.display, textTransform: 'uppercase',
     fontSize: 34,
     lineHeight: 34,
     paddingTop: 6,

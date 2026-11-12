@@ -33,8 +33,8 @@ const y = (pz: number) => ALTO - ((pz - Z_MIN) / (Z_MAX - Z_MIN)) * ALTO;
 const recorta = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
 const ESTILO: Record<PitchLine['kind'], { fill: string; stroke: string; texto: string; nombre: string }> = {
-  strike: { fill: COLORS.ink, stroke: COLORS.ink, texto: COLORS.inkFg, nombre: 'Strike' },
-  bola: { fill: COLORS.bgCard, stroke: COLORS.ink, texto: COLORS.ink, nombre: 'Bola' },
+  strike: { fill: COLORS.accent, stroke: COLORS.accent, texto: COLORS.accentOn, nombre: 'Strike' },
+  bola: { fill: COLORS.bgCard, stroke: COLORS.accent, texto: COLORS.textPrimary, nombre: 'Bola' },
   en_juego: { fill: COLORS.warning, stroke: COLORS.warning, texto: COLORS.inkFg, nombre: 'En juego' },
 };
 
@@ -108,7 +108,7 @@ export default function ZonaStrike({ turno }: { turno: AtBat }) {
               <G key={p.number}>
                 {/* El último lleva un anillo: es el que se acaba de ver. */}
                 {p === ultimo && (
-                  <Circle cx={cx} cy={cy} r={12.5} fill="none" stroke={COLORS.ink} strokeWidth={1.5} />
+                  <Circle cx={cx} cy={cy} r={12.5} fill="none" stroke={COLORS.accent} strokeWidth={1.5} />
                 )}
                 <Circle cx={cx} cy={cy} r={8.5} fill={e.fill} stroke={e.stroke} strokeWidth={1.5} />
                 <SvgText x={cx} y={cy + 3.5} textAnchor="middle" fontSize={10} fontWeight="700" fill={e.texto}>

@@ -8,6 +8,7 @@
     "ios": "expo start --ios"
   },
   "dependencies": {
+    "@expo-google-fonts/barlow-condensed": "^0.4.1",
     "@expo-google-fonts/bebas-neue": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
     "@react-navigation/bottom-tabs": "^7.19.1",

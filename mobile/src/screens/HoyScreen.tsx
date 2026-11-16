@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -48,7 +49,7 @@ export default function HoyScreen({ navigation, route }: Props) {
   // Solo la última petición escribe: tocar tres fechas seguidas dispara tres
   // respuestas que llegan en cualquier orden.
   const pedido = useRef(0);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   const hayDato = useRef(false);
 
   const cargar = useCallback(async (silencioso = false) => {

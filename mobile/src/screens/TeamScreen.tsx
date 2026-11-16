@@ -1,5 +1,6 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { Aparecer, Tocable } from '../components/Movimiento';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
@@ -128,7 +129,7 @@ export default function TeamScreen({ route, navigation }: Props) {
   // empujan el año a año fuera de alcance. Se muestran las primeras —ya van
   // ordenadas por uso, así que son los regulares— y el resto a un toque.
   const [completa, setCompleta] = useState(false);
-  const scroll = useRef<ScrollView>(null);
+  const scroll = useRef<ScrollViewInstance>(null);
   // Cada petición lleva su número; solo la última puede escribir el estado.
   // Tocar tres temporadas seguidas dispara tres respuestas que llegan en
   // cualquier orden, y sin esto la pantalla podría quedarse con la segunda.

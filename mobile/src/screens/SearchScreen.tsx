@@ -147,7 +147,7 @@ export default function SearchScreen() {
             <Text style={styles.estado} accessibilityLiveRegion="polite">
               {fallo ? 'Sin conexión. Mostrando lo último que llegó.' : 'Buscando…'}
             </Text>
-          ) : null
+          ) : undefined
         }
         ListEmptyComponent={
           corto ? (
@@ -166,7 +166,7 @@ export default function SearchScreen() {
             </View>
           ) : !buscando && resultado.consulta === consulta ? (
             <Text style={styles.ayuda}>No encontramos a nadie con ese nombre.</Text>
-          ) : null
+          ) : undefined
         }
         renderItem={({ item: fila }) => {
           if (fila.tipo === 'titulo') {

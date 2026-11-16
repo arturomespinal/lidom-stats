@@ -198,7 +198,7 @@ la 2015-16. No cambiar esa clave.
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
-| `verify_boxscore_ingestor.py` | 50 comprobaciones del ingestor contra un boxscore sintético, incluida la ingesta de un solo juego |
+| `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
 | `verify_game_routes.py` | 304 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
@@ -288,6 +288,29 @@ En `/players/search` el orden de declaración importa: la ruta estática va **an
 6. **La decisión del lanzador sale de `stats.pitching`, no de `seasonStats`**: en el boxscore `stats` es lo del juego (`wins` vale 0 ó 1) y `seasonStats` el acumulado. No parsear el string `note` — no siempre viene.
 
 7. **Colisiones de `game_id`**: `/schedule` lista juegos pospuestos junto a su reposición con la misma fecha y equipos, así que varias entradas caen en el mismo `game_id`. La precedencia es determinista (final > con marcador > gamePk mayor). No volver a last-write-wins: una entrada pospuesta procesada después borraría el marcador de un juego ya jugado, y el checkpoint impediría recuperarlo.
+
+   **El caso inverso: un juego movido (16-nov-2026).** Cuando la liga cambia
+   la fecha o el rival de un juego, el gamePk de la MLB sigue siendo el mismo
+   pero el `game_id` cambia, porque lleva la fecha y los equipos. El juego
+   entraba como fila nueva y la vieja se quedaba "scheduled" para siempre:
+   `/schedule` ya no la lista y nadie la volvía a tocar. En la 2026-27 hubo
+   cinco (cuatro del 27-oct y el 10-nov que se jugaron dos días después, y un
+   ESC-TOR del 20-nov que pasó a ser LIC-TOR): salían "SIN RESULTADO" en Hoy
+   y en el calendario e inflaban los conteos de las jornadas. Las posiciones
+   no se enteraban porque solo cuentan los finales.
+
+   `_purgar_fantasmas()` corre después de `_upsert_games`, en `ingest()` y en
+   `ingest_game()`: borra (con sus líneas) toda fila cuyo gamePk —sale de
+   `source_url` con `game_pk_de_url()`, `games` no tiene columna para él—
+   está en el calendario recién guardado, con un `game_id` que ese calendario
+   ya no trae, y que no es final. Un final nunca se borra: se avisa. Va sobre
+   el calendario **entero**, no sobre lo pendiente del checkpoint, porque el
+   fantasma queda justo cuando el juego real ya es final y está ingestado.
+
+   No la confundir con un gamePk repetido que la MLB lista dos veces en su
+   propio calendario (la fecha pospuesta y la doble cartelera donde se jugó:
+   2020-11-24 TOR-ESC, 2022-11-10 AGU-ESC, 2022-12-17 TOR-LIC). Esas filas
+   están en `/schedule` y se quedan.
 
 8. **`innings_played` se calcula de los outs reales** del boxscore, no de `scheduledInnings`. Y `_upsert_games` preserva el valor existente: si lo re-sembrara con 9 en cada corrida, los juegos de entradas extra se corromperían en la segunda ejecución.
 
@@ -638,6 +661,8 @@ del round robin o de la final que terminaba no se ingestaba nunca**.
 - `ingest_game` respeta las reglas de la ingesta por temporada: la colisión de
   `game_id` (una entrada no final no pisa un juego ya final, regla 7), los
   `innings_played` de los outs reales (regla 8) y el `merge` idempotente.
+- Si el juego cambió de fecha o de rival, borra su fila vieja
+  (`_purgar_fantasmas`, ver la regla 7).
 - **No reescribe la temporada**: `_upsert_season` tomaría las fechas de este
   único juego como inicio y fin. `_ensure_season` la crea si falta y corre la
   fecha final si el juego es posterior.

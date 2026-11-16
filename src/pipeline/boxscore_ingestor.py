@@ -31,7 +31,7 @@ import unicodedata
 from datetime import date, datetime
 from typing import Any, Iterable, Optional
 
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from src.clients.mlb_api import MLBAPIClient
@@ -151,6 +151,19 @@ def build_game_id(
     return f"{game_date}-{away_code}-{home_code}-{game_number}"
 
 
+def game_pk_de_url(url: Optional[str]) -> Optional[int]:
+    """
+    El gamePk de la MLB guardado en `games.source_url`.
+
+    `games` no tiene columna para el gamePk: va dentro de la URL del boxscore
+    (".../game/851519/boxscore"). Es la identidad del juego para la MLB; el
+    `game_id` es la nuestra y lleva la fecha y los equipos, así que cambia si
+    la liga mueve el juego (ver `_purgar_fantasmas`).
+    """
+    match = re.search(r"/game/(\d+)/", url or "")
+    return int(match.group(1)) if match else None
+
+
 def parse_height_cm(height: Optional[str]) -> Optional[int]:
     """La MLB API devuelve altura como \"6' 1\\\"\" — la pasamos a centímetros."""
     if not height:
@@ -221,6 +234,7 @@ class BoxscoreIngestor:
             "teams": 0,
             "games": 0,
             "games_skipped": 0,
+            "games_purged": 0,
             "players": 0,
             "batting_lines": 0,
             "pitching_lines": 0,
@@ -238,6 +252,10 @@ class BoxscoreIngestor:
 
             self._upsert_season(season_id, schedule_games)
             summary["games"] = self._upsert_games(season_id, schedule_games)
+            # Sobre el calendario ENTERO, no sobre lo pendiente: el checkpoint
+            # se salta los juegos ya ingestados, y el fantasma de un juego
+            # movido queda justo cuando el juego real ya es final.
+            summary["games_purged"] = self._purgar_fantasmas(schedule_games)
 
             # 3. Boxscores de los juegos finalizados.
             playable = [g for g in schedule_games if g["status"] == "final"]
@@ -292,6 +310,9 @@ class BoxscoreIngestor:
         - **La colisión de game_id (regla 7).** Si el gamePk pedido no es final
           y la fila de su game_id ya lo es —la entrada pospuesta de un juego que
           sí se jugó— no se toca: final gana.
+        - **Un juego movido no deja fantasma** (`_purgar_fantasmas`): si el
+          gamePk ya estaba en la base con otra fecha u otro rival, esa fila
+          se borra mientras no sea final.
         - **innings_played** sale de los outs reales del boxscore
           (`_ingest_game_chunk`) y `_upsert_games` preserva el que ya hubiera.
         - **La temporada no se reescribe**: `_upsert_season` tomaría las fechas
@@ -351,6 +372,7 @@ class BoxscoreIngestor:
 
             self._ensure_season(season_id, g["game_date"])
             self._upsert_games(season_id, [g])
+            self._purgar_fantasmas([g])
 
             if g["status"] != "final":
                 logger.info(f"  ingest_game: {g['game_id']} queda '{g['status']}', sin boxscore")
@@ -574,6 +596,73 @@ class BoxscoreIngestor:
                 ))
             session.commit()
         return len(games)
+
+    def _purgar_fantasmas(self, games: list[dict]) -> int:
+        """
+        Borra las filas que dejó un juego que la liga movió de fecha o de rival.
+
+        El `game_id` lleva la fecha y los equipos; el gamePk de la MLB no
+        cambia cuando la liga reprograma un juego. El juego en su fecha nueva
+        es un `game_id` nuevo y entraba como fila nueva, y la de la fecha
+        vieja se quedaba "scheduled" para siempre: el calendario /schedule ya
+        no la lista, así que nadie la volvía a tocar. En la 2026-27 hubo
+        cinco (851519, 851540, 851459, 851562 y 851429, este con el rival
+        cambiado): salían "SIN RESULTADO" en Hoy y en el calendario e
+        inflaban los conteos de las jornadas. Las posiciones no se
+        enteraban porque solo cuentan los finales.
+
+        Se borra una fila cuando:
+          - su gamePk (de `source_url`) está en `games`, el calendario que se
+            acaba de guardar, y
+          - su `game_id` no es ninguno de los de ese calendario, y
+          - no es final. Un final con el gamePk de otra fila no se toca: es un
+            juego jugado, y si aparece se avisa para revisarlo a mano.
+
+        Va DESPUÉS de `_upsert_games`: un `game_id` que en el calendario
+        pertenece a otro gamePk ya quedó con la URL de ese otro.
+
+        Con sus líneas, si tuviera (un fantasma no debería tenerlas).
+        Devuelve cuántas filas borró.
+        """
+        ids_por_pk: dict[int, set[str]] = {}
+        for g in games:
+            if g.get("game_pk"):
+                ids_por_pk.setdefault(int(g["game_pk"]), set()).add(g["game_id"])
+        if not ids_por_pk:
+            return 0
+        vigentes = {g["game_id"] for g in games}
+
+        with Session(self.engine) as session:
+            fantasmas: list[str] = []
+            for game_id, status, url in session.execute(
+                select(Game.game_id, Game.status, Game.source_url)
+            ):
+                pk = game_pk_de_url(url)
+                if pk not in ids_por_pk or game_id in vigentes:
+                    continue
+                if status == "final":
+                    logger.warning(
+                        f"⚠️ {game_id} es final y tiene el gamePk {pk}, que el "
+                        f"calendario pone en {sorted(ids_por_pk[pk])}; no se toca"
+                    )
+                    continue
+                fantasmas.append(game_id)
+
+            if not fantasmas:
+                return 0
+
+            # Las líneas primero y a mano, sin depender del ON DELETE CASCADE:
+            # solo aplica si la conexión encendió las claves foráneas.
+            session.execute(delete(BattingLine).where(BattingLine.game_id.in_(fantasmas)))
+            session.execute(delete(PitchingLine).where(PitchingLine.game_id.in_(fantasmas)))
+            session.execute(delete(Game).where(Game.game_id.in_(fantasmas)))
+            session.commit()
+
+        logger.info(
+            f"  juegos movidos: {len(fantasmas)} fila(s) de su fecha vieja "
+            f"borrada(s): {', '.join(sorted(fantasmas))}"
+        )
+        return len(fantasmas)
 
     @staticmethod
     def _parse_utc(value: Optional[str]) -> Optional[datetime]:

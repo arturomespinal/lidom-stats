@@ -108,8 +108,28 @@ SUELTOS = {
 }
 
 
+# Juegos por jugar que la liga mueve, para los fantasmas (al final de la
+# suite). Antes de eso el calendario no los trae: FASE 0.
+FASE = 0
+
+
+def por_jugar():
+    """Los juegos por jugar de cada fase: 826349 cambia de fecha, 826350 de rival."""
+    if FASE == 0:
+        return []
+    if FASE == 1:
+        return [game(826349, "2025-11-01", 669, 670, None, None, state="S"),
+                game(826350, "2025-11-02", 672, 671, None, None, state="S")]
+    if FASE == 2:
+        return [game(826349, "2025-11-03", 669, 670, None, None, state="S"),
+                game(826350, "2025-11-02", 672, 668, None, None, state="S")]
+    return [game(826349, "2025-11-05", 669, 670, None, None, state="S"),
+            game(826350, "2025-11-02", 672, 668, None, None, state="S")]
+
+
 def calendario():
     return {"dates": [
+            {"date": "2025-11", "games": por_jugar()},
             {"date": "2025-10-15", "games": [game(826343, "2025-10-15", 668, 669, 3, 5)]},
             {"date": "2025-10-16", "games": [
                 game(826344, "2025-10-16", 672, 667, 4, 2),
@@ -287,6 +307,50 @@ u4 = bi.BoxscoreIngestor(DB).ingest_game(999999)
 check("ingest_game de un gamePk que no existe: no revienta", (u4["ingested"], u4["game_id"]), (False, None))
 u5 = bi.BoxscoreIngestor(DB).ingest_game(826345)
 check("ingest_game contra un equipo fuera de LIDOM: se descarta", u5["game_id"], None)
+
+print("\n━━━ UN JUEGO MOVIDO NO DEJA FANTASMA ━━━")
+# La liga mueve un juego de fecha o le cambia el rival y el gamePk sigue
+# siendo el mismo. El game_id lleva la fecha y los equipos: sin la purga, la
+# fila de la fecha vieja se quedaba "scheduled" para siempre.
+FASE = 1
+bi.BoxscoreIngestor(DB).ingest(season="2025")
+ids = lambda: [r[0] for r in q("select game_id from games where game_id like '2025-11-%' order by game_id")]
+check("fase 1: los dos juegos por jugar entran", ids(),
+      ["2025-11-01-EST-GIG-1", "2025-11-02-LIC-ESC-1"])
+
+# Un fantasma con líneas (no debería tenerlas, pero si las tiene se van con
+# él) y un final ajeno con el gamePk de 826349, que no se toca.
+fila = dict(q("select * from batting_lines limit 1")[0])
+fila["game_id"] = "2025-11-01-EST-GIG-1"
+c.execute(f"insert into batting_lines ({','.join(fila)}) values ({','.join('?' * len(fila))})", list(fila.values()))
+final = dict(q("select * from games where game_id='2025-10-15-TOR-EST-1'")[0])
+final.update(game_id="2025-10-20-EST-GIG-9",
+             source_url="https://statsapi.mlb.com/api/v1/game/826349/boxscore")
+c.execute(f"insert into games ({','.join(final)}) values ({','.join('?' * len(final))})", list(final.values()))
+c.commit()
+
+FASE = 2
+r3 = bi.BoxscoreIngestor(DB).ingest(season="2025")
+check("fase 2: la fecha vieja y el rival viejo se borran, quedan los nuevos", ids(),
+      ["2025-11-02-LIC-TOR-1", "2025-11-03-EST-GIG-1"])
+check("fase 2: el resumen cuenta los dos borrados", r3["games_purged"], 2)
+check("fase 2: las líneas del fantasma se van con él",
+      n("batting_lines where game_id='2025-11-01-EST-GIG-1'"), 0)
+check("fase 2: un final con el mismo gamePk no se toca",
+      n("games where game_id='2025-10-20-EST-GIG-9'"), 1)
+check("fase 2: los juegos jugados siguen", n("games where status='final'"), 5)
+c.execute("delete from games where game_id='2025-10-20-EST-GIG-9'")
+c.commit()
+
+r4 = bi.BoxscoreIngestor(DB).ingest(season="2025")
+check("otra corrida igual: nada que borrar (idempotente)",
+      (r4["games_purged"], ids()), (0, ["2025-11-02-LIC-TOR-1", "2025-11-03-EST-GIG-1"]))
+
+# El motor en vivo ingesta un juego suelto: también limpia su fecha vieja.
+FASE = 3
+bi.BoxscoreIngestor(DB).ingest_game(826349)
+check("ingest_game de un juego movido: borra su fila vieja", ids(),
+      ["2025-11-02-LIC-TOR-1", "2025-11-05-EST-GIG-1"])
 
 print()
 if fails:

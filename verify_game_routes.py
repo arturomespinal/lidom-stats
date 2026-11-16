@@ -469,16 +469,21 @@ check("Valdespin (340 J al bate, 1 lanzando) no es lanzador", v["is_pitcher"], F
 check("  pero su pitcheo sigue en la ficha", len(v["pitching"]) > 0, True)
 o = call("/players/wirfin-obispo-1984-09-26")
 check("Wirfin Obispo sí es lanzador", o["is_pitcher"], True)
-# Sobre la base entera: de los 1.300 que lanzaron alguna vez, 17 son jugadores
+# Hasta la 2025-26: de los 1.300 que lanzaron alguna vez, 17 son jugadores
 # de posición de un juego roto. Y el corte es limpio — ningún lanzador de
 # verdad tiene 5 juegos al bate —, que es lo que justifica no usar un umbral.
+# La cifra fija va hasta la 2025-26 porque la temporada en curso la mueve
+# (16-nov-2026: Wilmer Difo, un juego roto con Toros, y Erick Mejía, que ya
+# lanzó 5 juegos con Águilas). El corte limpio se mira sobre la base entera.
 from api.main import query_db
-_b = {r["player_id"]: r["g"] for r in query_db(
-    "SELECT player_id, SUM(games_batted) AS g FROM v_batting_season GROUP BY player_id")}
-_p = {r["player_id"]: r["g"] for r in query_db(
-    "SELECT player_id, SUM(games) AS g FROM v_pitching_season GROUP BY player_id")}
-check("de quienes lanzaron, 17 pasan a jugador de posición",
+def _por_jugador(vista, campo, filtro=""):
+    return {r["player_id"]: r["g"] for r in query_db(
+        f"SELECT player_id, SUM({campo}) AS g FROM {vista} {filtro} GROUP BY player_id")}
+_hasta = "WHERE season_id <= '2025-26'"
+_b, _p = _por_jugador("v_batting_season", "games_batted", _hasta), _por_jugador("v_pitching_season", "games", _hasta)
+check("de quienes lanzaron hasta la 2025-26, 17 pasan a jugador de posición",
       sum(1 for k, g in _p.items() if g <= (_b.get(k) or 0)), 17)
+_b, _p = _por_jugador("v_batting_season", "games_batted"), _por_jugador("v_pitching_season", "games")
 check("ningún lanzador por volumen tiene 5+ juegos al bate",
       [k for k, g in _p.items() if g > (_b.get(k) or 0) and (_b.get(k) or 0) >= 5], [])
 

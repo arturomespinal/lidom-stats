@@ -9,13 +9,11 @@
    Tailwind componga opacidad sobre el token (`bg-card/50`) con
    rgb(var(--x) / <alpha-value>).
 
-   ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ────────────────────────
+   ── Look "Pizarra" (elegido el 12-nov-2026, en main desde el 16-nov) ─────
    Arturo eligió esta dirección entre tres propuestas: una pizarra de estadio.
    Fondo grafito, tarjetas un paso más claras con borde fino, cifras grandes en
    Barlow Condensed y lo seleccionado RELLENO DE CLARO con texto oscuro.
-
-   El look anterior (tema claro, tinta navy, Bebas Neue, 25-sep-2026) sigue
-   intacto en `main`. Esta rama no lo borra: lo reemplaza para poder comparar.
+   Reemplazó al tema claro con tinta navy y Bebas Neue (25-sep-2026).
 
    El grafito es NEUTRO a propósito. El navy oscuro que se rechazó el 25-sep
    teñía toda la interfaz de azul; aquí ningún color de club —ni el azul del
@@ -104,7 +102,7 @@ body {
 }
 
 /* Barlow Condensed lleva títulos, marcadores, códigos y estados, SIEMPRE en
-   mayúsculas: así se escribía con Bebas Neue (que no tiene minúsculas) y el
+   mayúsculas: así se escribía con la letra anterior (Bebas Neue, que no tiene minúsculas) y el
    texto de los componentes sigue escrito normal. Peso 600 de base; un
    `font-bold` al lado lo sube a 700, que es el de los marcadores. Solo se
    cargan 500, 600 y 700: `font-synthesis: none` impide que el navegador
@@ -203,7 +201,7 @@ body {
   }
 }
 
-/* La jugada en la pantalla de un juego (game/Situacion.tsx): la franja navy
+/* La jugada en la pantalla de un juego (game/Situacion.tsx): la franja
    entra desde la derecha, se queda y sale sola, 3,6 s en total. Se monta de
    nuevo con cada jugada (key = su índice), así que no hace falta estado ni
    temporizador. Con "reducir movimiento" no se desliza: aparece y se va. */

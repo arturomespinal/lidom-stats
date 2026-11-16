@@ -72,7 +72,7 @@ export const COLS_PITCHEO: Col<FilaPitcheo>[] = [
   { k: 'WHIP', t: 'Embasados por entrada', val: f => num(f.whip, 2), fuerte: true },
 ];
 
-/** Una cifra de la franja navy de carrera. */
+/** Una cifra de la franja de carrera. */
 function Cifra({ valor, etiqueta }: { valor: string; etiqueta: string }) {
   return (
     <View style={styles.cifra} accessible accessibilityLabel={`${etiqueta}: ${valor}`}>
@@ -83,7 +83,7 @@ function Cifra({ valor, etiqueta }: { valor: string; etiqueta: string }) {
 }
 
 /**
- * La franja navy de la carrera: la firma del kit, puesta donde más pesa.
+ * La franja de la carrera, puesta donde más pesa.
  *
  * Es lo primero que uno busca en una ficha —"¿cuánto batea de por vida?"— y
  * en la web está al pie de una tabla de dieciséis columnas que en un teléfono
@@ -177,7 +177,7 @@ export default function PlayerScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // La cabecera es navy: la barra de estado va en claro mientras esta
+  // La cabecera es oscura: la barra de estado va en claro mientras esta
   // pantalla tiene el foco, y vuelve a oscura al salir.
   useFocusEffect(
     useCallback(() => {
@@ -273,9 +273,9 @@ export default function PlayerScreen({ route, navigation }: Props) {
 
   return (
     <ScrollView style={styles.pagina} contentContainerStyle={{ paddingBottom: 32 }}>
-      {/* ── Quién es ── La cabecera navy con el plano del club: ocupa el
+      {/* ── Quién es ── La cabecera oscura con el plano del club: ocupa el
           lugar de la foto. El monograma va sobre el plano; el texto, sobre
-          el navy, siempre (ver Heroe.tsx). */}
+          la franja, siempre (ver Heroe.tsx). */}
       <Heroe color={color ?? COLORS.textSecondary}>
         <View style={styles.identidad}>
           <View style={styles.nombreCaja}>
@@ -399,7 +399,7 @@ export default function PlayerScreen({ route, navigation }: Props) {
         </>
       )}
 
-      {/* ── Qué tan bueno ha sido ── La carrera entera, en la franja navy. */}
+      {/* ── Qué tan bueno ha sido ── La carrera entera, en la franja. */}
       {activo && <FranjaCarrera rol={activo} bateo={carreraBateo} pitcheo={carreraPitcheo} />}
 
       {/* ── El año a año ── Pestañas solo si hay dos roles que mostrar. */}
@@ -478,8 +478,7 @@ const styles = StyleSheet.create({
   },
   meta: { fontSize: 13, lineHeight: 18, color: COLORS.inkDim },
 
-  // La franja navy. Esquinas redondeadas parejas: la esquina cortada está
-  // reservada a tejas y estados, y aquí no significaría nada.
+  // La franja de la carrera, con esquinas redondeadas parejas.
   franja: {
     backgroundColor: COLORS.ink,
     marginHorizontal: 16,

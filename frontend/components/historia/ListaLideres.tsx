@@ -8,7 +8,7 @@ import { rutaJugador } from "./rutas";
 /**
  * Los líderes de todos los tiempos de una categoría.
  *
- * El primero va en una tarjeta navy con la cifra en Bebas, como el héroe de
+ * El primero va en una tarjeta destacada con la cifra en Barlow Condensed, como el héroe de
  * las fichas: es la respuesta a "¿quién tiene el récord?". El resto, en filas
  * de 56 px con el puesto, la época y los equipos.
  *
@@ -62,7 +62,7 @@ function Primero({ lider, stat, etiqueta }: { lider: LiderHistorico; stat: strin
   const ruta = rutaJugador(lider);
   const contenido = (
     <div className="relative overflow-hidden rounded-xl bg-ink px-4 py-4 text-ink-fg sm:px-6 sm:py-5">
-      {/* Navy y sin color de club: el récord es de la liga, no de un equipo.
+      {/* Sin color de club: el récord es de la liga, no de un equipo.
           Los equipos van abajo, en sus tejas. */}
       <div className="flex items-end justify-between gap-4">
         <div className="min-w-0">

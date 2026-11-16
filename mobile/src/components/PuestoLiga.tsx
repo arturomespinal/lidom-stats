@@ -15,7 +15,7 @@ import type { PlayerRanking } from '../types';
  * último vacía— para que la columna se lea de un vistazo.
  *
  * ── Una sola tinta ─────────────────────────────────────────────────────────
- * La barra es navy en el podio (1º a 3º) y gris del 4º en adelante; el puesto
+ * La barra es clara en el podio (1º a 3º) y gris del 4º en adelante; el puesto
  * va escrito siempre. Nada de verde "bueno" y rojo "malo": el color no carga
  * juicio, y en deuteranopia esos dos son el mismo.
  */

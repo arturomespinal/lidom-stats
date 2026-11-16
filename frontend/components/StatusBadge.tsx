@@ -13,7 +13,7 @@ interface Props {
  * una con su propio rojo — por eso es un componente.
  *
  * ── Look "Pizarra": una etiqueta de 6 px de radio ─────────────────────────
- * La esquina cortada del look anterior (sigue en `main`) se fue con la de las
+ * La esquina cortada del look anterior (25-sep) se fue con la de las
  * tejas. Sin borde: el relleno solo basta.
  */
 

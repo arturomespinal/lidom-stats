@@ -125,8 +125,9 @@ export default function HojaInferior({
 }
 
 const styles = StyleSheet.create({
-  // Navy y no negro: el velo tiñe la app con su propia tinta.
-  velo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(9, 28, 58, 0.45)' },
+  // Negro y no navy: sobre el grafito, un velo azulado teñía la app de un
+  // color que no es suyo.
+  velo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.55)' },
   hoja: {
     position: 'absolute',
     left: 0,

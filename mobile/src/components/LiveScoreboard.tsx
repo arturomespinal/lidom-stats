@@ -259,7 +259,7 @@ export default function LiveScoreboard({
         </View>
       )}
 
-      {/* La franja navy de contexto, el pie de tarjeta del kit: dónde se
+      {/* El pie de tarjeta: dónde se
           juega y, si la tarjeta se puede tocar, a dónde lleva. */}
       <View style={styles.banda}>
         <Text style={styles.bandaEstadio} numberOfLines={1}>

@@ -4,7 +4,7 @@ import { TEAM_STYLES } from "@/lib/constants";
 import { conSigno, pct3 } from "@/lib/formato";
 
 /**
- * Cabecera de la ficha de un equipo: la franja navy con el plano del club y
+ * Cabecera de la ficha de un equipo: la franja oscura con el plano del club y
  * su código gigante tono sobre tono. Misma cabecera que la del móvil.
  *
  * El récord grande es el de la temporada ELEGIDA, no el de la más reciente:
@@ -53,7 +53,7 @@ export default function TeamHeader({ equipo }: { equipo: TeamProfile }) {
 
       <FilaCifras>
         {actual && <CifraHeroe valor={pct3(actual.win_pct)} etiqueta="PCT" />}
-        {/* El signo va escrito: sobre el navy no hay verde ni rojo que valga. */}
+        {/* El signo va escrito: sobre la franja el signo no depende del color. */}
         {actual && <CifraHeroe valor={conSigno(actual.run_diff)} etiqueta="Diferencial" />}
         <CifraHeroe valor={`${totalG}-${totalP}`} etiqueta={`${equipo.seasons_count} temporadas`} />
       </FilaCifras>

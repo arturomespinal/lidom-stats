@@ -154,7 +154,7 @@ export default function TeamScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // Cabecera navy: barra de estado clara mientras esta pantalla tiene el foco.
+  // Cabecera oscura: barra de estado clara mientras esta pantalla tiene el foco.
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');
@@ -220,7 +220,7 @@ export default function TeamScreen({ route, navigation }: Props) {
       contentContainerStyle={{ paddingBottom: 32 }}
       stickyHeaderIndices={[1]}
     >
-      {/* 0 ── Cabecera: navy con el plano del club y su código gigante ── */}
+      {/* 0 ── Cabecera: la franja con el plano del club y su código gigante ── */}
       <Heroe color={color ?? COLORS.textSecondary} marca={code}>
         <View style={styles.nombreCaja}>
           {/* Dos renglones: "SAN PEDRO DE MACORÍS · DESDE 1935" no cabe en uno
@@ -257,7 +257,7 @@ export default function TeamScreen({ route, navigation }: Props) {
         )}
         <FilaCifras>
           {actual && <CifraHeroe valor={pct3(actual.win_pct)} etiqueta="PCT" />}
-          {/* El signo va escrito: sobre el navy no hay verde ni rojo que valga. */}
+          {/* El signo va escrito: sobre la franja el signo no depende del color. */}
           {actual && <CifraHeroe valor={conSigno(actual.run_diff)} etiqueta="Diferencial" />}
           <CifraHeroe valor={`${totalG}-${totalP}`} etiqueta={`${equipo.seasons_count} temporadas`} />
         </FilaCifras>
@@ -600,7 +600,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 0.4,
   },
-  // La temporada elegida: raya navy a la izquierda y el año en negrita. La
+  // La temporada elegida: raya clara a la izquierda y el año en negrita. La
   // raya es la misma señal que la pestaña activa, girada.
   filaElegida: { backgroundColor: COLORS.bgPage },
   marcaElegida: {

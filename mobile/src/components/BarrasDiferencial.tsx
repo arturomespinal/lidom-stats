@@ -12,7 +12,7 @@ const M = { arriba: 20, abajo: 22 };
  * El diferencial de carreras de cada temporada, de la más vieja a la más
  * nueva, en barras que suben o bajan desde el cero.
  *
- * La dirección ya dice el signo; el tono lo refuerza (navy arriba, gris
+ * La dirección ya dice el signo; el tono lo refuerza (claro arriba, gris
  * abajo) sin cargar juicio de verde y rojo. Etiquetas solo donde importan: la
  * mejor, la peor y la temporada elegida — un número en cada barra sería
  * ruido. La temporada elegida va con la barra más ancha.
@@ -61,7 +61,11 @@ export default function BarrasDiferencial({
                   {marcadas.has(f.season_id) && (
                     <SvgText
                       x={x + bw / 2}
-                      y={f.run_diff >= 0 ? Y(f.run_diff) - 5 : Y(f.run_diff) + 13}
+                      // La cifra de una barra negativa va sobre la línea del
+                      // cero, no bajo la barra: abajo chocaba con la etiqueta
+                      // de la primera temporada (el "-47" del Licey junto a
+                      // "2012-13", iPhone 16-nov). Igual que en la web.
+                      y={f.run_diff >= 0 ? Y(f.run_diff) - 5 : Y(0) - 5}
                       fontSize={11}
                       fontWeight="700"
                       fill={COLORS.textPrimary}

@@ -184,7 +184,7 @@ export function TarjetaDestacado({
   onJugador: (p: PitcherDecision) => void;
   /** Lo que dice arriba a la izquierda. En la página del juego, la fecha. */
   etiqueta?: string;
-  /** El texto de la franja navy: "Ver el juego ›" o "Relato y línea ›". */
+  /** El texto del pie de la tarjeta: "Ver el juego ›" o "Relato y línea ›". */
   accion?: string;
 }) {
   const wp = destacado.win_prob;
@@ -224,7 +224,7 @@ export function TarjetaDestacado({
   );
 }
 
-/** La franja navy de contexto, el pie de tarjeta del kit. */
+/** El pie de la tarjeta: estadio a la izquierda, la acción a la derecha. */
 function Banda({
   venue,
   onAbrir,

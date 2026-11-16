@@ -12,12 +12,12 @@ import { valorPuesto } from "@/lib/formato";
  * barra lo traduce a longitud —1º llena, el último vacía—.
  *
  * ── Una sola tinta ─────────────────────────────────────────────────────────
- * Navy en el podio (1º a 3º), gris del 4º en adelante, y el puesto escrito
+ * Claro en el podio (1º a 3º), gris del 4º en adelante, y el puesto escrito
  * siempre. Nada de verde "bueno" y rojo "malo": en deuteranopia son el mismo.
  */
 /**
- * "3º" con el ordinal en Archivo: Bebas no trae el glifo "º" y el navegador
- * lo rellenaba con otra fuente, subrayado y a otra altura.
+ * "3º" con el ordinal en Archivo, chico y elevado. Nació porque Bebas Neue no
+ * traía el glifo "º"; Barlow Condensed sí lo trae, pero así se lee mejor.
  */
 function Rango({ n }: { n: number }) {
   return (

@@ -68,7 +68,7 @@ export default function GameDetailScreen({ route }: Props) {
   const scrollY = useRef(0);
   const inicioContenido = useRef(0);
 
-  // La cabecera es navy: la barra de estado va en claro mientras esta
+  // La cabecera es oscura: la barra de estado va en claro mientras esta
   // pantalla tiene el foco, igual que en las fichas.
   useFocusEffect(
     useCallback(() => {
@@ -149,7 +149,7 @@ export default function GameDetailScreen({ route }: Props) {
   if (loading) {
     return (
       // Esqueleto con la forma de la pantalla, no un spinner (reglas de
-      // diseño móvil, punto 3): la franja navy ya está donde va a estar.
+      // diseño móvil, punto 3): la franja oscura ya está donde va a estar.
       <View style={styles.page} accessibilityLabel="Cargando el juego">
         <View style={styles.esqueletoHeroe} />
         <View style={{ padding: 16, gap: 12 }}>
@@ -184,7 +184,7 @@ export default function GameDetailScreen({ route }: Props) {
   };
 
   // ── La disposición ────────────────────────────────────────────────────
-  // Cabecera navy y franja se desplazan con el contenido (el patrón de
+  // Cabecera y franja se desplazan con el contenido (el patrón de
   // SofaScore: la cabecera se va). Las pestañas ya no se quedan pegadas
   // ARRIBA: van fijas al pie, sobre la barra de la app, en la zona del
   // pulgar. Es lo que más se toca en esta pantalla.
@@ -271,7 +271,7 @@ export default function GameDetailScreen({ route }: Props) {
 }
 
 /**
- * La cabecera del juego: la misma franja navy de las fichas, con su corte en
+ * La cabecera del juego: la misma franja oscura de las fichas, con su corte en
  * diagonal, pero SIN el plano de color. Un juego es de dos clubes, y pintar
  * el color de uno solo diría que el juego es suyo. Cada club se identifica
  * con su teja y su código, como en todas partes.

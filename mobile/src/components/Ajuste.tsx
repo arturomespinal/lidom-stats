@@ -20,14 +20,11 @@ import { FONTS } from '../constants';
  * `w / Σ anchos`, con tope en el tamaño de diseño. Es exacto y no depende del
  * sistema.
  *
- * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
- * La letra es ahora Barlow Condensed y la tabla es la suya, en peso 700 (el
- * más ancho de los dos que se cargan: lo que cabe en 700 cabe en 600). Las
- * cifras cuentan 0.5, su ancho tabular. Lo que no está en la tabla cuenta
- * como una mayúscula ancha (0.5), que es el lado seguro. La función conserva
- * el nombre de la letra anterior (Bebas Neue, que sigue en `main`) para que
- * la rama no renombre nada; la web tiene la misma tabla en
- * `frontend/lib/bebas.ts`.
+ * La letra es Barlow Condensed y la tabla es la de su peso 700 (el más ancho
+ * de los dos que se cargan: lo que cabe en 700 cabe en 600). Las cifras
+ * cuentan 0.5, su ancho tabular. Lo que no está en la tabla cuenta como una
+ * mayúscula ancha (0.5), que es el lado seguro. La web tiene la misma tabla
+ * en `frontend/lib/anchoTitulo.ts`.
  */
 const ANCHO_EM: Record<string, number> = {
   A: 0.482, B: 0.47, C: 0.464, D: 0.476, E: 0.438, F: 0.421, G: 0.467, H: 0.48,
@@ -40,7 +37,7 @@ const ANCHO_EM: Record<string, number> = {
 };
 
 /** Ancho de un texto en la letra de títulos, en em (multiplicar por el tamaño). */
-export function anchoBebas(texto: string, espaciado = 0): number {
+export function anchoTitulo(texto: string, espaciado = 0): number {
   let em = 0;
   for (const c of texto.toUpperCase()) {
     em += /[0-9]/.test(c) ? 0.5 : ANCHO_EM[c] ?? 0.5;
@@ -50,7 +47,7 @@ export function anchoBebas(texto: string, espaciado = 0): number {
 
 /** El tamaño al que `texto` cabe en `ancho` puntos, sin pasar de `maximo`. */
 export function tamanoQueCabe(texto: string, ancho: number, maximo: number): number {
-  const em = anchoBebas(texto);
+  const em = anchoTitulo(texto);
   if (!em || ancho <= 0) return maximo;
   // 2 % de holgura: el redondeo del sistema no debe partir la última letra.
   return Math.min(maximo, Math.floor((ancho * 0.98) / em));
@@ -64,7 +61,7 @@ export function tamanoQueCabe(texto: string, ancho: number, maximo: number): num
 export function tamanoNombre(nombre: string, ancho: number, maximo: number): number {
   const larga = nombre
     .split(/\s+/)
-    .reduce((a, p) => (anchoBebas(p) > anchoBebas(a) ? p : a), '');
+    .reduce((a, p) => (anchoTitulo(p) > anchoTitulo(a) ? p : a), '');
   return tamanoQueCabe(larga, ancho, maximo);
 }
 

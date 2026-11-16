@@ -1,18 +1,18 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
-import { anchoBebas, CifraAjustada } from './Ajuste';
+import { anchoTitulo, CifraAjustada } from './Ajuste';
 
 const CORTE = 32;
 
 /**
- * La cabecera de las fichas: franja navy a sangre con un plano del color del
+ * La cabecera de las fichas: la franja (COLORS.ink) a sangre con un plano del color del
  * club en diagonal. Es lo que ocupa el lugar de la foto que no podemos usar
  * (ver la guía legal: ni escudos ni fotos de la MLB).
  *
- * ── Toda letra va sobre el navy, nunca sobre el plano ──────────────────────
+ * ── Toda letra va sobre la franja, nunca sobre el plano ────────────────────
  * El plano es solo forma. Blanco sobre el rojo de Escogido da 3.6:1 y sobre el
- * amarillo de Águilas 2:1; sobre el navy, 16.9:1 para los seis. Por eso el
+ * amarillo de Águilas 2:1; sobre la franja, 13.2:1 para los seis. Por eso el
  * plano se queda arriba a la derecha (156 pt de alto) y quien use la cabecera
  * limita su columna de texto al 52% del ancho: medido, es lo que deja libre
  * el borde inclinado del plano en todo su alto.
@@ -79,7 +79,7 @@ export default function Heroe({
  *
  * que despejado da el divisor de abajo. Barlow Condensed con lineHeight =
  * tamaño deja la letra entre 0.2 y 0.9 del alto de la línea (mayúsculas de
- * 0.7 em, línea de base a 0.9; con Bebas Neue iba entre 0.1 y 0.8).
+ * 0.7 em, línea de base a 0.9).
  *
  * El margen pasó de 10 a 24 pt (iPhone de Arturo, 30-sep): con 10 la R
  * quedaba pegada al borde y a la barra de desplazamiento de iOS, que aparece
@@ -88,7 +88,7 @@ export default function Heroe({
 const MARGEN_MARCA = 24;
 
 function medidaMarca(marca: string) {
-  const t = Math.min(150, Math.floor((124 - MARGEN_MARCA) / (anchoBebas(marca) + 0.19)));
+  const t = Math.min(150, Math.floor((124 - MARGEN_MARCA) / (anchoTitulo(marca) + 0.19)));
   return { fontSize: t, lineHeight: t, top: Math.round(146 - 0.9 * t) };
 }
 
@@ -145,7 +145,7 @@ const styles = StyleSheet.create({
     height: 176,
     transform: [{ skewX: '-16deg' }],
   },
-  // Tono sobre tono: el navy al 16% sobre el plano. No es texto que se lea,
+  // Tono sobre tono: la franja al 16% sobre el plano. No es texto que se lea,
   // es textura; por eso queda fuera del lector de pantalla.
   // Tamaño y altura los pone medidaMarca().
   marca: {

@@ -10,7 +10,7 @@ import { AtBat, PitchLine } from "@/lib/types";
  * bateador (`zone_top`/`zone_bottom`), que cambia con su estatura.
  *
  * El tipo de cada lanzamiento no va solo en el color: strike relleno de
- * navy, bola hueca, en juego en ocre (el mismo de las bases ocupadas). Cada
+ * claro, bola hueca, en juego en ocre (el mismo de las bases ocupadas). Cada
  * uno lleva su número, y la lista de al lado lo dice en texto: el dibujo
  * ayuda, nunca es la única puerta al dato.
  */

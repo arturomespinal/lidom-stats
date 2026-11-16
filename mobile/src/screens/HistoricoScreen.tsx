@@ -62,7 +62,7 @@ export default function HistoricoScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // Cabecera navy: barra de estado clara mientras tiene el foco.
+  // Cabecera oscura: barra de estado clara mientras tiene el foco.
   useFocusEffect(
     useCallback(() => {
       setStatusBarStyle('light');

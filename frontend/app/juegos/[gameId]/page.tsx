@@ -31,7 +31,7 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
  * historia—. Trae marcador, decisiones, titular, figuras y el boxscore, con
  * el mismo componente del detalle en vivo. Lo que la base no guarda
  * (errores, línea por entradas, relato) se dice, no se inventa. Si la caché
- * tiene el juego, la franja navy lleva al detalle completo en /live.
+ * tiene el juego, el pie de la tarjeta lleva al detalle completo en /live.
  */
 export default async function JuegoPage(props: Props) {
   const { gameId } = await props.params;

@@ -123,7 +123,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season?
   );
 
   if (loading) {
-    // Esqueleto con la forma de la página: la franja navy ya está donde va a
+    // Esqueleto con la forma de la página: la franja oscura ya está donde va a
     // estar, y el contenido no salta al llegar.
     return (
       <>
@@ -176,7 +176,7 @@ export default function GameDetail({ gamePk, season }: { gamePk: number; season?
 
   return (
     <>
-      {/* La cabecera: la franja navy de las fichas, sin el plano de color. Un
+      {/* La cabecera: la franja oscura de las fichas, sin el plano de color. Un
           juego es de dos clubes; cada uno se identifica con su teja. */}
       <Heroe>
         {volver}

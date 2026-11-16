@@ -33,7 +33,7 @@ interface Props {
  * ── Look "Pizarra": un cuadrado redondeado ────────────────────────────────
  * Las dos son la misma forma, con el radio a un cuarto del lado, igual que
  * frontend/components/TeamBadge.tsx. La esquina con más radio del look
- * anterior (sigue en `main`) se fue con él.
+ * anterior (25-sep) se fue con él.
  */
 export default function TeamBadge({ code, size = 32, variant = 'outline' }: Props) {
   // Respaldo para un código fuera del catálogo: gris de la paleta, nunca un

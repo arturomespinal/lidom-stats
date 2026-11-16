@@ -13,8 +13,8 @@ import { AtBat, LiveGameDetail, LiveSituation, PlayLine } from "@/lib/types";
  *
  * ── La jugada que se mueve ──────────────────────────────────────────────────
  * Cuando llega un sencillo, doble, triple, jonrón o ponche nuevo:
- *   - entra una franja navy con corte en diagonal (la firma del kit) con el
- *     nombre de la jugada en Bebas, el bateador, las carreras y el batazo,
+ *   - entra una franja oscura con corte en diagonal con el
+ *     nombre de la jugada en Barlow Condensed, el bateador, las carreras y el batazo,
  *     sobre los jardines del terreno, y sale sola a los ~3,6 s;
  *   - en los batazos, un corredor recorre el terreno desde el home hasta la
  *     base a la que llegó; en el jonrón da la vuelta completa. La franja

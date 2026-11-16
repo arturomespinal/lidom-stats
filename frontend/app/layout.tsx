@@ -11,8 +11,8 @@ import "./globals.css";
  *
  * Barlow Condensed lleva títulos, marcadores, códigos de equipo y estados. Es
  * la letra del look "Pizarra" (12-nov-2026): la de una pizarra de estadio,
- * con pesos de verdad —500, 600 y 700— y cifras tabulares. Reemplaza a Bebas
- * Neue, que sigue en `main`. Condensada, así que "ESTRELLAS ORIENTALES" cabe
+ * con pesos de verdad —500, 600 y 700— y cifras tabulares. Reemplazó a Bebas
+ * Neue (16-nov-2026). Condensada, así que "ESTRELLAS ORIENTALES" cabe
  * en 390 px y un código de tres letras en una teja de 32.
  *
  * Va siempre en mayúsculas (`.font-cond` en globals.css).

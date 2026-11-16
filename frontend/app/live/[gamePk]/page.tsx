@@ -20,7 +20,7 @@ export default async function GamePage(props: Props) {
 
   const season = searchParams.season;
 
-  // Sin <main> aquí: el detalle abre con la cabecera navy a sangre, como las
+  // Sin <main> aquí: el detalle abre con la cabecera oscura a sangre, como las
   // fichas, y arma su propia columna debajo.
   return (
     <>

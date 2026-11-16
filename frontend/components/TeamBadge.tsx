@@ -34,7 +34,7 @@ interface Props {
  *
  * ── Look "Pizarra": un cuadrado redondeado ────────────────────────────────
  * Las dos son la misma forma, con el radio a un cuarto del lado. La esquina
- * cortada del look anterior (sigue en `main`) se fue con él: en la pizarra
+ * cortada del look anterior (25-sep) se fue con él: en la pizarra
  * todo es ortogonal, y la teja se reconoce por el código en Barlow Condensed.
  */
 export default function TeamBadge({

@@ -47,8 +47,8 @@ const OPCIONES_PILA = {
 };
 
 /**
- * Las fichas abren con la cabecera navy (components/Heroe.tsx), así que la
- * barra de navegación se pinta del mismo navy y sin título: la flecha blanca
+ * Las fichas abren con la cabecera oscura (components/Heroe.tsx), así que la
+ * barra de navegación se pinta del mismo tono (COLORS.ink) y sin título: la flecha blanca
  * queda sobre la franja y el nombre grande de la ficha hace de título. El
  * `title` se sigue poniendo —lo usa el lector de pantalla—; solo no se dibuja.
  */
@@ -59,7 +59,7 @@ const OPCIONES_FICHA = {
 };
 
 /**
- * El detalle de juego también abre con la franja navy, pero conserva el
+ * El detalle de juego también abre con la franja oscura, pero conserva el
  * título ("AGU vs LIC") en blanco: el marcador se va al desplazar, y el
  * título es lo único que queda diciendo qué juego es.
  */

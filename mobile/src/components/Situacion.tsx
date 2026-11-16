@@ -15,7 +15,7 @@ import ZonaStrike from './ZonaStrike';
  *
  * ── La jugada que se mueve ──────────────────────────────────────────────────
  * Cuando la última jugada completa es sencillo, doble, triple, jonrón o
- * ponche, entra una franja navy con corte en diagonal con la jugada en Barlow Condensed,
+ * ponche, entra una franja oscura con corte en diagonal con la jugada en Barlow Condensed,
  * el bateador, las carreras y el batazo, y se va sola a los ~3,6 s. En los
  * batazos un corredor recorre el terreno hasta su base (el jonrón da la
  * vuelta) y la base se enciende cuando llega. La franja ocupa la mitad de
@@ -255,7 +255,7 @@ function Corredor({ bases, duracion, ancho }: { bases: number; duracion: number;
   );
 }
 
-/** La franja navy con la jugada. Entra, se queda y se va sola. */
+/** La franja con la jugada. Entra, se queda y se va sola. */
 function Franja({ jugada, titulo, reducir }: { jugada: PlayLine; titulo: string; reducir: boolean }) {
   const v = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -304,7 +304,7 @@ function Franja({ jugada, titulo, reducir }: { jugada: PlayLine; titulo: string;
         },
       ]}
     >
-      {/* El corte en diagonal: un plano navy inclinado. React Native no
+      {/* El corte en diagonal: un plano de la franja inclinado. React Native no
           tiene clip-path; lo que sobra a la derecha lo recorta la tarjeta. */}
       <View style={styles.franjaFondo} />
       <View style={styles.franjaTexto}>
@@ -335,7 +335,7 @@ function Franja({ jugada, titulo, reducir }: { jugada: PlayLine; titulo: string;
 const styles = StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
-    // La cabecera navy termina a ras: el aire lo pone la tarjeta.
+    // La cabecera oscura termina a ras: el aire lo pone la tarjeta.
     marginTop: 16,
     marginBottom: 16,
     backgroundColor: COLORS.bgCard,

@@ -12,7 +12,7 @@ interface Props {
 }
 
 /**
- * Cabecera de la ficha de un jugador: la franja navy con el plano del club y
+ * Cabecera de la ficha de un jugador: la franja oscura con el plano del club y
  * el monograma en el lugar de la foto. Misma cabecera que la del móvil.
  *
  * Las cuatro cifras son de su ÚLTIMA temporada, con los equipos sumados si lo

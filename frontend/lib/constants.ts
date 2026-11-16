@@ -27,7 +27,7 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * Sobre el navy oscuro de antes, El azul oficial de Licey (#003DA5) y el verde de
+ * Sobre el navy oscuro de septiembre, el azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
  * ── Tema claro (25-sep-2026) ──────────────────────────────────────────────
@@ -36,7 +36,7 @@ export interface TeamStyle {
  * el que más contraste dé. Gigantes pasó de #D6357F a #D2327C: visualmente
  * igual (ΔE < 1), pero con el primero el blanco encima daba 4.49:1.
  *
- * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
+ * ── Look "Pizarra" (12-nov-2026, en main desde el 16-nov) ───────────────
  * `primary` y `on` no cambian: la teja sólida es la misma. `text` es ahora la
  * tinta de cada club para fondo OSCURO, aclarada hasta pasar 4.5:1 sobre las
  * cinco superficies (la peor, la franja #232A33): AGU 7.1, TOR 4.8, EST 6.9,

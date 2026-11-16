@@ -16,7 +16,7 @@ const GRIS = "#9AA6B8";
  * nueva, en barras que suben o bajan desde el cero. Misma gráfica que la del
  * móvil.
  *
- * La dirección ya dice el signo; el tono lo refuerza (navy arriba, gris
+ * La dirección ya dice el signo; el tono lo refuerza (claro arriba, gris
  * abajo) sin cargar juicio de verde y rojo. Etiquetas solo donde importan: la
  * mejor, la peor y la temporada elegida, que va con la barra más ancha. Tocar
  * una barra abre esa temporada.

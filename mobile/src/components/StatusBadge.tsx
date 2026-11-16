@@ -52,7 +52,7 @@ function PulsingDot() {
  * cada una con su propio relleno — ahora es una.
  *
  * Look "Pizarra": una etiqueta de 6 pt de radio, sin borde, igual que en la
- * web. La esquina con más radio del look anterior sigue en `main`.
+ * web. La esquina con más radio del look anterior (25-sep) se fue.
  */
 export default function StatusBadge({ status, label }: Props) {
   // EN VIVO va SÓLIDO, con el texto grafito encima: 6.2:1. El blanco sobre

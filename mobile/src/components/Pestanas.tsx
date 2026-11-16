@@ -14,7 +14,7 @@ export interface Pestana<K extends string> {
  * web. Las usan el detalle de juego (GameTabs) y las dos fichas.
  *
  * Cada una mide 44 pt de alto: el área táctil que piden las reglas de diseño,
- * sin `hitSlop`. La activa se marca con la raya navy Y con el texto en tinta
+ * sin `hitSlop`. La activa se marca con la raya clara Y con el texto en claro
  * y más peso: la raya sola, de 2 pt, es poca señal para un ojo cansado.
  *
  * `llenar` reparte el ancho entre las pestañas en vez de alinearlas a la

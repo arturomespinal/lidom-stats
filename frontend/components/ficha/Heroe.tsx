@@ -1,14 +1,14 @@
 import type { ReactNode } from "react";
-import { anchoBebas } from "@/lib/bebas";
+import { anchoTitulo } from "@/lib/anchoTitulo";
 
 /**
- * La cabecera de las fichas: franja navy a sangre con un plano del color del
+ * La cabecera de las fichas: la franja (--ink) a sangre con un plano del color del
  * club en diagonal. Ocupa el lugar de la foto que no podemos usar (guía legal:
  * ni escudos ni fotos de la MLB). Misma pieza que `mobile/src/components/Heroe.tsx`.
  *
- * ── Toda letra va sobre el navy, nunca sobre el plano ──────────────────────
+ * ── Toda letra va sobre la franja, nunca sobre el plano ────────────────────
  * Blanco sobre el rojo de Escogido da 3.6:1 y sobre el amarillo de Águilas
- * 2:1; sobre el navy, 16.9:1 para los seis. El plano es solo forma, y quien
+ * 2:1; sobre la franja, 13.2:1 para los seis. El plano es solo forma, y quien
  * use la cabecera mete su texto en `<ColumnaHeroe>`, que no pasa de lo que el
  * plano deja libre:
  *
@@ -52,10 +52,10 @@ export default function Heroe({
           }}
         >
           {marca && (
-            // Tono sobre tono: el navy al 16%. Textura, no texto; por eso
+            // Tono sobre tono: la franja al 16%. Textura, no texto; por eso
             // aria-hidden en el contenedor.
             //
-            // El tamaño sale del ancho real del código en Bebas contra lo que
+            // El tamaño sale del ancho real del código en la letra de títulos contra lo que
             // deja ver el plano: a 150 px fijos "TOR" medía 175 y el plano de
             // un teléfono deja ~110, así que la R quedaba cortada (30-sep). En
             // el teléfono el plano mide el 42 % del ancho y por la diagonal
@@ -63,7 +63,7 @@ export default function Heroe({
             // 40 % y ~85 % a media altura. Mismo cálculo que el móvil.
             <span
               className="absolute bottom-3 right-3 font-cond leading-none text-[rgb(9_28_58/0.16)] text-[length:min(150px,calc((32.76vw_-_16px)/var(--em)))] sm:bottom-auto sm:right-6 sm:top-1/2 sm:-translate-y-1/2 sm:text-[length:min(240px,calc((34vw_-_32px)/var(--em)))]"
-              style={{ ["--em" as string]: anchoBebas(marca).toFixed(3) }}
+              style={{ ["--em" as string]: anchoTitulo(marca).toFixed(3) }}
             >
               {marca}
             </span>
@@ -88,7 +88,7 @@ export function ColumnaHeroe({ children }: { children: ReactNode }) {
   return <div className="w-[52%] space-y-2 sm:w-[58%]">{children}</div>;
 }
 
-/** Una cifra grande de la cabecera: valor en Bebas, etiqueta chica debajo. */
+/** Una cifra grande de la cabecera: valor en la letra de títulos, etiqueta chica debajo. */
 export function CifraHeroe({
   valor,
   etiqueta,
@@ -110,7 +110,7 @@ export function CifraHeroe({
             ? "text-[length:min(84px,calc(98cqw/var(--em)))] sm:text-[length:min(104px,calc(98cqw/var(--em)))]"
             : "text-[length:min(40px,calc(98cqw/var(--em)))] sm:text-[length:min(48px,calc(98cqw/var(--em)))]"
         }`}
-        style={{ ["--em" as string]: anchoBebas(valor).toFixed(3) }}
+        style={{ ["--em" as string]: anchoTitulo(valor).toFixed(3) }}
       >
         {valor}
       </div>

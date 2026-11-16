@@ -27,7 +27,7 @@ export interface TeamStyle {
  * siendo rojos, que es su identidad, pero se separan.
  *
  * ── Todos tienen piso de luminosidad ──────────────────────────────────────
- * Sobre el navy oscuro de antes, El azul oficial de Licey (#003DA5) y el verde de
+ * Sobre el navy oscuro de septiembre, el azul oficial de Licey (#003DA5) y el verde de
  * Estrellas (#00713B) sobre eso se leen como negro: hay que subirlos o la
  * franja de 3 px desaparece.
  *
@@ -40,7 +40,7 @@ export interface TeamStyle {
  * el que más contraste dé. Gigantes pasó de #D6357F a #D2327C: visualmente
  * igual (ΔE < 1), pero con el primero el blanco encima daba 4.49:1.
  *
- * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
+ * ── Look "Pizarra" (12-nov-2026, en main desde el 16-nov) ───────────────
  * `primary` y `on` no cambian: la teja sólida es la misma. `text` es ahora la
  * tinta de cada club para fondo OSCURO, aclarada hasta pasar 4.5:1 sobre las
  * cinco superficies (la peor, la franja #232A33): AGU 7.1, TOR 4.8, EST 6.9,
@@ -75,11 +75,11 @@ export const TEAM_SHORT_NAMES: Record<string, string> = {
  * Paleta de Deportiv — fuente única para el móvil. Los MISMOS valores que
  * frontend/app/globals.css; la tabla de contraste completa vive allá.
  *
- * ── Look "Pizarra" (rama nuevo-look, 12-nov-2026) ─────────────────────────
+ * ── Look "Pizarra" (12-nov-2026, en main desde el 16-nov) ───────────────
  * Una pizarra de estadio: fondo grafito, tarjetas un paso más claras con
  * borde fino, cifras grandes en Barlow Condensed y lo seleccionado RELLENO DE
- * CLARO con texto grafito. El look anterior (tema claro, tinta navy, Bebas
- * Neue) sigue intacto en `main`.
+ * CLARO con texto grafito. Reemplazó al tema claro con tinta navy y Bebas
+ * Neue (25-sep-2026).
  *
  * El grafito es neutro a propósito: el navy oscuro que se rechazó el 25-sep
  * teñía la interfaz de azul.
@@ -142,7 +142,7 @@ export const COLORS = {
  * Familias tipográficas.
  *
  * La letra de títulos, marcadores, códigos de equipo y estados es Barlow
- * Condensed (look "Pizarra"; reemplaza a Bebas Neue, que sigue en `main`).
+ * Condensed (look "Pizarra"; reemplazó a Bebas Neue el 16-nov-2026).
  * Se cargan dos pesos, y cada uno es una FAMILIA aparte:
  *
  * - `display` (700): marcadores, cifras, códigos de equipo, nombres grandes.
@@ -153,7 +153,7 @@ export const COLORS = {
  * - **Nunca con `fontWeight`.** El peso lo elige la familia. En Android,
  *   pedir '700' a una fuente propia hace que el sistema la sustituya por la
  *   suya, sin error y sin aviso: el texto sale en Roboto negrita.
- * - **Siempre con `textTransform: 'uppercase'`.** Bebas no tenía minúsculas y
+ * - **Siempre con `textTransform: 'uppercase'`.** Bebas Neue, la letra anterior, no tenía minúsculas y
  *   el texto de los componentes sigue escrito normal; Barlow sí las tiene, y
  *   sin la transformación "Estrellas" saldría en minúsculas.
  *

@@ -22,7 +22,7 @@ type Props = NativeStackScreenProps<FichasParamList & Partial<LiveStackParamList
  * siguió. Trae lo que la base tiene —marcador, decisiones, titular, figuras y
  * el boxscore completo— y dice lo que no tiene: sin línea por entradas ni
  * relato, que solo existen para los juegos seguidos en vivo. Si la caché sí
- * lo tiene, la franja navy lleva al detalle completo.
+ * lo tiene, el pie de la tarjeta lleva al detalle completo.
  *
  * El boxscore es el mismo componente del detalle en vivo: la API lo manda
  * con la misma forma, y cada fila abre la ficha del jugador.

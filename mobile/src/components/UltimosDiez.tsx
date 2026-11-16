@@ -6,7 +6,7 @@ import type { LastGame } from '../types';
 
 /**
  * Los últimos diez, del más viejo al más nuevo: se leen de izquierda a
- * derecha como una racha. Ganado relleno de navy, perdido en blanco con
+ * derecha como una racha. Ganado relleno de claro, perdido en el fondo con
  * borde — y la letra escrita en los dos, porque el relleno solo sería color.
  * Cada celda abre su juego.
  */

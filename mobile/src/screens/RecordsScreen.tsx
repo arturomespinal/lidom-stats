@@ -33,7 +33,7 @@ type Fila = { tipo: 'carrera'; l: LiderHistorico } | { tipo: 'temporada'; t: Tem
  * 2012-13 y la MLB API desde entonces, sumados por jugador (src/historia.py).
  *
  * Arriba, Bateo | Pitcheo (dos opciones: pestañas) y la categoría (trece:
- * botón + hoja inferior, regla 7). El primero va en una tarjeta navy con la
+ * botón + hoja inferior, regla 7). El primero va en una tarjeta destacada con la
  * cifra en Barlow Condensed; el resto, en filas de 56 pt que abren la ficha: la de la
  * MLB API si el jugador está enlazado, la histórica si no.
  *
@@ -214,7 +214,7 @@ function linea(f: Fila): string {
  * Carrera | Una temporada. Dos opciones que cambian la misma lista: un
  * control segmentado, no otra fila de pestañas (las de Bateo | Pitcheo ya
  * están arriba y dos barras subrayadas se confunden). 44 pt de alto; la
- * elegida, rellena de navy como los chips de orden.
+ * elegida, rellena de claro como los chips de orden.
  */
 function SelectorVista({ vista, onChange }: { vista: Vista; onChange: (v: Vista) => void }) {
   return (
@@ -239,7 +239,7 @@ function SelectorVista({ vista, onChange }: { vista: Vista; onChange: (v: Vista)
   );
 }
 
-/** La tarjeta navy del primero: el récord de carrera o la mejor temporada. */
+/** La tarjeta destacada del primero: el récord de carrera o la mejor temporada. */
 function Tarjeta({
   fila,
   stat,
@@ -304,7 +304,7 @@ function Esqueleto() {
 const styles = StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   atenuada: { opacity: 0.5 },
-  // La tarjeta del récord: navy, sin color de club (el récord es de la
+  // La tarjeta del récord: la franja, sin color de club (el récord es de la
   // liga). Esquinas parejas: la cortada es de tejas y estados.
   record: { backgroundColor: COLORS.ink, borderRadius: 12, padding: 16 },
   recordTitulo: { fontSize: 11, letterSpacing: 0.8, textTransform: 'uppercase', color: COLORS.inkDim },

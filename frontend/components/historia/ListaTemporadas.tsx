@@ -9,7 +9,7 @@ import { rutaJugador } from "./rutas";
  * Las mejores temporadas de la historia en una categoría: lo que un jugador
  * hizo en UNA campaña, no en la carrera.
  *
- * Mismas filas que ListaLideres, sin la tarjeta navy: esa ya está arriba, con
+ * Mismas filas que ListaLideres, sin la tarjeta destacada: esa ya está arriba, con
  * el récord de carrera, y dos en la misma página se disputan el ojo.
  *
  * La temporada va escrita bajo el nombre. Los equipos, en sus tejas desde sm;

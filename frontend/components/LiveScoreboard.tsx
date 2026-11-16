@@ -262,7 +262,7 @@ export default function LiveScoreboard({ state, stale, href }: Props) {
         </div>
       )}
 
-      {/* La franja navy de contexto, el pie de tarjeta del kit de referencia:
+      {/* El pie de tarjeta:
           dónde se juega y, si hay detalle, la puerta a él. Mide 44 px para que
           el pulgar la acierte. */}
       <footer className="flex min-h-[44px] items-center gap-3 bg-ink px-4 text-[11px]">

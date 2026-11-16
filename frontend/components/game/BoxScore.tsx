@@ -10,6 +10,14 @@ import { BatterLine, PitcherLine, TeamBox } from "@/lib/types";
  * cada sustituto justo debajo del titular al que relevó (100, 101, 200, …).
  * La sangría solo hace visible un orden que el dato ya trae.
  *
+ * Las cifras van en columnas de ancho fijo (`table-fixed` y `<colgroup>`;
+ * más angostas en el teléfono, para que el nombre no se corte):
+ * así caen igual en los dos equipos, lado a lado. Los lanzadores tienen una
+ * columna menos y se alinean por la derecha: K bajo K, BB bajo BB, CL bajo
+ * CI, H bajo H e IP bajo C; el nombre ocupa también la de VB. Antes los
+ * cinco números de los lanzadores arrancaban en la columna de VB y quedaba
+ * la de K vacía: nada caía bajo nada.
+ *
  * En pantalla ancha los dos equipos van lado a lado; en angosta, apilados.
  */
 
@@ -20,7 +28,7 @@ function BatterRow({ b }: { b: BatterLine }) {
   return (
     <tr className="border-t border-line">
       <td className="py-1.5 pr-2">
-        <span className={`flex items-center gap-2 ${b.is_starter ? "" : "pl-3"}`}>
+        <span className={`flex min-w-0 items-center gap-2 ${b.is_starter ? "" : "pl-3"}`}>
           <span className="w-7 shrink-0 text-[10px] font-bold text-dim">
             {b.position ?? ""}
           </span>
@@ -29,14 +37,14 @@ function BatterRow({ b }: { b: BatterLine }) {
           </span>
         </span>
       </td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{b.at_bats}</td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{b.runs}</td>
-      <td className="px-1.5 py-1.5 text-right font-bold tabular-nums text-fg">
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{b.at_bats}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{b.runs}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right font-bold tabular-nums text-fg">
         {b.hits}
       </td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{b.rbi}</td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{b.walks}</td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{b.rbi}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{b.walks}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">
         {b.strikeouts}
       </td>
     </tr>
@@ -46,8 +54,8 @@ function BatterRow({ b }: { b: BatterLine }) {
 function PitcherRow({ p }: { p: PitcherLine }) {
   return (
     <tr className="border-t border-line">
-      <td className="py-1.5 pr-2">
-        <span className="flex items-center gap-2">
+      <td colSpan={2} className="py-1.5 pr-2">
+        <span className="flex min-w-0 items-center gap-2">
           <span className="w-7 shrink-0 text-[10px] font-bold text-dim">
             {p.is_starter ? "AB" : "RL"}
           </span>
@@ -58,15 +66,15 @@ function PitcherRow({ p }: { p: PitcherLine }) {
         </span>
       </td>
       {/* Texto y no número: "0.2" son dos outs, no dos décimas. */}
-      <td className="px-1.5 py-1.5 text-right font-bold tabular-nums text-fg">
+      <td className="px-1 sm:px-1.5 py-1.5 text-right font-bold tabular-nums text-fg">
         {p.innings_pitched ?? "—"}
       </td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{p.hits}</td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{p.hits}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">
         {p.earned_runs}
       </td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">{p.walks}</td>
-      <td className="px-1.5 py-1.5 text-right tabular-nums text-dim">
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">{p.walks}</td>
+      <td className="px-1 sm:px-1.5 py-1.5 text-right tabular-nums text-dim">
         {p.strikeouts}
       </td>
     </tr>
@@ -99,12 +107,18 @@ function TeamBlock({ team, temporada }: { team: TeamBox; temporada?: string | nu
       </header>
 
       <div className="overflow-x-auto table-scroll px-4 pb-4">
-        <table className="w-full text-[13px]">
+        <table className="w-full table-fixed text-[13px]">
+          <colgroup>
+            <col />
+            {BAT_COLS.map((c) => (
+              <col key={c} className="w-7 sm:w-9" />
+            ))}
+          </colgroup>
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-dim">
               <th className="pb-1 text-left font-bold">Bateadores</th>
               {BAT_COLS.map((c) => (
-                <th key={c} className="px-1.5 pb-1 text-right font-bold">
+                <th key={c} className="px-1 sm:px-1.5 pb-1 text-right font-bold">
                   {c}
                 </th>
               ))}
@@ -118,10 +132,10 @@ function TeamBlock({ team, temporada }: { team: TeamBox; temporada?: string | nu
 
           <thead>
             <tr className="text-[10px] uppercase tracking-wide text-dim">
-              <th className="pb-1 pt-4 text-left font-bold">Lanzadores</th>
-              <th className="px-1.5 pb-1 pt-4 text-right font-bold">IP</th>
+              <th colSpan={2} className="pb-1 pt-4 text-left font-bold">Lanzadores</th>
+              <th className="px-1 sm:px-1.5 pb-1 pt-4 text-right font-bold">IP</th>
               {PIT_COLS.map((c) => (
-                <th key={c} className="px-1.5 pb-1 pt-4 text-right font-bold">
+                <th key={c} className="px-1 sm:px-1.5 pb-1 pt-4 text-right font-bold">
                   {c}
                 </th>
               ))}

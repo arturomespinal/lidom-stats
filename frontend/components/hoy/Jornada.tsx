@@ -43,8 +43,8 @@ export function enlaceJuego(j: JuegoJornada): string | null {
 /**
  * Siete días con la jornada en el centro, como enlaces: la fecha vive en la
  * URL (`?fecha=`), así se puede compartir una jornada y el botón de atrás
- * funciona. Un día sin juegos no es enlace: el servidor lo resolvería a otra
- * fecha y el clic parecería no hacer caso.
+ * funciona. Un día sin juegos también se abre (va atenuado): el servidor lo
+ * devuelve vacío y la portada dice que no hubo juegos.
  */
 export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: string }) {
   return (
@@ -66,9 +66,9 @@ export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: stri
           // El día elegido es la pastilla CLARA del look Pizarra: lo
           // seleccionado se rellena de claro, con el texto grafito encima.
           const clase = `flex min-h-[60px] flex-col items-center justify-center gap-0.5 rounded-lg ${
-            es ? "bg-accent" : vacio ? "opacity-45" : "hover:bg-raised"
+            es ? "bg-accent" : vacio ? "opacity-45 hover:bg-raised hover:opacity-100" : "hover:bg-raised"
           }`;
-          if (vacio || es) {
+          if (es) {
             return (
               <div key={d.date} className={clase} aria-current={es ? "date" : undefined}>
                 {cuerpo}
@@ -76,7 +76,7 @@ export function FranjaFechas({ dias, activa }: { dias: DiaFranja[]; activa: stri
             );
           }
           return (
-            <Link key={d.date} href={`/?fecha=${d.date}`} className={`tocable ${clase}`} aria-label={`${d.label}, ${d.games} juegos`}>
+            <Link key={d.date} href={`/?fecha=${d.date}`} className={`tocable ${clase}`} aria-label={`${d.label}, ${vacio ? "sin juegos" : `${d.games} ${d.games === 1 ? "juego" : "juegos"}`}`}>
               {cuerpo}
             </Link>
           );

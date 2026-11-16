@@ -199,7 +199,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 304 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 333 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -1629,10 +1629,21 @@ de probabilidad; las figuras y la próxima fecha con juegos.
 
 Reglas que no conviene deshacer:
 
-- **Fuera de temporada se sirve la última jornada**, con `is_requested:
-  false`. Los clientes lo dicen ("No hay juegos hoy. Esta fue la última
-  jornada…") en vez de llamarla "Hoy". Una portada vacía nueve meses al año
-  no sirve; una que miente, menos.
+- **Un día sin juegos se muestra vacío** (16-nov-2026, pedido de Arturo):
+  la fecha elegida siempre (la franja, el calendario, `?fecha=`), y hoy si
+  cae dentro de una temporada (entre su primer y su último juego). Llega con
+  `games: []`, `season_id` de la temporada que lo contiene y `next`; los
+  clientes ponen "Sin juegos · temporada 2026-27" y una tarjeta "Hoy no hay
+  juegos. La próxima jornada es el mar 17 nov." Antes el servidor cambiaba
+  el día por la jornada anterior y el toque parecía no hacer caso.
+  `resolver_fecha(…, explicita=, temporadas=)` en `src/jornada.py`.
+- **Solo hoy fuera de temporada se sirve la última jornada**, con
+  `is_requested: false`. Los clientes lo dicen ("No hay juegos hoy. Esta fue
+  la última jornada…") en vez de llamarla "Hoy". Una portada vacía nueve
+  meses al año no sirve; una que miente, menos.
+- **La franja y el calendario cuentan los suspendidos** (`_ESTADOS_CON_JUEGO`):
+  se jugó una parte y la jornada los lista. Sin ellos, el 15-nov-2026 la
+  franja decía "2 juegos" y la cabecera "3 juegos".
 - **El destacado lo elige el marcador, no los datos que tengamos.** En vivo, el
   más apretado. Terminados: entradas extra, después menor diferencia, después
   más carreras. Elegir "el que tiene franja" destacaría siempre el mismo tipo
@@ -1668,8 +1679,8 @@ Reglas que no conviene deshacer:
 - **Con juegos en curso llega `poll_seconds` (15)** y los clientes vuelven a
   pedir la jornada: el móvil con `setTimeout` mientras tiene el foco, la web
   con `router.refresh()` mientras la pestaña se ve (`components/hoy/Refresco.tsx`).
-- La fecha vive en la URL de la web (`/?fecha=`). Un día sin juegos en la
-  franja no es enlace: el servidor lo resolvería a otra fecha.
+- La fecha vive en la URL de la web (`/?fecha=`). Todos los días de la
+  franja se abren; uno sin juegos va atenuado.
 - **Para saltar lejos está el calendario** (`GET /calendar`; web
   `/calendario?temporada=&activa=`, móvil `screens/CalendarioScreen.tsx`,
   ruta `Calendario` de la pila de Hoy). La franja camina de siete en siete, y
@@ -1725,6 +1736,13 @@ el orden en que se jugó.
   juego.
 - La decisión va como nota junto al lanzador — (G), (P), (SV) — igual que en
   el detalle en vivo.
+- **Las columnas del boxscore de la web son fijas** (`table-fixed` y
+  `<colgroup>`, `components/game/BoxScore.tsx`), y las de los lanzadores van
+  alineadas por la derecha bajo las de los bateadores: K bajo K, IP bajo C,
+  y el nombre ocupa también la de VB. Antes los lanzadores arrancaban en la
+  columna de VB y nada caía bajo nada (captura de Arturo, 16-nov-2026). En
+  el teléfono las columnas son más angostas para que quepa el nombre. El
+  móvil ya alineaba por la derecha con anchos fijos.
 
 ### Sin conexión no es lo mismo que sin datos (móvil)
 

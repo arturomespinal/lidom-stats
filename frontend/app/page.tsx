@@ -20,8 +20,9 @@ interface Props {
  * primera pestaña del móvil (mobile/src/screens/HoyScreen.tsx).
  *
  * La fecha vive en la URL (`?fecha=YYYY-MM-DD`); sin ella, hoy en República
- * Dominicana. Fuera de temporada el servidor devuelve la última jornada y
- * `is_requested: false`, y la página lo dice en vez de llamarla "hoy".
+ * Dominicana. Un día sin juegos llega vacío y la página lo dice, con lo que
+ * viene. Solo hoy fuera de temporada el servidor devuelve la última jornada
+ * y `is_requested: false`, y la página lo dice en vez de llamarla "hoy".
  *
  * La tabla de posiciones, que era la portada, vive en /posiciones.
  */
@@ -47,10 +48,11 @@ export default async function HoyPage(props: Props) {
     : undefined;
   const resto = jornada.games.filter((g) => g !== destacado);
   const temporada = jornada.season_id ? ` de la temporada ${jornada.season_id}` : "";
+  const sinJuegos = jornada.is_requested && jornada.games.length === 0;
   const nota = !jornada.is_requested
-    ? `${fecha ? "No hubo juegos ese día." : "No hay juegos hoy."} ` +
+    ? "No hay juegos hoy. " +
       (jornada.next ? "Esta es la jornada anterior." : `Esta fue la última jornada${temporada}.`)
-    : `${jornada.games.length} ${jornada.games.length === 1 ? "juego" : "juegos"}${
+    : `${sinJuegos ? "Sin juegos" : `${jornada.games.length} ${jornada.games.length === 1 ? "juego" : "juegos"}`}${
         jornada.season_id ? ` · temporada ${jornada.season_id}` : ""
       }`;
   const prox = jornada.next;
@@ -90,6 +92,13 @@ export default async function HoyPage(props: Props) {
             </Link>
           )}
         </header>
+
+        {sinJuegos && (
+          <p className="rounded-2xl border border-line bg-card px-4 py-8 text-center text-sm text-dim">
+            {jornada.is_today ? "Hoy no hay juegos." : "No hay juegos este día."}
+            {jornada.next && ` La próxima jornada es el ${jornada.next.label.toLowerCase()}.`}
+          </p>
+        )}
 
         {/* El destacado y el resto, lado a lado en pantalla ancha. Cada
             columna con su alto (`items-start`): estirado hasta el alto de la

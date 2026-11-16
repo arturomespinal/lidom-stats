@@ -33,10 +33,10 @@ function estadoBadge(st: EstadoJornada): LiveStatus {
 // ── La franja de fechas ─────────────────────────────────────────────────────
 
 /**
- * Siete días con la jornada en el centro. Un día sin juegos va atenuado y no
- * se puede tocar: el servidor lo resolvería a otra fecha y el toque parecería
- * no hacer caso. Tocar un extremo recentra la franja, así que se puede
- * caminar la temporada día a día.
+ * Siete días con la jornada en el centro. Un día sin juegos va atenuado pero
+ * se puede tocar: el servidor lo devuelve vacío y la portada dice que no hubo
+ * juegos. Tocar un extremo recentra la franja, así que se puede caminar la
+ * temporada día a día.
  */
 export function FranjaFechas({
   dias,
@@ -57,11 +57,11 @@ export function FranjaFechas({
           <Tocable
             key={d.date}
             contenedor={styles.diaCaja}
-            disabled={vacio || es}
+            disabled={es}
             onPress={() => onDia(d.date)}
             style={({ pressed }) => [styles.dia, es && styles.diaActivo, pressed && styles.presionado]}
             accessibilityRole="button"
-            accessibilityState={{ selected: es, disabled: vacio }}
+            accessibilityState={{ selected: es }}
             accessibilityLabel={`${d.label}, ${vacio ? 'sin juegos' : `${d.games} ${d.games === 1 ? 'juego' : 'juegos'}`}`}
           >
             <Text style={[styles.diaNombre, es && styles.diaTextoActivo, vacio && styles.diaVacio]}>{dia}</Text>

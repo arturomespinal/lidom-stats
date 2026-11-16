@@ -76,20 +76,37 @@ def game_pk_de(source_url: Optional[str]) -> Optional[int]:
 # ── Qué fecha se muestra ─────────────────────────────────────────────────────
 
 
-def resolver_fecha(pedida: date, fechas_con_juegos: Iterable[date]) -> Optional[date]:
+def resolver_fecha(
+    pedida: date,
+    fechas_con_juegos: Iterable[date],
+    *,
+    explicita: bool = False,
+    temporadas: Iterable[tuple[date, date]] = (),
+) -> Optional[date]:
     """
-    La fecha pedida si tuvo juegos; si no, la última jornada anterior; si no
-    hay ninguna anterior, la primera posterior.
+    Qué día se muestra. La fecha pedida, salvo un caso.
 
-    Fuera de temporada "hoy" no tiene juegos, y una portada vacía durante
-    nueve meses no le sirve a nadie: se muestra la última jornada, y la
-    respuesta lo dice (`is_requested: false`) para que el cliente no la llame
-    "Hoy".
+    - Con juegos: esa.
+    - **Elegida** (la franja, el calendario, `?fecha=`): esa, aunque no tenga
+      juegos. Quien toca el lunes quiere ver el lunes y que le digan que no
+      hubo juegos; antes el servidor lo mandaba a otra fecha y el toque
+      parecía no hacer caso (pedido de Arturo, 16-nov-2026).
+    - **Hoy** sin juegos, dentro de una temporada (`temporadas`: el primer y
+      el último día de cada una): hoy, vacío. Un día libre es parte de la
+      temporada y la portada lo dice.
+    - **Hoy fuera de temporada**: la última jornada anterior (o la primera,
+      si no hay anterior). Una portada vacía nueve meses no le sirve a nadie;
+      la respuesta lo dice (`is_requested: false`) para que el cliente no la
+      llame "Hoy".
+
+    Sin ningún juego en la base, `None`.
     """
     fechas = sorted(set(fechas_con_juegos))
     if not fechas:
         return None
-    if pedida in fechas:
+    if pedida in fechas or explicita:
+        return pedida
+    if any(ini <= pedida <= fin for ini, fin in temporadas):
         return pedida
     anteriores = [f for f in fechas if f < pedida]
     return anteriores[-1] if anteriores else fechas[0]

@@ -1054,8 +1054,10 @@ __all__ = ["router"]
 # ─────────────────────────────────────────────────────────────────────────────
 
 # Estados de `games` que cuentan como "hubo (o habrá) juego ese día". Un día
-# con todo pospuesto no es una jornada que mostrar.
-_ESTADOS_CON_JUEGO = ("final", "scheduled", "live")
+# con todo pospuesto no es una jornada que mostrar. El suspendido sí cuenta:
+# se jugó una parte y la jornada lo lista (sin él, el 15-nov-2026 la franja
+# decía "2 juegos" y la cabecera "3 juegos").
+_ESTADOS_CON_JUEGO = ("final", "scheduled", "live", "suspended")
 
 _SQL_BATEO_DIA = """
     SELECT b.*, p.full_name, p.mlb_id, g.game_id,
@@ -1253,9 +1255,10 @@ def get_day(
     La jornada de una fecha: los juegos, el destacado con su titular, las
     figuras y lo que viene. Es la portada "Hoy" de la web y del móvil.
 
-    Si la fecha pedida no tuvo juegos —fuera de temporada, un día libre— se
-    sirve la última jornada anterior, y `is_requested` viene en `false` para
-    que el cliente no la presente como "hoy".
+    Un día sin juegos se sirve vacío (`games: []`) con lo que viene: la fecha
+    elegida siempre, y hoy si cae dentro de una temporada. Solo hoy fuera de
+    temporada se sirve la última jornada, con `is_requested: false` para que
+    el cliente no la presente como "hoy". Ver `resolver_fecha`.
     """
     hoy = hoy_rd()
     if date_:
@@ -1279,7 +1282,15 @@ def get_day(
         if st.game_date:
             d = date.fromisoformat(st.game_date[:10])
             conteo.setdefault(d, 0)
-    dia = resolver_fecha(pedida, conteo)
+    # El primer y el último día de cada temporada: un día libre entre los dos
+    # se muestra vacío; fuera de ellos, "hoy" cae a la última jornada.
+    rangos = {
+        f["season_id"]: (date.fromisoformat(str(f["ini"])[:10]), date.fromisoformat(str(f["fin"])[:10]))
+        for f in query_db(
+            "SELECT season_id, MIN(game_date) AS ini, MAX(game_date) AS fin FROM games GROUP BY season_id"
+        )
+    }
+    dia = resolver_fecha(pedida, conteo, explicita=bool(date_), temporadas=rangos.values())
     if dia is None:
         raise HTTPException(404, "No hay juegos en la base")
 
@@ -1332,7 +1343,10 @@ def get_day(
         "label": etiqueta_fecha(dia),
         "is_requested": dia == pedida,
         "is_today": dia == hoy,
-        "season_id": juegos[0]["season_id"] if juegos else None,
+        # Un día libre también es de su temporada (el calendario abre en ella).
+        "season_id": juegos[0]["season_id"] if juegos else next(
+            (s for s, (ini, fin) in rangos.items() if ini <= dia <= fin), None
+        ),
         "strip": franja_de_fechas(dia, conteo),
         "games": juegos,
         "featured": featured,

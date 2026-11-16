@@ -700,16 +700,40 @@ check("un bullpen de principio a fin: nadie llega a 3 entradas, ninguna figura d
 check("sin extras, el titular es la figura del juego", d2["featured"]["headline"],
       "Jonrón y 4 impulsadas de Aderlin Rodríguez.")
 
+# Un día elegido sin juegos se muestra vacío, con lo que viene (16-nov-2026:
+# antes el servidor lo cambiaba por otra fecha y el toque parecía no hacer caso).
 fuera = call("/day?date=2026-09-29")
 # Con la 2026-27 cargada, "lo que viene" ya existe: su primera jornada.
-check("fuera de temporada: la última jornada, marcada como no pedida",
-      (fuera["date"], fuera["is_requested"], fuera["next"] and fuera["next"]["date"]),
-      ("2025-12-23", False, PROXIMA_TRAS_2025_26))
+check("un día elegido fuera de temporada: ese día, vacío, con lo que viene",
+      (fuera["date"], fuera["is_requested"], fuera["games"], fuera["next"] and fuera["next"]["date"]),
+      ("2026-09-29", True, [], PROXIMA_TRAS_2025_26))
+check("  sin destacado ni figuras, y sin temporada", (fuera["featured"], fuera["figures"], fuera["season_id"]),
+      (None, [], None))
+libre = call("/day?date=2025-10-21")
+check("un día libre dentro de la temporada: ese día, vacío y de su temporada",
+      (libre["date"], libre["is_requested"], len(libre["games"]), libre["season_id"]),
+      ("2025-10-21", True, 0, "2025-26"))
+check("  la franja lo marca sin juegos y lo que viene es la jornada siguiente",
+      ([x["games"] for x in libre["strip"] if x["date"] == "2025-10-21"],
+       libre["next"] is not None and libre["next"]["date"] > "2025-10-21"), ([0], True))
 antes = call("/day?date=2012-01-01")
-check("antes de la primera jornada: la primera", (antes["date"], antes["is_requested"]), ("2012-10-14", False))
+check("antes de la primera jornada: ese día, con la primera como lo que viene",
+      (antes["date"], antes["is_requested"], antes["next"]["date"]), ("2012-01-01", True, "2012-10-14"))
 call("/day?date=15-10-2025", expect=400)
 
 check("resolver_fecha sin juegos → None", resolver_fecha(_date(2025, 1, 1), []), None)
+_fechas = [_date(2025, 10, 15), _date(2025, 10, 20), _date(2025, 12, 23)]
+_temps = [(_date(2025, 10, 15), _date(2025, 12, 23))]
+check("resolver_fecha: hoy en un día libre de la temporada → hoy, vacío",
+      resolver_fecha(_date(2025, 10, 21), _fechas, temporadas=_temps), _date(2025, 10, 21))
+check("resolver_fecha: hoy fuera de temporada → la última jornada",
+      resolver_fecha(_date(2026, 3, 1), _fechas, temporadas=_temps), _date(2025, 12, 23))
+check("resolver_fecha: un día elegido fuera de temporada → ese día",
+      resolver_fecha(_date(2026, 3, 1), _fechas, explicita=True, temporadas=_temps), _date(2026, 3, 1))
+_d15 = call("/day?date=2026-11-15")
+if any(g["status"] == "suspended" for g in _d15["games"]):  # solo con la 2026-27 cargada
+    check("la franja cuenta el juego suspendido, como la jornada",
+          [x["games"] for x in _d15["strip"] if x["date"] == "2026-11-15"], [len(_d15["games"])])
 from src.jornada import etiqueta_estado  # noqa: E402
 # Un suspendido no va a empezar a su hora: se reanuda otro día. Antes caía a
 # la hora y el EST-AGU del 21-oct-2026 salía "7:15 p. m." días después.

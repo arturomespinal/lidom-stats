@@ -125,13 +125,15 @@ export default function HoyScreen({ navigation, route }: Props) {
     : undefined;
   const resto = jornada.games.filter(g => g !== destacado);
   const titulo = jornada.is_today ? 'Hoy' : jornada.label;
-  // Sin fecha elegida se pidió "hoy". Si no hubo juegos, el servidor mandó la
-  // jornada anterior más cercana; sin jornada siguiente, fue la última.
+  // Un día sin juegos llega vacío y se dice. Solo "hoy" fuera de temporada
+  // llega cambiado por la jornada anterior más cercana (`is_requested` en
+  // false); sin jornada siguiente, fue la última.
   const temporada = jornada.season_id ? ` de la temporada ${jornada.season_id}` : '';
+  const sinJuegos = jornada.is_requested && jornada.games.length === 0;
   const nota = !jornada.is_requested
-    ? `${fecha === undefined ? 'No hay juegos hoy.' : 'No hubo juegos ese día.'} ` +
+    ? 'No hay juegos hoy. ' +
       (jornada.next ? 'Esta es la jornada anterior.' : `Esta fue la última jornada${temporada}.`)
-    : `${jornada.games.length} ${jornada.games.length === 1 ? 'juego' : 'juegos'}${jornada.season_id ? ` · temporada ${jornada.season_id}` : ''}`;
+    : `${sinJuegos ? 'Sin juegos' : `${jornada.games.length} ${jornada.games.length === 1 ? 'juego' : 'juegos'}`}${jornada.season_id ? ` · temporada ${jornada.season_id}` : ''}`;
   const prox = jornada.next;
   const tituloProx = prox && prox.days_ahead === 1 && jornada.is_today ? 'Mañana' : prox?.label;
   const recargando = estado === 'cargando';
@@ -181,6 +183,15 @@ export default function HoyScreen({ navigation, route }: Props) {
             <Text style={styles.enVivoTexto}>Marcadores en vivo</Text>
             <Text style={styles.enVivoFlecha}>›</Text>
           </Tocable>
+        )}
+
+        {sinJuegos && (
+          <View style={styles.sinJuegos}>
+            <Text style={styles.sinJuegosTexto}>
+              {jornada.is_today ? 'Hoy no hay juegos.' : 'No hay juegos este día.'}
+              {jornada.next ? ` La próxima jornada es el ${jornada.next.label.toLowerCase()}.` : ''}
+            </Text>
+          </View>
         )}
 
         {destacado && jornada.featured && (
@@ -296,6 +307,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: COLORS.border,
   },
+  sinJuegos: {
+    marginHorizontal: 16,
+    marginTop: 8,
+    paddingVertical: 28,
+    paddingHorizontal: 16,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    backgroundColor: COLORS.bgCard,
+  },
+  sinJuegosTexto: { fontSize: 14, lineHeight: 20, color: COLORS.textSecondary, textAlign: 'center' },
   vacio: {
     flex: 1,
     alignItems: 'center',

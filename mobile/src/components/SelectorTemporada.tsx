@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants';
 import HojaInferior from './HojaInferior';
@@ -49,7 +50,7 @@ export default function SelectorTemporada({
   marcarPrimera?: boolean;
 }) {
   const [abierto, setAbierto] = useState(false);
-  const lista = useRef<ScrollView>(null);
+  const lista = useRef<ScrollViewInstance>(null);
   const actual = opciones.find(o => o.key === activa);
 
   // Al abrir, la elegida queda a la vista aunque sea la 2012-13, la última.

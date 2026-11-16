@@ -10,6 +10,7 @@ import {
   Text,
   View,
 } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { fetchGameDetail, fetchWinProb } from '../api';
@@ -63,7 +64,7 @@ export default function GameDetailScreen({ route }: Props) {
 
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const active = useRef(true);
-  const scrollRef = useRef<ScrollView>(null);
+  const scrollRef = useRef<ScrollViewInstance>(null);
   const scrollY = useRef(0);
   const inicioContenido = useRef(0);
 

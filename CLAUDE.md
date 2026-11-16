@@ -842,11 +842,38 @@ El móvil consume los mismos endpoints sondeando, no por SSE: React Native no tr
 
 ## Mobile (Expo)
 
-**SDK 57** — React Native 0.86.3, React 19.2.3, navegación 7. Expo Go solo corre
+**SDK 58** — React Native 0.88.1, React 19.3.0, navegación 7. Expo Go solo corre
 proyectos de su misma versión de SDK, y en iPhone físico **no** se puede instalar
 un Expo Go viejo, así que subir el SDK es obligatorio para probar en dispositivo.
 Desde SDK 57 además hay que tener sesión iniciada **en los dos lados**: `npx expo
 login` en la terminal y el avatar dentro de Expo Go, con la misma cuenta.
+
+### De SDK 57 a 58 (16-nov-2026)
+
+El Expo Go del iPhone de Arturo pasó a pedir SDK 58. Lo que hay que saber:
+
+- **Expo, React Native y sus módulos se suben JUNTOS.** En la PC quedó una
+  vez Expo 58 con React Native 0.86.3 (la de la 57) y Metro fallaba al
+  empaquetar cualquier fuente: "Unable to resolve react-native/asset-registry",
+  con decenas de avisos de "invalid package.json configuration" en
+  `react-native`. Expo 58 busca ese archivo, que solo trae React Native 0.88.
+  La forma correcta: `npx expo install expo@^58.0.0 --fix`. Sin red hacia
+  `api.expo.dev`: `npm install expo@~58.0.25` y después
+  `EXPO_OFFLINE=1 npx expo install --fix`, que alinea el resto con la tabla
+  de `node_modules/expo/bundledNativeModules.json`. `babel-preset-expo` (de
+  desarrollo) no lo sube `--fix`: va a mano a la misma versión que Expo.
+- **React Native 0.88 tipa estricto por defecto.** Una referencia a un
+  `ScrollView` es `useRef<ScrollViewInstance>(null)` (tipo importado de
+  `react-native`), no `useRef<ScrollView>`: con el componente como tipo,
+  `scrollTo` no existe. Y `ListHeaderComponent`/`ListEmptyComponent` no
+  aceptan `null`: `undefined`.
+- Lo que el SDK 58 quitó (`InteractionManager`, `Touchable`, el `animated`
+  de `Modal`, `backgroundColor`/`translucent` de `StatusBar`) no se usaba.
+- `expo install --fix` añadió el plugin `expo-status-bar` a `app.json`.
+- Expo 58 pide Node 22.13 o más (o 24.3+); Actions usa la última 22.
+- Comprobado: `tsc`, `expo export --platform ios` (el empaquetado que fallaba
+  en la PC) y el arnés web. Los avisos que quedan en `npm audit` son de
+  `minimatch`, en herramientas de compilación.
 
 ### El punto de entrada NO es App.tsx
 
@@ -1221,7 +1248,7 @@ pestañas ya no se quedan pegadas arriba: ver "El detalle de juego: cabecera
 navy y pestañas al pie".
 
 Para instalar las dependencias: `npx expo install react-native-svg expo-font
-@expo-google-fonts/bebas-neue` desde `mobile/`. Elige la versión que corresponde al SDK (15.15.4 en el 57, según
+@expo-google-fonts/bebas-neue` desde `mobile/`. Elige la versión que corresponde al SDK (15.16.0 en el 58, según
 `node_modules/expo/bundledNativeModules.json`).
 
 ### Trabajar la pantalla de juego sin red

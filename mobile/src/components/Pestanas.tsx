@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, LayoutChangeEvent, Pressable, ScrollView, StyleSheet, Text } from 'react-native';
+import type { ScrollViewInstance } from 'react-native';
 import { COLORS } from '../constants';
 import { useReducirMovimiento } from './Movimiento';
 
@@ -54,7 +55,7 @@ export default function Pestanas<K extends string>({
   const x = useRef(new Animated.Value(0)).current;
   const w = useRef(new Animated.Value(0)).current;
   const colocada = useRef(false);
-  const barra = useRef<ScrollView>(null);
+  const barra = useRef<ScrollViewInstance>(null);
   const anchoBarra = useRef(0);
   const desplazado = useRef(0);
 

@@ -39,6 +39,22 @@ ABSTRACT_STATE = {
     "Other": "other",
 }
 
+# Un juego suspendido (lluvia, luz) se reanuda otro día. La MLB lo deja en el
+# grupo "Live" ("Suspended: Rain", codedGameState T), y tomarlo por un juego
+# en curso dejaba la portada con "Marcadores en vivo" durante semanas: el
+# EST-AGU del 21-oct-2026 seguía "en vivo" el 16-nov (ver CLAUDE.md, "Un
+# juego suspendido en la caché en vivo"). Va como "other", con su etiqueta.
+CODIGOS_SUSPENDIDO = ("T", "U")
+
+
+def es_suspendido(status: dict) -> bool:
+    """El juego quedó suspendido: no está en curso ni terminado."""
+    return (
+        status.get("codedGameState") in CODIGOS_SUSPENDIDO
+        or str(status.get("detailedState", "")).startswith("Suspended")
+    )
+
+
 # Ordinales masculinos, que es lo que pide "inning" en el uso dominicano:
 # "la parte baja del séptimo inning". Hasta la 10ma con su forma propia; de la
 # 11 en adelante la escritura corriente usa "vo" para todo (11vo, 12vo, 13vo),
@@ -198,6 +214,9 @@ class LiveGameState(BaseModel):
     # Estado
     status: str = "other"           # preview | live | final | other
     detailed_status: str = ""
+    # Suspendido, a reanudar otro día: status "other" y la etiqueta en
+    # español. El poller lo revisa cada SUSPENDIDO_SEGUNDOS, no cada 10.
+    suspended: bool = False
     timestamp: Optional[str] = None  # metaData.timeStamp, la marca de ESTA foto
     poll_wait_seconds: int = 10      # metaData.wait, lo que recomienda la API
 
@@ -335,7 +354,8 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
     ]
 
     half = linescore.get("inningHalf") or linescore.get("inningState")
-    abstracto = ABSTRACT_STATE.get(status.get("abstractGameState", ""), "other")
+    suspendido = es_suspendido(status)
+    abstracto = "other" if suspendido else ABSTRACT_STATE.get(status.get("abstractGameState", ""), "other")
 
     estado = LiveGameState(
         game_pk=payload.get("gamePk") or game_data.get("game", {}).get("pk"),
@@ -344,8 +364,9 @@ def parse_live_feed(payload: dict, game_id: Optional[str] = None) -> LiveGameSta
         game_date=datetime_info.get("officialDate"),
         venue=game_data.get("venue", {}).get("name"),
 
-        status=ABSTRACT_STATE.get(status.get("abstractGameState", ""), "other"),
-        detailed_status=status.get("detailedState", ""),
+        status=abstracto,
+        detailed_status="SUSPENDIDO" if suspendido else status.get("detailedState", ""),
+        suspended=suspendido,
         timestamp=meta.get("timeStamp"),
         poll_wait_seconds=meta.get("wait") or 10,
 

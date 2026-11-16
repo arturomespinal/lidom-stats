@@ -256,6 +256,36 @@ p5 = LivePoller(store=st5, client=FakeClient(), game_date="2025-10-15")
 p5._schedule_checked_at = 9e18   # que no consulte el calendario
 check("sin juegos activos duerme largo", p5.tick(), 60)
 
+print("\n━━━ 6b. Un juego suspendido ━━━")
+# La MLB deja un suspendido por lluvia en el grupo "Live" (codedGameState T).
+# Tomado por un juego en curso, el EST-AGU del 21-oct-2026 seguía "en vivo" el
+# 16-nov y se pedía cada 10 segundos.
+import copy as _copy
+import src.live.poller as _plmod
+susp = _copy.deepcopy(snapshots[len(snapshots) // 2])
+susp["gameData"]["status"].update(abstractGameState="Live", codedGameState="T",
+                                  detailedState="Suspended: Rain", statusCode="TR")
+es = parse_live_feed(susp)
+check("suspendido: no es en vivo ni final, va como 'other'", (es.status, es.is_live, es.is_final), ("other", False, False))
+check("  con su etiqueta en español y la marca", (es.detailed_status, es.suspended), ("SUSPENDIDO", True))
+check("  sin probabilidad de ganar", es.win_prob_home, None)
+st6 = LiveStore()
+fc6 = FakeClient(full_feeds=[susp], diffs=[])
+p6 = LivePoller(store=st6, client=fc6, game_date="2025-10-15")
+p6._schedule_checked_at = 9e18
+p6._tracking[GAME_PK] = None
+espera6 = p6.tick()
+check("el poller lo pide una vez y espera lo del calendario", (fc6.full_calls, espera6), (1, float(_plmod.SUSPENDIDO_SEGUNDOS)))
+p6.tick()
+check("  el ciclo siguiente no lo vuelve a pedir", fc6.full_calls + fc6.diff_calls, 1)
+check("  y la caché no lo cuenta como en vivo", len(st6.states(only_live=True)), 0)
+p6._dormidos[GAME_PK] = 0   # pasó el tiempo
+fc6.full_feeds = [snapshots[len(snapshots) // 2]]   # reanudado
+st6.get(GAME_PK).timecode = None                    # que llegue completo
+p6.tick()
+check("  al reanudarse vuelve al ritmo de siempre",
+      (fc6.full_calls + fc6.diff_calls, GAME_PK in p6._dormidos), (2, False))
+
 print("\n━━━ 7. La caché ━━━")
 s = st.stats()
 print(f"    {s}")

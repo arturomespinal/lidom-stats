@@ -46,6 +46,11 @@ SCHEDULE_REFRESH_SECONDS = 600
 # Si la API no recomienda intervalo, este es el nuestro.
 DEFAULT_POLL_SECONDS = 10
 
+# Un juego suspendido no cambia hasta que se reanuda, otro día. Se revisa con
+# el ritmo del calendario, no cada 10 segundos: el EST-AGU del 21-oct-2026 se
+# pidió cada 10 segundos durante días sin que cambiara nada.
+SUSPENDIDO_SEGUNDOS = SCHEDULE_REFRESH_SECONDS
+
 # Cuando no hay ningún juego activo, el ciclo duerme esto en vez de martillar
 # el calendario.
 IDLE_SLEEP_SECONDS = 60
@@ -88,6 +93,8 @@ class LivePoller:
         self._thread: Optional[threading.Thread] = None
         self._stop = threading.Event()
         self._tracking: dict[int, Optional[str]] = {}   # game_pk → game_id
+        # Juegos suspendidos: game_pk → cuándo volver a mirarlos.
+        self._dormidos: dict[int, float] = {}
         self._finalized: set[int] = set()
         self._schedule_checked_at = 0.0
 
@@ -142,6 +149,13 @@ class LivePoller:
         active = [pk for pk in self._tracking if pk not in self._finalized]
         if not active:
             return IDLE_SLEEP_SECONDS
+
+        ahora = time.time()
+        # Los suspendidos esperan su turno; el resto, al ritmo de la API.
+        dormidos = [self._dormidos[pk] - ahora for pk in active if self._dormidos.get(pk, 0) > ahora]
+        active = [pk for pk in active if self._dormidos.get(pk, 0) <= ahora]
+        if not active:
+            return max(1.0, min(min(dormidos), IDLE_SLEEP_SECONDS))
 
         waits = []
         for game_pk in active:
@@ -253,6 +267,13 @@ class LivePoller:
         state = parse_live_feed(raw, game_id=entry.game_id)
         self.store.update(game_pk, raw, state)
 
+        if state.suspended:
+            if game_pk not in self._dormidos:
+                logger.info(f"⏸ Juego {game_pk} suspendido: se revisa cada {SUSPENDIDO_SEGUNDOS}s")
+            self._dormidos[game_pk] = time.time() + SUSPENDIDO_SEGUNDOS
+            return float(SUSPENDIDO_SEGUNDOS)
+        self._dormidos.pop(game_pk, None)
+
         if state.is_final and game_pk not in self._finalized:
             self._finalized.add(game_pk)
             # El crudo ya no hace falta: sin más parches por aplicar, es un
@@ -319,4 +340,4 @@ class LivePoller:
         return doc
 
 
-__all__ = ["LivePoller", "SCHEDULE_REFRESH_SECONDS", "DEFAULT_POLL_SECONDS"]
+__all__ = ["LivePoller", "SCHEDULE_REFRESH_SECONDS", "DEFAULT_POLL_SECONDS", "SUSPENDIDO_SEGUNDOS"]

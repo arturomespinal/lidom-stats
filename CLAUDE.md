@@ -681,6 +681,27 @@ del round robin o de la final que terminaba no se ingestaba nunca**.
   la temporada intacta) y `verify_live_poller.py` el cableado de `on_final` con
   ingestores dobles.
 
+### Un juego suspendido en la caché en vivo (16-nov-2026)
+
+La MLB deja un juego suspendido por lluvia en el grupo "Live" del feed
+(`abstractGameState: Live`, `codedGameState: T`, "Suspended: Rain"). El
+parser lo tomaba por un juego en curso: el EST-AGU del 21-oct-2026 (gamePk
+851559) seguía "en vivo" en la caché el 16-nov, la portada mostraba
+"Marcadores en vivo" un lunes sin juegos y el poller lo pedía cada 10
+segundos sin que cambiara nada. El calendario de la MLB lo vuelve a listar
+en días posteriores mientras no se reanude, así que el poller lo encuentra
+cada día.
+
+- `es_suspendido()` en `gumbo.py` (códigos T y U, o un `detailedState` que
+  empieza con "Suspended"): el estado va como `other`, con
+  `detailed_status: "SUSPENDIDO"` (lo que pintan los clientes) y
+  `suspended: true`. Sin probabilidad de ganar.
+- El poller revisa un suspendido cada `SUSPENDIDO_SEGUNDOS` (los 600 del
+  calendario), no al ritmo de la API. Al reanudarse vuelve a ser `live` y
+  sigue normal; al terminar dispara `on_final` y se ingesta con su
+  `game_id` de siempre (la fecha original).
+- `verify_live_poller.py`, sección 6b.
+
 ### Endpoints en vivo
 
 | Endpoint | Qué da |

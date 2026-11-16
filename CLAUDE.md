@@ -2668,7 +2668,10 @@ de verdad y minúsculas, y eso cambia las dos reglas de Bebas:
   de sección, estados y acciones. **Sigue sin `fontWeight`**, y ahora
   **siempre con `textTransform: 'uppercase'`**: sin eso "Estrellas" saldría en
   minúsculas. Paquete nuevo: `@expo-google-fonts/barlow-condensed` (hay que
-  correr `npm install` en `mobile/` al cambiar a la rama).
+  correr `npm install` en `mobile/` al cambiar a la rama). `App.tsx` carga
+  los dos pesos POR ARCHIVO, con `useFonts` de `expo-font`: el índice del
+  paquete hace un `require` de los 18 pesos de la familia y los metía todos
+  en la app (~1.8 MB).
 - **La tabla de anchos** (`frontend/lib/bebas.ts`, `mobile/src/components/
   Ajuste.tsx`) es ahora la de Barlow Condensed 700, sacada del archivo de la
   fuente; las cifras cuentan 0.5 (su ancho tabular). El archivo y

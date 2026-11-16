@@ -5,11 +5,7 @@ import { DarkTheme, NavigationContainer } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  BarlowCondensed_600SemiBold,
-  BarlowCondensed_700Bold,
-  useFonts,
-} from '@expo-google-fonts/barlow-condensed';
+import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import HoyScreen from './src/screens/HoyScreen';
 import LiveScreen from './src/screens/LiveScreen';
@@ -224,7 +220,14 @@ function Logotipo() {
 }
 
 export default function App() {
-  const [fuentesListas, errorFuentes] = useFonts({ BarlowCondensed_600SemiBold, BarlowCondensed_700Bold });
+  // Solo los dos pesos que usa la app, pedidos por archivo. Importarlos del
+  // índice del paquete metería en la app los 18 pesos de la familia (~1.8 MB):
+  // el índice hace un require de cada uno. Los nombres son las familias de
+  // FONTS en constants.ts.
+  const [fuentesListas, errorFuentes] = useFonts({
+    BarlowCondensed_600SemiBold: require('@expo-google-fonts/barlow-condensed/600SemiBold/BarlowCondensed_600SemiBold.ttf'),
+    BarlowCondensed_700Bold: require('@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf'),
+  });
 
   useEffect(() => {
     // Si la fuente falla, la app arranca igual con la del sistema: un título

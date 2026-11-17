@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 
 import TeamBadge from "@/components/TeamBadge";
 import { searchPlayers, type ResultadoBusqueda } from "@/lib/api";
-import type { PlayerSearchHit } from "@/lib/types";
+import type { HistoricoHit, PlayerSearchHit } from "@/lib/types";
 import { epocaHistorica } from "@/lib/formato";
 
 /**
@@ -25,8 +25,9 @@ import { epocaHistorica } from "@/lib/formato";
  *   más útil que un panel en blanco.
  *
  * Con `alElegir` no abre la ficha: entrega el jugador elegido (lo usa la
- * página de comparar, components/comparar/ElegirJugador.tsx). Ahí no salen los
- * históricos: sin player_id no hay comparación posible.
+ * página de comparar, components/comparar/ElegirJugador.tsx). Un histórico
+ * sin player_id se entrega como `h` + su id_miembro ("h7552"), que es como
+ * lo pide GET /players/compare.
  */
 export default function PlayerSearch({
   alElegir,
@@ -35,7 +36,7 @@ export default function PlayerSearch({
   clasePanel = "right-0 w-72",
   autoFocus = false,
 }: {
-  alElegir?: (jugador: PlayerSearchHit) => void;
+  alElegir?: (jugador: Pick<PlayerSearchHit, "player_id" | "full_name">) => void;
   placeholder?: string;
   /** El ancho de la caja. Por defecto, el de la barra de arriba. */
   claseInput?: string;
@@ -95,7 +96,7 @@ export default function PlayerSearch({
   const visibles = termino.length < 2 ? [] : res.data.jugadores;
   // Los que solo están en DIGIMETRICS (antes de 2012-13): van aparte, debajo,
   // y abren la ficha histórica.
-  const historicos = termino.length < 2 || alElegir ? [] : res.data.historicos;
+  const historicos = termino.length < 2 ? [] : res.data.historicos;
   const total = visibles.length + historicos.length;
   const buscando = termino.length >= 2 && res.q !== termino;
 
@@ -105,11 +106,16 @@ export default function PlayerSearch({
     router.push(ruta);
   }
 
-  function elegir(h: PlayerSearchHit) {
+  function elegir(h: Pick<PlayerSearchHit, "player_id" | "full_name">) {
     if (!alElegir) return abrir(`/players/${h.player_id}`);
     setAbierto(false);
     setQ("");
     alElegir(h);
+  }
+
+  function elegirHistorico(h: HistoricoHit) {
+    if (!alElegir) return abrir(`/historia/jugador/${h.id_miembro}`);
+    elegir({ player_id: `h${h.id_miembro}`, full_name: h.name });
   }
 
   return (
@@ -131,7 +137,7 @@ export default function PlayerSearch({
           // escribió el nombre completo.
           if (e.key === "Enter" && total === 1) {
             if (visibles.length) elegir(visibles[0]);
-            else abrir(`/historia/jugador/${historicos[0].id_miembro}`);
+            else elegirHistorico(historicos[0]);
           }
         }}
         className={`${claseInput} rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:border-fg2 focus:outline-none`}
@@ -190,7 +196,7 @@ export default function PlayerSearch({
                 {historicos.map((h) => (
                   <button
                     key={`h${h.id_miembro}`}
-                    onClick={() => abrir(`/historia/jugador/${h.id_miembro}`)}
+                    onClick={() => elegirHistorico(h)}
                     className="flex w-full items-center gap-2 border-b border-line-soft px-3 py-2 text-left last:border-0 hover:bg-raised"
                   >
                     <span className="min-w-0 flex-1">

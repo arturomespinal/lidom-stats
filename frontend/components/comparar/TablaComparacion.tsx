@@ -51,6 +51,11 @@ function Renglon({ f }: { f: RenglonComparado }) {
   );
 }
 
+/** La ficha de cada uno: un histórico ("h7552") tiene la suya en Historia. */
+function ficha(playerId: string): string {
+  return /^h\d+$/.test(playerId) ? `/historia/jugador/${playerId.slice(1)}` : `/players/${playerId}`;
+}
+
 export default function TablaComparacion({ cmp }: { cmp: Comparacion }) {
   const [pa, pb] = cmp.players;
   const pie = (p: typeof pa) =>
@@ -60,14 +65,14 @@ export default function TablaComparacion({ cmp }: { cmp: Comparacion }) {
   return (
     <section aria-label={`${pa.full_name} contra ${pb.full_name}`} className="rounded-xl border border-line bg-card px-4 py-3">
       <div className="mb-3 flex items-start justify-between gap-3 border-b border-line pb-3">
-        <Link href={`/players/${pa.player_id}`} className="group flex min-w-0 items-center gap-2">
+        <Link href={ficha(pa.player_id)} className="group flex min-w-0 flex-1 basis-0 items-center gap-2">
           {pa.team_code && <TeamBadge code={pa.team_code} size="sm" />}
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold text-fg group-hover:underline">{pa.full_name}</span>
             <span className="block text-[11px] leading-snug text-dim">{pie(pa) || "Sin cifras"}</span>
           </span>
         </Link>
-        <Link href={`/players/${pb.player_id}`} className="group flex min-w-0 flex-row-reverse items-center gap-2 text-right">
+        <Link href={ficha(pb.player_id)} className="group flex min-w-0 flex-1 basis-0 flex-row-reverse items-center gap-2 text-right">
           {pb.team_code && <TeamBadge code={pb.team_code} size="sm" />}
           <span className="min-w-0">
             <span className="block truncate text-sm font-bold text-fg group-hover:underline">{pb.full_name}</span>

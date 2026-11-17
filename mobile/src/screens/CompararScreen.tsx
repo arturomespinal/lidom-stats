@@ -6,7 +6,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { fetchComparacion, searchPlayers } from '../api';
 import { COLORS } from '../constants';
 import type { FichasParamList } from '../navigation';
-import type { Comparacion, PlayerSearchHit, RenglonComparado, RolComparacion } from '../types';
+import type { Comparacion, HistoricoHit, PlayerSearchHit, RenglonComparado, RolComparacion } from '../types';
+import { epocaHistorica } from '../formato';
+
+/** Lo que entrega el buscador: un histórico va como 'h' + id_miembro ('h7552'). */
+type Elegible = { player_id: string; full_name: string };
 import EmptyState from '../components/EmptyState';
 import Seccion from '../components/Seccion';
 import TeamBadge from '../components/TeamBadge';
@@ -26,10 +30,18 @@ type Elegido = { id: string; nombre: string } | null;
  * efectividad, la MÁS BAJA) y la frase. Aquí solo se dibuja.
  */
 
-/** El buscador de un lado: escribe, espera 250 ms, cancela la anterior. */
-function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: PlayerSearchHit) => void }) {
+/**
+ * El buscador de un lado: escribe, espera 250 ms, cancela la anterior. Ofrece
+ * también los históricos (solo DIGIMETRICS, antes de 2012-13), debajo: David
+ * Ortiz no salía (16-nov-2026).
+ */
+function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: Elegible) => void }) {
   const [q, setQ] = useState('');
-  const [res, setRes] = useState<{ q: string; data: PlayerSearchHit[] }>({ q: '', data: [] });
+  const [res, setRes] = useState<{ q: string; data: PlayerSearchHit[]; historicos: HistoricoHit[] }>({
+    q: '',
+    data: [],
+    historicos: [],
+  });
 
   useEffect(() => {
     const termino = q.trim();
@@ -38,7 +50,7 @@ function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: PlayerSea
     const reloj = setTimeout(async () => {
       const r = await searchPlayers(termino, control.signal, 8);
       // Un fallo no vacía la lista: lo de hace un segundo sirve más que nada.
-      if (r && !control.signal.aborted) setRes({ q: termino, data: r.jugadores });
+      if (r && !control.signal.aborted) setRes({ q: termino, data: r.jugadores, historicos: r.historicos });
     }, 250);
     return () => {
       control.abort();
@@ -48,6 +60,7 @@ function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: PlayerSea
 
   const termino = q.trim();
   const visibles = termino.length < 2 ? [] : res.data;
+  const historicos = termino.length < 2 ? [] : res.historicos;
   const buscando = termino.length >= 2 && res.q !== termino;
   return (
     <View>
@@ -68,7 +81,7 @@ function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: PlayerSea
           accessibilityLabel={lado === 'a' ? 'Buscar el primer jugador' : 'Buscar el segundo jugador'}
         />
       </View>
-      {termino.length >= 2 && visibles.length === 0 && (
+      {termino.length >= 2 && visibles.length === 0 && historicos.length === 0 && (
         <Text style={styles.ayuda}>{buscando ? 'Buscando…' : 'Sin coincidencias'}</Text>
       )}
       {visibles.map(j => {
@@ -91,6 +104,24 @@ function Buscador({ lado, onElegir }: { lado: 'a' | 'b'; onElegir: (j: PlayerSea
           </Pressable>
         );
       })}
+      {historicos.length > 0 && <Text style={styles.grupo}>Históricos · antes de 2012-13</Text>}
+      {historicos.map(h => (
+        <Pressable
+          key={`h${h.id_miembro}`}
+          onPress={() => onElegir({ player_id: `h${h.id_miembro}`, full_name: h.name })}
+          style={({ pressed }) => [styles.resultado, pressed && styles.presionado]}
+          accessibilityRole="button"
+          accessibilityLabel={`Elegir a ${h.name}, ${epocaHistorica(h.first_season, h.last_season)}`}
+        >
+          <View style={{ flex: 1, minWidth: 0 }}>
+            <Text style={styles.resultadoNombre} numberOfLines={1}>{h.name}</Text>
+            <Text style={styles.resultadoNota}>{epocaHistorica(h.first_season, h.last_season)}</Text>
+          </View>
+          <View style={styles.tejas}>
+            {h.teams.slice(0, 3).map(c => <TeamBadge key={c} code={c} size={24} />)}
+          </View>
+        </Pressable>
+      ))}
     </View>
   );
 }
@@ -185,7 +216,7 @@ export default function CompararScreen({ route, navigation }: Props) {
   // Al cambiar a uno de los dos se sueltan el papel y la temporada: la
   // temporada puede no ser común con el nuevo, y el papel por defecto
   // depende de los dos.
-  const elegir = (lado: 'a' | 'b') => (j: PlayerSearchHit) => {
+  const elegir = (lado: 'a' | 'b') => (j: Elegible) => {
     const nuevo = { id: j.player_id, nombre: j.full_name };
     if (lado === 'a') setA(nuevo);
     else setB(nuevo);
@@ -345,6 +376,15 @@ const styles = tematico(() => StyleSheet.create({
   resultadoNombre: { color: COLORS.textPrimary, fontSize: 15 },
   resultadoNota: { color: COLORS.textFaint, fontSize: 11, fontVariant: ['tabular-nums'] },
   tejas: { flexDirection: 'row', gap: 4 },
+  grupo: {
+    color: COLORS.textSecondary,
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+    paddingTop: 14,
+    paddingBottom: 4,
+  },
   presionado: { backgroundColor: COLORS.bgRaised },
 
   filaPastillas: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingBottom: 10 },

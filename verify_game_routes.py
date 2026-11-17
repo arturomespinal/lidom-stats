@@ -962,6 +962,28 @@ check("la nota dice a quién le faltan cifras", cmp_x["note"], f"{nombre_l1} no 
 check("sin titular", cmp_x["headline"], None)
 check("el lanzador conserva su teja (su último equipo)", cmp_x["players"][0]["team_code"] is not None, True)
 
+# Un histórico (solo DIGIMETRICS, antes de 2012-13) se pide como "h" + su
+# id_miembro. David Ortiz no salía en la comparación (16-nov-2026).
+if c.get("/historia/miembros/7552").status_code == 200:
+    ortiz = call("/historia/miembros/7552")
+    cmp_h = call(f"/players/compare?a=h7552&b={pid}")
+    fh = {f["key"]: f for f in cmp_h["rows"]}
+    print(f"  {cmp_h['players'][0]['full_name']} vs {cmp_h['players'][1]['full_name']} · {cmp_h['headline']}")
+    check("histórico: nombre de DIGIMETRICS", cmp_h["players"][0]["full_name"], ortiz["player"]["name"])
+    check("histórico: su carrera de serie regular (H y AP de su ficha)", (fh["h"]["a"], fh["pa"]["a"]),
+          (ortiz["career_batting"]["h"], ortiz["career_batting"]["pa"]))
+    check("histórico: sin fecha de nacimiento no hay edad", cmp_h["players"][0]["age"], None)
+    check("histórico: lleva la teja de su equipo", cmp_h["players"][0]["team_code"], "ESC")
+    check("histórico: comparable", cmp_h["comparable"], True)
+    idm_gn = sqlite3.connect("data/lidom_stats.db").execute(
+        "SELECT MIN(id_miembro) FROM hist_enlaces WHERE player_id = ?", (gn,)).fetchone()[0]
+    cmp_e = call(f"/players/compare?a=h{idm_gn}&b={pid}")
+    check("un histórico ENLAZADO va por su player_id (carrera completa)",
+          (cmp_e["players"][0]["player_id"], cmp_e["players"][0]["volume"]), (gn, f"{car_gn['pa']} AP"))
+    check("id_miembro inexistente → 404", c.get(f"/players/compare?a=h999999999&b={pid}").status_code, 404)
+else:
+    print("  (sin capa histórica: se saltan los históricos en la comparación)")
+
 print("  errores esperados:")
 check("el mismo jugador dos veces → 400", c.get(f"/players/compare?a={pid}&b={pid}").status_code, 400)
 check("jugador inexistente → 404", c.get(f"/players/compare?a=no-existe&b={pid}").status_code, 404)

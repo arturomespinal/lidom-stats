@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import Navbar from "@/components/Navbar";
 import Heroe, { CifraHeroe, ColumnaHeroe, FilaCifras, NombreHeroe } from "@/components/ficha/Heroe";
+import BotonComparar from "@/components/ficha/BotonComparar";
 import Monograma from "@/components/ficha/Monograma";
 import Seccion from "@/components/ficha/Seccion";
 import Trayectoria from "@/components/ficha/Trayectoria";
@@ -72,6 +73,8 @@ export default async function MiembroPage(props: Props) {
           <p className="text-[13px] leading-snug text-ink-dim sm:text-sm">
             {temporadas} {temporadas === 1 ? "temporada" : "temporadas"} en LIDOM
           </p>
+          {/* Se compara con cualquiera, también con los de la MLB API: "h" + id_miembro. */}
+          <BotonComparar id={`h${m.player.id_miembro}`} />
         </ColumnaHeroe>
         <FilaCifras titulo="Carrera · serie regular">
           {m.is_pitcher && cp ? (

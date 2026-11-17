@@ -16,12 +16,14 @@ Convenciones heredadas de main.py:
 
 from __future__ import annotations
 
+import re
 from datetime import date
 
 from fastapi import APIRouter, HTTPException, Query
 from sqlalchemy import text
 
-from api.historia_routes import historia_de_jugador, historicos_que_coinciden
+from api.historia_routes import hay_historia, historia_de_jugador, historicos_que_coinciden
+from src.historia import es_lanzador_historico, nombre_para_mostrar, temporadas_historicas
 from src.carrera import (
     carrera_bateo,
     carrera_pitcheo,
@@ -398,10 +400,50 @@ def _datos_del_jugador(player_id: str) -> tuple[dict, list[dict], list[dict]]:
     return bio, batting, pitching
 
 
+def _datos_historico(id_miembro: int) -> dict:
+    """
+    Un jugador de DIGIMETRICS para la comparación: sus temporadas de serie
+    regular antes de 2012-13 (la regla de una sola fuente por temporada) y su
+    nombre. Si está enlazado a la MLB API, va por su player_id: así su
+    carrera es la completa, como en su ficha. Sin fecha de nacimiento en la
+    fuente, no hay edad.
+    """
+    with engine.connect() as conn:
+        if not hay_historia(conn):
+            raise HTTPException(404, "No hay capa histórica en la base")
+        fila = conn.execute(text("SELECT nombre FROM hist_jugadores WHERE id_miembro = :i"),
+                            {"i": id_miembro}).first()
+        if not fila:
+            raise HTTPException(404, f"No hay ningún miembro {id_miembro} en DIGIMETRICS")
+        enlace = conn.execute(text("SELECT player_id FROM hist_enlaces WHERE id_miembro = :i"),
+                              {"i": id_miembro}).first()
+        if enlace is None:
+            viejas = temporadas_historicas(conn, [id_miembro])
+    if enlace is not None:
+        bio, batting, pitching = _datos_del_jugador(enlace.player_id)
+        with engine.connect() as conn:
+            historia = historia_de_jugador(conn, enlace.player_id, batting, pitching)
+        return {
+            "bio": bio,
+            "batting": (historia["batting"] if historia else []) + batting,
+            "pitching": (historia["pitching"] if historia else []) + pitching,
+            "is_pitcher": es_lanzador(batting, pitching),
+            "has_history": historia is not None,
+        }
+    return {
+        "bio": {"player_id": f"h{id_miembro}", "full_name": nombre_para_mostrar(fila.nombre), "birth_date": None},
+        "batting": viejas["batting"],
+        "pitching": viejas["pitching"],
+        "is_pitcher": es_lanzador_historico(viejas["batting"], viejas["pitching"]),
+        "has_history": True,
+    }
+
+
 @router.get("/players/compare", tags=["Jugadores"])
 def compare_players(
-    a: str = Query(..., min_length=1, max_length=80, description="player_id del primero"),
-    b: str = Query(..., min_length=1, max_length=80, description="player_id del segundo"),
+    a: str = Query(..., min_length=1, max_length=80,
+                   description="player_id del primero, o 'h' + id_miembro para un histórico ('h7552')"),
+    b: str = Query(..., min_length=1, max_length=80, description="player_id del segundo, o 'h' + id_miembro"),
     role: str | None = Query(None, pattern="^(batting|pitching)$",
                              description="Por defecto, pitcheo si los dos son lanzadores; si no, bateo"),
     season: str = Query(CARRERA, pattern=r"^(career|\d{4}-\d{2})$",
@@ -419,6 +461,12 @@ def compare_players(
         raise HTTPException(400, "Elige dos jugadores distintos")
     datos = []
     for pid in (a, b):
+        # Un histórico (solo DIGIMETRICS, antes de 2012-13): 'h7552'. Los
+        # enlazados a la MLB API llegan por su player_id, con su carrera
+        # completa. David Ortiz no salía en la comparación (16-nov-2026).
+        if (m := re.fullmatch(r"h(\d{1,9})", pid)):
+            datos.append(_datos_historico(int(m.group(1))))
+            continue
         bio, batting, pitching = _datos_del_jugador(pid)
         # Los años anteriores a 2012-13 (DIGIMETRICS), si jugó entonces: la
         # carrera de la comparación es la COMPLETA, como en su ficha.

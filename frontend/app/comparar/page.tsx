@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Seccion from "@/components/ficha/Seccion";
 import ElegirJugador from "@/components/comparar/ElegirJugador";
 import TablaComparacion from "@/components/comparar/TablaComparacion";
-import { fetchComparacion, fetchPlayerProfile } from "@/lib/api";
+import { fetchComparacion, fetchMiembroHistorico, fetchPlayerProfile } from "@/lib/api";
 import type { RolComparacion } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Comparar jugadores · Deportiv" };
@@ -36,8 +36,11 @@ export default async function CompararPage(props: Props) {
   const temporada = sp.temporada && /^\d{4}-\d{2}$/.test(sp.temporada) ? sp.temporada : undefined;
 
   const cmp = a && b ? await fetchComparacion(a, b, rol, temporada) : null;
-  // Con uno solo elegido, su nombre sale de la ficha.
-  const solo = !cmp && (a || b) ? await fetchPlayerProfile((a ?? b)!) : null;
+  // Con uno solo elegido, su nombre sale de la ficha (o de la histórica:
+  // "h7552" es un jugador que solo está en DIGIMETRICS).
+  const unId = !cmp ? a ?? b : null;
+  const solo = unId && !unId.startsWith("h") ? await fetchPlayerProfile(unId) : null;
+  const soloHist = unId?.startsWith("h") ? await fetchMiembroHistorico(Number(unId.slice(1))) : null;
   const elegido = (lado: "a" | "b") => {
     if (cmp) {
       const p = cmp.players[lado === "a" ? 0 : 1];
@@ -47,6 +50,10 @@ export default async function CompararPage(props: Props) {
     if (solo && id === solo.player.player_id) {
       const code = solo.context?.latest.team_code ?? solo.batting[0]?.team_code ?? solo.pitching[0]?.team_code ?? null;
       return { player_id: id, full_name: solo.player.full_name, team_code: code };
+    }
+    if (soloHist && id === `h${soloHist.player.id_miembro}`) {
+      const code = [...soloHist.teams].sort((x, y) => y.seasons - x.seasons)[0]?.team_code ?? null;
+      return { player_id: id, full_name: soloHist.player.name, team_code: code };
     }
     return null;
   };

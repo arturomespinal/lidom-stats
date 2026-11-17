@@ -20,6 +20,7 @@ import Monograma from '../components/Monograma';
 import Trayectoria from '../components/Trayectoria';
 import { COLS_BATEO, COLS_PITCHEO, FilaBateo, FilaPitcheo, FranjaCarrera } from './PlayerScreen';
 import { estiloBarra, tematico } from '../tema';
+import BotonFranja from '../components/BotonFranja';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Historico'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -128,6 +129,13 @@ export default function HistoricoScreen({ route, navigation }: Props) {
             <Text style={styles.meta}>
               {temporadas} {temporadas === 1 ? 'temporada' : 'temporadas'} en LIDOM
             </Text>
+            {/* Se compara con cualquiera, también con los de la MLB API. */}
+            <BotonFranja
+              icono="git-compare-outline"
+              texto="Comparar"
+              etiqueta={`Comparar a ${m.player.name} con otro jugador`}
+              onPress={() => navigation.push('Comparar', { a: `h${m.player.id_miembro}`, nombreA: m.player.name })}
+            />
           </View>
           <Monograma nombre={m.player.name} />
         </View>

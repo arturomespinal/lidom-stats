@@ -1,5 +1,4 @@
-import Link from "next/link";
-
+import BotonComparar from "@/components/ficha/BotonComparar";
 import Heroe, { CifraHeroe, ColumnaHeroe, FilaCifras, NombreHeroe } from "@/components/ficha/Heroe";
 import Monograma from "@/components/ficha/Monograma";
 import type { PlayerBio, PlayerContext } from "@/lib/types";
@@ -58,17 +57,7 @@ export default function PlayerHeader({ bio, currentTeam, context }: Props) {
         {linea1 && <p className="text-[13px] leading-snug text-ink-dim sm:text-sm">{linea1}</p>}
         {linea2 && <p className="text-[13px] leading-snug text-ink-dim sm:text-sm">{linea2}</p>}
         {/* A la página de comparar, con este jugador ya puesto a la izquierda. */}
-        <div className="pt-1">
-          <Link
-            href={`/comparar?a=${encodeURIComponent(bio.player_id)}`}
-            className="tocable inline-flex min-h-11 items-center gap-2 rounded-lg border border-ink-fg/25 px-3 text-sm font-semibold text-ink-fg hover:bg-ink-fg/10"
-          >
-            <svg aria-hidden="true" viewBox="0 0 24 24" className="h-[18px] w-[18px]" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-              <path d="M8 4v16M16 4v16M3 9h5M16 15h5" />
-            </svg>
-            Comparar
-          </Link>
-        </div>
+        <BotonComparar id={bio.player_id} />
       </ColumnaHeroe>
 
       {context && (

@@ -200,7 +200,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 368 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 375 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -1711,10 +1711,16 @@ todo en la URL: se comparte y el atrás deshace), móvil `CompararScreen`
   ("Ojo: Fulano tiene solo 23 AP.") bajo el titular, que si no engaña.
 - **Las barras** como "Equipo contra equipo": el lado dice de quién es, el
   color dice quién gana (tinta el ganador, gris el otro).
-- **Los históricos sin enlace** (solo DIGIMETRICS, sin `player_id`) no se
-  pueden comparar: el buscador de la comparación no los ofrece.
+- **Los históricos** (solo DIGIMETRICS, sin `player_id`) se piden como `h`
+  + su id_miembro (`?a=h7552`, David Ortiz). Su línea son sus temporadas de
+  serie regular antes de 2012-13 (`_datos_historico`), sin edad (la fuente no
+  trae fecha de nacimiento). Un id_miembro ENLAZADO a la MLB API va por su
+  `player_id`: así su carrera es la completa, como en su ficha. Al principio
+  el buscador de la comparación no los ofrecía y David Ortiz daba "Sin
+  coincidencias" (16-nov, en el iPhone). La ficha histórica también tiene
+  su botón "Comparar" (web `BotonComparar`, móvil `BotonFranja`).
 - El buscador de la barra (`PlayerSearch`) es el mismo, con `alElegir`: en
-  vez de abrir la ficha entrega el jugador.
+  vez de abrir la ficha entrega el jugador (un histórico, como `h…`).
 - Suite: `verify_game_routes.py` rehace a mano la línea de una temporada con
   dos equipos (Eguy Rosario 2025-26), comprueba cada ganador, el titular
   (incluido el empate: Munguia contra Nunez, 6 a 6), la efectividad de dos

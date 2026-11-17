@@ -3,7 +3,7 @@ import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 
 import { fetchLideresHistoricos, fetchMejoresTemporadas } from '../api';
-import { COLORS, FONTS } from '../constants';
+import { COLORS, FONTS, ALPHA } from '../constants';
 import { epocaHistorica, valorHistorico } from '../formato';
 import type { FichasParamList } from '../navigation';
 import type {
@@ -18,6 +18,7 @@ import Pestanas from '../components/Pestanas';
 import SelectorTemporada from '../components/SelectorTemporada';
 import TeamBadge from '../components/TeamBadge';
 import { Aparecer, Tocable } from '../components/Movimiento';
+import { tematico } from '../tema';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Records'>;
 
@@ -301,7 +302,7 @@ function Esqueleto() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   atenuada: { opacity: 0.5 },
   // La tarjeta del récord: la franja, sin color de club (el récord es de la
@@ -319,7 +320,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.14)',
+    borderTopColor: ALPHA.rayaFranja,
   },
   minimo: { fontSize: 11, color: COLORS.textSecondary, marginTop: 8, textAlign: 'right' },
   segmento: {
@@ -356,4 +357,4 @@ const styles = StyleSheet.create({
   vacioTexto: { fontSize: 14, color: COLORS.textSecondary, textAlign: 'center' },
   boton: { minHeight: 44, paddingHorizontal: 24, justifyContent: 'center', borderRadius: 8, backgroundColor: COLORS.accent },
   botonTexto: { color: COLORS.accentOn, fontSize: 14, fontWeight: '600' },
-});
+}));

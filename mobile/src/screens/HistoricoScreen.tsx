@@ -19,6 +19,7 @@ import { tamanoNombre } from '../components/Ajuste';
 import Monograma from '../components/Monograma';
 import Trayectoria from '../components/Trayectoria';
 import { COLS_BATEO, COLS_PITCHEO, FilaBateo, FilaPitcheo, FranjaCarrera } from './PlayerScreen';
+import { estiloBarra, tematico } from '../tema';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Historico'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -62,11 +63,12 @@ export default function HistoricoScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // Cabecera oscura: barra de estado clara mientras tiene el foco.
+  // La barra de estado sigue al modo (src/tema.ts): la franja de la cabecera
+  // es grafito en el oscuro y gris claro en el claro.
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('light');
+      setStatusBarStyle(estiloBarra());
+      return () => setStatusBarStyle(estiloBarra());
     }, []),
   );
 
@@ -210,7 +212,7 @@ export default function HistoricoScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   identidad: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
   // Columna del 52 %: el resto es del plano del club (ver Heroe.tsx).
@@ -230,4 +232,4 @@ const styles = StyleSheet.create({
   },
   presionado: { opacity: 0.8 },
   botonTexto: { color: COLORS.inkFg, fontSize: 14, fontWeight: '600' },
-});
+}));

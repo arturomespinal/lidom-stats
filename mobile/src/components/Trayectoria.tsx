@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 import { rangoTemporadas } from '../formato';
 import type { CareerTeam } from '../types';
+import { tematico } from '../tema';
 
 /**
  * La trayectoria como una sola barra partida por equipo, cada tramo del largo
@@ -45,10 +46,10 @@ export default function Trayectoria({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4, paddingHorizontal: 16 },
   tramo: { flexBasis: 0, minWidth: 56, minHeight: 44, gap: 6 },
   barra: { height: 12, borderRadius: 3 },
   codigo: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20, lineHeight: 20 },
   detalle: { fontSize: 11, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
-});
+}));

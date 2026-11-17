@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, StyleSheet, Text, View } from 'react-native';
 import { ALPHA, COLORS, FONTS } from '../constants';
 import { LiveStatus } from '../types';
+import { tematico } from '../tema';
 
 interface Props {
   status: LiveStatus;
@@ -80,7 +81,7 @@ export default function StatusBadge({ status, label }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   badge: {
     // Nunca se estira: dentro de una columna, sin esto, el "FINAL" ocupaba
     // todo el ancho de la pantalla.
@@ -95,4 +96,4 @@ const styles = StyleSheet.create({
   // SIN fontWeight: el peso lo pone la familia. Ver FONTS en constants.ts.
   texto: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 14, letterSpacing: 0.9 },
   dot: { width: 6, height: 6, borderRadius: 3, backgroundColor: COLORS.accentOn },
-});
+}));

@@ -10,7 +10,7 @@ import { useAncho } from "./useAncho";
 const ALTO = 280;
 const M = { izq: 36, der: 76, arriba: 20, abajo: 26 };
 // 3.0:1 sobre blanco: el mínimo para una marca gráfica. Contexto, no dato.
-const RESTO = "#8A96A9";
+const RESTO = "rgb(var(--serie))";
 
 function signo(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : "0";
@@ -146,7 +146,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
                   x2={M.izq + pw}
                   y1={Y(t)}
                   y2={Y(t)}
-                  stroke={t === 0 ? "#9AA6B8" : "rgb(var(--line-soft))"}
+                  stroke={t === 0 ? "rgb(var(--serie))" : "rgb(var(--line-soft))"}
                 />
                 <text x={M.izq - 6} y={Y(t) + 3.5} fontSize={11} fill="rgb(var(--dim))" textAnchor="end" className="num">
                   {t === 0 ? ".500" : signo(t)}

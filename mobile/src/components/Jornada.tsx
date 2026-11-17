@@ -15,6 +15,7 @@ import TeamBadge from './TeamBadge';
 import WinProbBand from './WinProbBand';
 import { Tocable } from './Movimiento';
 import { useFichas } from '../navigation';
+import { tematico } from '../tema';
 
 /*
  * Las piezas de la portada "Hoy". Todo lo que dice algo —qué juego se
@@ -400,7 +401,7 @@ export function FilaProxima({ juego }: { juego: JuegoJornada }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   presionado: { backgroundColor: COLORS.bgRaised },
 
   franja: {
@@ -546,4 +547,4 @@ const styles = StyleSheet.create({
   proximaDatos: { flex: 1, alignItems: 'flex-end' },
   proximaHora: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary, fontVariant: ['tabular-nums'] },
   proximaEstadio: { fontSize: 11, color: COLORS.textSecondary },
-});
+}));

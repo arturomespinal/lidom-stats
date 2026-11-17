@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
 import TeamBadge from './TeamBadge';
+import { tematico } from '../tema';
 
 /**
  * Una columna de la tabla. Se declaran como DATOS y no como JSX repetido: la
@@ -245,7 +246,7 @@ export default function TablaTemporadas<T>({
 // Sin Barlow Condensed en la tabla, a propósito: sus cifras son de ancho variable, y en
 // columnas alineadas a la derecha un 1 y un 8 no quedan uno sobre otro. La
 // fuente del sistema sí trae tabulares.
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   marco: {
     backgroundColor: COLORS.bgCard,
     borderTopWidth: 1,
@@ -350,4 +351,4 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: COLORS.borderSoft,
   },
-});
+}));

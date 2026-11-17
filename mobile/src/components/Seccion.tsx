@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
+import { tematico } from '../tema';
 
 /**
  * Título de sección de las fichas, en Barlow Condensed como los de la web.
@@ -39,7 +40,7 @@ export default function Seccion({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   caja: { paddingHorizontal: 16, paddingTop: 24, paddingBottom: 8, gap: 4 },
   fila: {
     flexDirection: 'row',
@@ -51,4 +52,4 @@ const styles = StyleSheet.create({
   nota: { fontSize: 11, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
   titular: { fontSize: 14, fontWeight: '700', lineHeight: 19, color: COLORS.textPrimary },
   sub: { fontSize: 11, lineHeight: 16, color: COLORS.textSecondary },
-});
+}));

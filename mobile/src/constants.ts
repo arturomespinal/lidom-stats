@@ -1,3 +1,5 @@
+import { temaActual, tematico, type Tema } from './tema';
+
 export interface TeamStyle {
   /** Color del club. Relleno de la teja sólida, franja de fila, lavados. */
   primary: string;
@@ -47,14 +49,31 @@ export interface TeamStyle {
  * GIG 4.9, ESC 4.9, LIC 5.7. El lavado sube de 12% a 16%: sobre grafito el
  * 12% casi no se veía.
  */
-export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.16)', text: '#F2A71B', on: '#0B1830' },
-  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.16)',  text: '#EA6A85', on: '#FFFFFF' },
-  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.16)', text: '#2FCB8D', on: '#0B1830' },
-  GIG: { primary: '#D2327C', tint: 'rgba(210,50,124,0.16)', text: '#EC69A3', on: '#FFFFFF' },
-  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.16)',  text: '#F46A6A', on: '#0B1830' },
-  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.16)', text: '#6FA3F5', on: '#0B1830' },
+const TEJAS: Record<string, Omit<TeamStyle, 'text'>> = {
+  AGU: { primary: '#F2A71B', tint: 'rgba(242,167,27,0.16)', on: '#0B1830' },
+  TOR: { primary: '#C7304F', tint: 'rgba(199,48,79,0.16)',  on: '#FFFFFF' },
+  EST: { primary: '#14B87A', tint: 'rgba(20,184,122,0.16)', on: '#0B1830' },
+  GIG: { primary: '#D2327C', tint: 'rgba(210,50,124,0.16)', on: '#FFFFFF' },
+  ESC: { primary: '#EF4B4B', tint: 'rgba(239,75,75,0.16)',  on: '#0B1830' },
+  LIC: { primary: '#4A8BF0', tint: 'rgba(74,139,240,0.16)', on: '#0B1830' },
 };
+
+/**
+ * La tinta de cada club para texto, por modo. En oscuro, aclarada hasta 4.5:1
+ * sobre la franja; en claro, oscurecida hasta 4.6:1 sobre las seis
+ * superficies claras (16-nov-2026). Los mismos valores que `--club-*` en
+ * frontend/app/globals.css. La teja sólida (primary, on) no cambia.
+ */
+const TINTAS: Record<Tema, Record<string, string>> = {
+  oscuro: { AGU: '#F2A71B', TOR: '#EA6A85', EST: '#2FCB8D', GIG: '#EC69A3', ESC: '#F46A6A', LIC: '#6FA3F5' },
+  claro:  { AGU: '#8B5D08', TOR: '#BF2E4C', EST: '#0D754E', GIG: '#BC296D', ESC: '#CC1212', LIC: '#1260D9' },
+};
+
+export const TEAM_STYLES: Record<string, TeamStyle> = tematico(() =>
+  Object.fromEntries(
+    Object.entries(TEJAS).map(([code, teja]) => [code, { ...teja, text: TINTAS[temaActual()][code] }]),
+  ),
+);
 
 /**
  * Nombre corto de cada club, los mismos que la web (TEAM_SHORT_NAMES en
@@ -96,7 +115,7 @@ export const TEAM_SHORT_NAMES: Record<string, string> = {
  * Ningún componente escribe un hex a mano. Si un color no está aquí, o es de
  * equipo (TEAM_STYLES) o falta un token.
  */
-export const COLORS = {
+const OSCURO = {
   bgPage:   '#0D1014',
   bgSunken: '#090B0E',   // filas hundidas (fuera de la clasificación), fondo de gráfica
   bgCard:   '#161A20',
@@ -133,10 +152,63 @@ export const COLORS = {
   campoTierra: '#3A3126',
   campoLinea:  '#8E98A6',
 
+  // La serie "del resto" en las gráficas de las fichas (la liga, los otros
+  // cinco, las barras sin color). Una marca, no texto: basta 3:1.
+  serie: '#8A96A9',
+
   // Marca. El verde, SOLO cascarón.
   brand:     '#03DA58',
   brandNavy: '#091C3A',
 };
+
+/**
+ * Pizarra clara (16-nov-2026): el mismo diseño sobre blanco y gris claro, con
+ * texto grafito. TODO cambia de lado, también la franja (`ink`). Los mismos
+ * valores que `:root[data-tema="claro"]` en frontend/app/globals.css, donde
+ * está la tabla de contraste: todo texto pasa 4.6:1 sobre las seis
+ * superficies. Lo seleccionado se invierte: pastilla grafito, texto claro.
+ */
+const CLARO: typeof OSCURO = {
+  bgPage:   '#F2F4F7',
+  bgSunken: '#E8ECF1',
+  bgCard:   '#FFFFFF',
+  bgRaised: '#EBEEF2',
+  bgHeader: '#F6F7F9',
+  border:   '#D3D9E1',
+  borderSoft: '#E6E9EE',
+
+  textPrimary:   '#0D1014',
+  textSupport:   '#2F3742',
+  textSecondary: '#4B5563',
+  textFaint:     '#596372',
+
+  accent:   '#161A20',
+  accentOn: '#F3F5F7',
+
+  ink:    '#E4E8EE',
+  inkFg:  '#0D1014',
+  inkDim: '#4B5563',
+
+  positive: '#136F44',
+  negative: '#B4233B',
+  warning:  '#8A5A00',
+  live:     '#C42B21',
+
+  campoPasto:  '#DCE9DF',
+  campoFranja: '#D3E3D7',
+  campoTierra: '#EADFCB',
+  campoLinea:  '#FFFFFF',
+
+  serie: '#7A8594',
+
+  brand:     '#03DA58',
+  brandNavy: '#091C3A',
+};
+
+export type Paleta = typeof OSCURO;
+
+/** La paleta del modo actual. Ver src/tema.ts. */
+export const COLORS: Paleta = tematico(() => (temaActual() === 'claro' ? CLARO : OSCURO));
 
 /**
  * Familias tipográficas.
@@ -167,10 +239,12 @@ export const FONTS = {
 };
 
 /** Transparencias derivadas, para no repetir el sufijo alfa por ahí suelto. */
-export const ALPHA = {
+export const ALPHA = tematico(() => ({
   live15:    `${COLORS.live}26`,
   live30:    `${COLORS.live}4D`,
   neutral15: `${COLORS.textSecondary}26`,
   neutral30: `${COLORS.textSecondary}4D`,
   positive12: `${COLORS.positive}1F`,
-};
+  // La raya fina sobre la franja (cabeceras de ficha y de récords).
+  rayaFranja: `${COLORS.inkFg}24`,
+}));

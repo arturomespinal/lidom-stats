@@ -43,13 +43,20 @@ export interface TeamStyle {
  * GIG 4.9, ESC 4.9, LIC 5.7. El lavado sube de 12% a 16%: sobre grafito el
  * 12% casi no se veía.
  */
+/*
+ * ── Modo claro (16-nov-2026) ───────────────────────────────────────────────
+ * `text` apunta a una variable de globals.css (`--club-agu`…) que cambia con
+ * el modo: la tinta aclarada sobre grafito, la oscurecida sobre blanco. Así
+ * los componentes siguen escribiendo `TEAM_STYLES[c].text` y no saben del
+ * modo. Vale en `style={{ color }}` y en los atributos de SVG.
+ */
 export const TEAM_STYLES: Record<string, TeamStyle> = {
-  AGU: { primary: "#F2A71B", tint: "rgba(242,167,27,0.16)", text: "#F2A71B", on: "#0B1830" },
-  TOR: { primary: "#C7304F", tint: "rgba(199,48,79,0.16)",  text: "#EA6A85", on: "#FFFFFF" },
-  EST: { primary: "#14B87A", tint: "rgba(20,184,122,0.16)", text: "#2FCB8D", on: "#0B1830" },
-  GIG: { primary: "#D2327C", tint: "rgba(210,50,124,0.16)", text: "#EC69A3", on: "#FFFFFF" },
-  ESC: { primary: "#EF4B4B", tint: "rgba(239,75,75,0.16)",  text: "#F46A6A", on: "#0B1830" },
-  LIC: { primary: "#4A8BF0", tint: "rgba(74,139,240,0.16)", text: "#6FA3F5", on: "#0B1830" },
+  AGU: { primary: "#F2A71B", tint: "rgba(242,167,27,0.16)", text: "rgb(var(--club-agu))", on: "#0B1830" },
+  TOR: { primary: "#C7304F", tint: "rgba(199,48,79,0.16)",  text: "rgb(var(--club-tor))", on: "#FFFFFF" },
+  EST: { primary: "#14B87A", tint: "rgba(20,184,122,0.16)", text: "rgb(var(--club-est))", on: "#0B1830" },
+  GIG: { primary: "#D2327C", tint: "rgba(210,50,124,0.16)", text: "rgb(var(--club-gig))", on: "#FFFFFF" },
+  ESC: { primary: "#EF4B4B", tint: "rgba(239,75,75,0.16)",  text: "rgb(var(--club-esc))", on: "#0B1830" },
+  LIC: { primary: "#4A8BF0", tint: "rgba(74,139,240,0.16)", text: "rgb(var(--club-lic))", on: "#0B1830" },
 };
 
 export const TEAM_FULL_NAMES: Record<string, string> = {

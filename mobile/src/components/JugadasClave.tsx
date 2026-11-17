@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 import { KeyPlay } from '../types';
 import TeamBadge from './TeamBadge';
+import { tematico } from '../tema';
 
 /**
  * Las jugadas que más movieron la probabilidad de ganar, de la que más a la
@@ -57,7 +58,7 @@ export default function JugadasClave({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   caja: { borderTopWidth: 1, borderTopColor: COLORS.border, paddingTop: 12, marginTop: 4, paddingBottom: 6, gap: 10 },
   etiqueta: { color: COLORS.textFaint, fontSize: 10, letterSpacing: 0.6 },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 12 },
@@ -76,4 +77,4 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   cambioBaja: { color: COLORS.textSecondary },
-});
+}));

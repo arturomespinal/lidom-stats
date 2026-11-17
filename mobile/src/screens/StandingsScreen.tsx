@@ -17,10 +17,12 @@ import EmptyState from '../components/EmptyState';
 import TeamBadge from '../components/TeamBadge';
 import SelectorTemporada from '../components/SelectorTemporada';
 import { etiquetaTemporada, useTemporada } from '../temporada';
+import { tematico } from '../tema';
 
-const POS = COLORS.positive;
-const NEG = COLORS.negative;
-const EVEN = COLORS.warning;
+// Funciones y no constantes: los colores cambian con el modo (src/tema.ts).
+const POS = () => COLORS.positive;
+const NEG = () => COLORS.negative;
+const EVEN = () => COLORS.warning;
 
 const fmtPct = (v: number | null) =>
   v != null ? v.toFixed(3).replace(/^0/, '') : '—';
@@ -41,9 +43,9 @@ const fmtClas = (v: number | null) => {
 
 const clasColor = (v: number | null) => {
   if (v == null) return COLORS.textSecondary;
-  if (v > 0) return POS;
-  if (v < 0) return NEG;
-  return EVEN;
+  if (v > 0) return POS();
+  if (v < 0) return NEG();
+  return EVEN();
 };
 
 function Header() {
@@ -87,7 +89,7 @@ function TeamRow({
 }) {
   const diff = item.run_differential;
   const diffColor =
-    diff == null ? COLORS.textSecondary : diff >= 0 ? POS : NEG;
+    diff == null ? COLORS.textSecondary : diff >= 0 ? POS() : NEG();
 
   // El color oficial del equipo como borde estructural de la fila, no solo
   // dentro del cuadrito de las siglas. Es lo único que distingue una tabla de
@@ -259,7 +261,7 @@ function Legend() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   atenuado: { opacity: 0.5 },
   center: {
     flex: 1,
@@ -347,9 +349,9 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
     backgroundColor: COLORS.bgPage,
   },
-  cutlineBar: { flex: 1, height: 1, backgroundColor: `${POS}66` },
+  cutlineBar: { flex: 1, height: 1, backgroundColor: `${POS()}66` },
   cutlineLabel: {
-    color: POS,
+    color: POS(),
     fontSize: 9,
     fontWeight: '700',
     textTransform: 'uppercase',
@@ -359,4 +361,4 @@ const styles = StyleSheet.create({
   legend: { paddingHorizontal: 16, paddingVertical: 14 },
   legendText: { color: COLORS.textSecondary, fontSize: 11, lineHeight: 16 },
   legendKey: { color: COLORS.textPrimary, fontWeight: '700' },
-});
+}));

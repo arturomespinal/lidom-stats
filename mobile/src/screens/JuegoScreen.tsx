@@ -10,6 +10,7 @@ import Seccion from '../components/Seccion';
 import BoxScore from '../components/BoxScore';
 import { Bloque } from '../components/Esqueleto';
 import { CarruselFiguras, TarjetaDestacado } from '../components/Jornada';
+import { tematico } from '../tema';
 
 // La pantalla vive en todas las pilas (FichasParamList). El detalle en vivo,
 // solo en la de Hoy: por eso se pregunta si la ruta existe antes de ofrecerlo.
@@ -116,7 +117,7 @@ export default function JuegoScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   box: { marginHorizontal: 16 },
   sinBox: {
@@ -148,4 +149,4 @@ const styles = StyleSheet.create({
   },
   botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   presionado: { backgroundColor: COLORS.bgRaised },
-});
+}));

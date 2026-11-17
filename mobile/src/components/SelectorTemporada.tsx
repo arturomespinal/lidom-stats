@@ -5,6 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { COLORS, FONTS } from '../constants';
 import HojaInferior from './HojaInferior';
 import { Tocable } from './Movimiento';
+import { tematico } from '../tema';
 
 export interface OpcionTemporada {
   /** Lo que se devuelve al elegir ("2015" o "2015-16", según la pantalla). */
@@ -115,7 +116,7 @@ export default function SelectorTemporada({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   barra: {
     height: 56,
     justifyContent: 'center',
@@ -156,4 +157,4 @@ const styles = StyleSheet.create({
   textoActivo: { color: COLORS.accentOn },
   notaActiva: { color: COLORS.accentOn },
   reciente: { fontSize: 10, letterSpacing: 0.8, fontWeight: '700', color: COLORS.textSecondary },
-});
+}));

@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, ALPHA } from '../constants';
 import { LiveGameDetail, PlayLine } from '../types';
+import { tematico } from '../tema';
 
 /**
  * El relato, del más reciente al más viejo — que es como se lee un juego en
@@ -132,7 +133,7 @@ export default function PlayByPlay({ detail }: { detail: LiveGameDetail }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   batazo: { color: COLORS.textFaint, fontSize: 11, fontVariant: ['tabular-nums'], marginTop: 1 },
   inningBar: {
     flexDirection: 'row',
@@ -208,4 +209,4 @@ const styles = StyleSheet.create({
   },
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { color: COLORS.textSecondary, fontSize: 14 },
-});
+}));

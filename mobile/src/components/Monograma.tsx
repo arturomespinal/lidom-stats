@@ -2,6 +2,7 @@ import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 import { iniciales } from '../formato';
+import { tematico } from '../tema';
 
 /**
  * El monograma del jugador: sus iniciales en una teja grafito redondeada.
@@ -36,7 +37,7 @@ export default function Monograma({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   teja: { backgroundColor: COLORS.bgPage, alignItems: 'center', justifyContent: 'center' },
   letras: { fontFamily: FONTS.display, textTransform: 'uppercase', letterSpacing: 0.5 },
-});
+}));

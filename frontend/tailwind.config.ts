@@ -60,6 +60,8 @@ const config: Config = {
         warn:     token("warn"),
         live:     token("live"),
 
+        serie:    token("serie"),
+
         // Solo cascarón. Ver la nota de arriba.
         brand:       token("brand"),
         "brand-navy": token("brand-navy"),

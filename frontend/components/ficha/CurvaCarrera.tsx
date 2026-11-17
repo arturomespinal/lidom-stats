@@ -9,7 +9,8 @@ import { useAncho } from "./useAncho";
 
 const ALTO = 240;
 const M = { izq: 40, der: 48, arriba: 14, abajo: 40 };
-const LIGA = "#7A879B"; // 4.4:1 sobre la tarjeta: se distingue sin competir
+// La liga en gris: se distingue sin competir con el jugador. Cambia con el modo.
+const LIGA = "rgb(var(--serie))";
 const TINTA = "rgb(var(--fg))";
 
 /**

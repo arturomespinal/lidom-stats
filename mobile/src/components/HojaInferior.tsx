@@ -13,6 +13,7 @@ import {
 import { SafeAreaInsetsContext } from 'react-native-safe-area-context';
 import { COLORS, FONTS } from '../constants';
 import { useReducirMovimiento } from './Movimiento';
+import { tematico } from '../tema';
 
 /**
  * Hoja que sube desde abajo (bottom sheet), el patrón que piden las reglas de
@@ -124,7 +125,7 @@ export default function HojaInferior({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   // Negro y no navy: sobre el grafito, un velo azulado teñía la app de un
   // color que no es suyo.
   velo: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0, 0, 0, 0.55)' },
@@ -146,4 +147,4 @@ const styles = StyleSheet.create({
   manija: { width: 40, height: 5, borderRadius: 3, backgroundColor: COLORS.border, marginBottom: 16 },
   titulo: { fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 28, lineHeight: 30, color: COLORS.textPrimary },
   subtitulo: { marginTop: 2, fontSize: 13, color: COLORS.textSecondary },
-});
+}));

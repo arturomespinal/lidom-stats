@@ -3,6 +3,7 @@ import { Animated, Easing, LayoutChangeEvent, Pressable, ScrollView, StyleSheet,
 import type { ScrollViewInstance } from 'react-native';
 import { COLORS } from '../constants';
 import { useReducirMovimiento } from './Movimiento';
+import { tematico } from '../tema';
 
 export interface Pestana<K extends string> {
   key: K;
@@ -137,7 +138,7 @@ export default function Pestanas<K extends string>({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   scroll: {
     backgroundColor: COLORS.bgCard,
     maxHeight: 44,
@@ -168,4 +169,4 @@ const styles = StyleSheet.create({
   raya: { position: 'absolute', height: 2, backgroundColor: COLORS.accent },
   rayaAbajo: { bottom: 0 },
   rayaArriba: { top: 0 },
-});
+}));

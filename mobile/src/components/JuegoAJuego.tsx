@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 import type { FilaJuegoBateo, FilaJuegoPitcheo } from '../types';
+import { tematico } from '../tema';
 
 type Fila = FilaJuegoBateo | FilaJuegoPitcheo;
 
@@ -74,7 +75,7 @@ export default function JuegoAJuego({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   lista: {
     marginHorizontal: 16,
     borderRadius: 10,
@@ -105,4 +106,4 @@ const styles = StyleSheet.create({
   flecha: { fontSize: 18, color: COLORS.textSecondary },
   verTodos: { minHeight: 44, alignItems: 'center', justifyContent: 'center' },
   verTodosTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-});
+}));

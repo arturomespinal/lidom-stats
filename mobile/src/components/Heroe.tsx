@@ -1,7 +1,8 @@
 import React from 'react';
 import { StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import { COLORS, FONTS } from '../constants';
+import { COLORS, FONTS, ALPHA } from '../constants';
 import { anchoTitulo, CifraAjustada } from './Ajuste';
+import { tematico } from '../tema';
 
 const CORTE = 32;
 
@@ -129,7 +130,7 @@ export function FilaCifras({ titulo, children }: { titulo?: string; children: Re
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   caja: {
     backgroundColor: COLORS.ink,
     overflow: 'hidden',
@@ -169,7 +170,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255, 255, 255, 0.14)',
+    borderTopColor: ALPHA.rayaFranja,
   },
   cifras: { flexDirection: 'row', gap: 8 },
   cifra: { flex: 1, gap: 2 },
@@ -184,4 +185,4 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     color: COLORS.inkDim,
   },
-});
+}));

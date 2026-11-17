@@ -4,6 +4,7 @@ import Svg, { Line, Rect, Text as SvgText } from 'react-native-svg';
 import { COLORS } from '../constants';
 import { conSigno } from '../formato';
 import type { TeamSeasonRow } from '../types';
+import { tematico } from '../tema';
 
 const ALTO = 168;
 const M = { arriba: 20, abajo: 22 };
@@ -57,7 +58,7 @@ export default function BarrasDiferencial({
               const h = Math.max(Math.abs(Y(f.run_diff) - Y(0)), 1);
               return (
                 <React.Fragment key={f.season_id}>
-                  <Rect x={x} y={y0} width={bw} height={h} rx={2} fill={f.run_diff > 0 ? COLORS.textPrimary : '#9AA6B8'} />
+                  <Rect x={x} y={y0} width={bw} height={h} rx={2} fill={f.run_diff > 0 ? COLORS.textPrimary : COLORS.serie} />
                   {marcadas.has(f.season_id) && (
                     <SvgText
                       x={x + bw / 2}
@@ -77,7 +78,7 @@ export default function BarrasDiferencial({
                 </React.Fragment>
               );
             })}
-            <Line x1={0} x2={ancho} y1={Y(0)} y2={Y(0)} stroke="#9AA6B8" strokeWidth={1} />
+            <Line x1={0} x2={ancho} y1={Y(0)} y2={Y(0)} stroke={COLORS.serie} strokeWidth={1} />
             <SvgText x={0} y={ALTO - 4} fontSize={10} fill={COLORS.textSecondary}>
               {filas[0].season_id}
             </SvgText>
@@ -91,7 +92,7 @@ export default function BarrasDiferencial({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     padding: 12,
@@ -100,4 +101,4 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
   },
-});
+}));

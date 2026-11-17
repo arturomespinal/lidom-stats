@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Tocable } from './Movimiento';
 import { COLORS, FONTS } from '../constants';
 import type { LastGame } from '../types';
+import { tematico } from '../tema';
 
 /**
  * Los últimos diez, del más viejo al más nuevo: se leen de izquierda a
@@ -43,7 +44,7 @@ export default function UltimosDiez({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   fila: { flexDirection: 'row', gap: 4, paddingHorizontal: 16 },
   caja: { flex: 1 },
   celda: { alignItems: 'center', gap: 4 },
@@ -52,4 +53,4 @@ const styles = StyleSheet.create({
   perdido: { backgroundColor: COLORS.bgCard, borderWidth: 1, borderColor: COLORS.border },
   letra: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 20 },
   rival: { fontSize: 10, color: COLORS.textSecondary },
-});
+}));

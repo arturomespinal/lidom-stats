@@ -11,6 +11,7 @@ import {
 import Svg, { ClipPath, Circle, Defs, G, Line, Path, Rect } from 'react-native-svg';
 import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 import { WinProbPoint } from '../types';
+import { tematico } from '../tema';
 
 interface Props {
   points: WinProbPoint[];
@@ -353,7 +354,7 @@ export default function WinProbBand({ points, current, homeCode, awayCode, headl
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   wrap: { marginTop: 16 },
 
   leyenda: { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 8 },
@@ -434,4 +435,4 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   celdaFuerte: { color: COLORS.textPrimary, fontWeight: '600' },
-});
+}));

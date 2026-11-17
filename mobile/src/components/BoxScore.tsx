@@ -4,6 +4,7 @@ import { COLORS } from '../constants';
 import { BatterLine, PitcherLine, TeamBox } from '../types';
 import TeamBadge from './TeamBadge';
 import { useFichas } from '../navigation';
+import { tematico } from '../tema';
 
 /**
  * Boxscore: los números de HOY, no el acumulado de temporada.
@@ -174,7 +175,7 @@ export default function BoxScore({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   block: { marginBottom: 18 },
   teamHeader: {
     flexDirection: 'row',
@@ -238,4 +239,4 @@ const styles = StyleSheet.create({
 
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { color: COLORS.textSecondary, fontSize: 14 },
-});
+}));

@@ -3,6 +3,7 @@ import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
 import { LiveGameDetail } from '../types';
 import TeamBadge from './TeamBadge';
+import { tematico } from '../tema';
 
 /**
  * El cuadro clásico por entradas, con R-H-E al final.
@@ -144,7 +145,7 @@ export default function InningGrid({ detail }: { detail: LiveGameDetail }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   grid: { paddingVertical: 6, paddingHorizontal: RELLENO },
   row: {
     flexDirection: 'row',
@@ -184,4 +185,4 @@ const styles = StyleSheet.create({
 
   empty: { padding: 32, alignItems: 'center' },
   emptyText: { color: COLORS.textSecondary, fontSize: 14 },
-});
+}));

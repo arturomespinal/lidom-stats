@@ -2,6 +2,7 @@ import React from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { API_BASE } from '../config';
 import { COLORS } from '../constants';
+import { tematico } from '../tema';
 
 /**
  * Pantalla vacía. Dos casos que NO son el mismo:
@@ -49,7 +50,7 @@ export default function EmptyState({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   container: {
     flex: 1,
     alignItems: 'center',
@@ -72,4 +73,4 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-});
+}));

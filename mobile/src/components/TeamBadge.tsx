@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS, TEAM_STYLES } from '../constants';
+import { tematico } from '../tema';
 
 interface Props {
   code: string;
@@ -79,7 +80,7 @@ export default function TeamBadge({ code, size = 32, variant = 'outline' }: Prop
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   teja: {
     alignItems: 'center',
     justifyContent: 'center',
@@ -90,4 +91,4 @@ const styles = StyleSheet.create({
     fontFamily: FONTS.display, textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
-});
+}));

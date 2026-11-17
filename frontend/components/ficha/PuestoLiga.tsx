@@ -49,7 +49,7 @@ export default function PuestoLiga({ ranking }: { ranking: PlayerRanking }) {
                 className="block h-full rounded"
                 style={{
                   width: `${Math.max(lleno, 3)}%`,
-                  backgroundColor: podio ? "rgb(var(--accent))" : "#7A879B",
+                  backgroundColor: podio ? "rgb(var(--accent))" : "rgb(var(--serie))",
                 }}
               />
             </span>

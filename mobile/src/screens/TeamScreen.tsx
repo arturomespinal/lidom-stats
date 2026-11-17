@@ -21,6 +21,7 @@ import { tamanoNombre } from '../components/Ajuste';
 import UltimosDiez from '../components/UltimosDiez';
 import CarreraBanderin from '../components/CarreraBanderin';
 import BarrasDiferencial from '../components/BarrasDiferencial';
+import { estiloBarra, tematico } from '../tema';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Equipo'>;
 type Plantilla = 'bateadores' | 'lanzadores';
@@ -154,11 +155,12 @@ export default function TeamScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // Cabecera oscura: barra de estado clara mientras esta pantalla tiene el foco.
+  // La barra de estado sigue al modo (src/tema.ts): la franja de la cabecera
+  // es grafito en el oscuro y gris claro en el claro.
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('light');
+      setStatusBarStyle(estiloBarra());
+      return () => setStatusBarStyle(estiloBarra());
     }, []),
   );
 
@@ -462,7 +464,7 @@ export default function TeamScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
 
   // La columna de texto no pasa del 52% del ancho: el resto es del plano del
@@ -640,4 +642,4 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-});
+}));

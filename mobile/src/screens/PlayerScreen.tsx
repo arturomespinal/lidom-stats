@@ -5,7 +5,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { setStatusBarStyle } from 'expo-status-bar';
 
 import { fetchGamelog, fetchPlayerProfile } from '../api';
-import { COLORS, FONTS, TEAM_SHORT_NAMES, TEAM_STYLES } from '../constants';
+import { COLORS, FONTS, TEAM_SHORT_NAMES, TEAM_STYLES, ALPHA } from '../constants';
 import { entradas, fechaEs, num, pct3, rangoTemporadas } from '../formato';
 import type { FichasParamList } from '../navigation';
 import type {
@@ -28,6 +28,7 @@ import PuestoLiga from '../components/PuestoLiga';
 import CurvaCarrera from '../components/CurvaCarrera';
 import Trayectoria from '../components/Trayectoria';
 import JuegoAJuego from '../components/JuegoAJuego';
+import { estiloBarra, tematico } from '../tema';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Jugador'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -177,12 +178,12 @@ export default function PlayerScreen({ route, navigation }: Props) {
     cargar();
   }, [cargar]);
 
-  // La cabecera es oscura: la barra de estado va en claro mientras esta
-  // pantalla tiene el foco, y vuelve a oscura al salir.
+  // La barra de estado sigue al modo (src/tema.ts): la franja de la cabecera
+  // es grafito en el oscuro y gris claro en el claro.
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('light');
+      setStatusBarStyle(estiloBarra());
+      return () => setStatusBarStyle(estiloBarra());
     }, []),
   );
 
@@ -458,7 +459,7 @@ export default function PlayerScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
 
   identidad: { flexDirection: 'row', alignItems: 'flex-start', gap: 16 },
@@ -505,7 +506,7 @@ const styles = StyleSheet.create({
     marginTop: 16,
     paddingTop: 8,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.14)',
+    borderTopColor: ALPHA.rayaFranja,
     fontVariant: ['tabular-nums'],
   },
 
@@ -555,4 +556,4 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.bgCard,
   },
   botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
-});
+}));

@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS } from '../constants';
 import { TeamDetail, TeamTotals } from '../types';
 import TeamBadge from './TeamBadge';
+import { tematico } from '../tema';
 
 /**
  * Equipo contra equipo: barras enfrentadas, el visitante a la izquierda y el
@@ -80,7 +81,7 @@ export default function Comparativa({ away, home }: { away: TeamDetail; home: Te
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     marginBottom: 16,
@@ -113,4 +114,4 @@ const styles = StyleSheet.create({
   barra: { height: 8 },
   barraIzq: { borderTopLeftRadius: 4, borderBottomLeftRadius: 4 },
   barraDer: { borderTopRightRadius: 4, borderBottomRightRadius: 4 },
-});
+}));

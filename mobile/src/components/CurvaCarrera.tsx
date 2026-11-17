@@ -4,10 +4,12 @@ import Svg, { Circle, Line, Polyline, Rect, Text as SvgText } from 'react-native
 import { COLORS, FONTS, TEAM_STYLES } from '../constants';
 import { marcasRedondas, pct3 } from '../formato';
 import type { PlayerCurve } from '../types';
+import { tematico } from '../tema';
 
 const ALTO = 200;
 const M = { izq: 34, der: 44, arriba: 12, abajo: 38 };
-const LIGA = '#7A879B'; // 4.4:1 sobre la tarjeta: se distingue sin competir
+// El gris de la serie (COLORS.serie), por modo: se distingue sin competir.
+const LIGA = () => COLORS.serie;
 
 /**
  * La carrera en una curva: su OPS (o su efectividad) temporada a temporada
@@ -104,7 +106,7 @@ export default function CurvaCarrera({
           <Text style={styles.leyendaTexto}>El jugador</Text>
         </View>
         <View style={styles.leyendaItem}>
-          <View style={[styles.muestra, { height: 2, backgroundColor: LIGA }]} />
+          <View style={[styles.muestra, { height: 2, backgroundColor: LIGA() }]} />
           <Text style={styles.leyendaTexto}>Promedio de la liga</Text>
         </View>
       </View>
@@ -158,7 +160,7 @@ export default function CurvaCarrera({
               <Polyline
                 points={liga.map(l => `${X(idx(l.season_id))},${Y(l.value)}`).join(' ')}
                 fill="none"
-                stroke={LIGA}
+                stroke={LIGA()}
                 strokeWidth={1.5}
                 strokeLinejoin="round"
               />
@@ -206,7 +208,7 @@ export default function CurvaCarrera({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     padding: 12,
@@ -220,4 +222,4 @@ const styles = StyleSheet.create({
   leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   muestra: { width: 16 },
   leyendaTexto: { fontSize: 11, color: COLORS.textSupport },
-});
+}));

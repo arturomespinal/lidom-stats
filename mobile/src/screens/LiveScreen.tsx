@@ -16,6 +16,7 @@ import { fetchLiveGames } from '../api';
 import { COLORS } from '../constants';
 import { LiveGameState } from '../types';
 import LiveScoreboard from '../components/LiveScoreboard';
+import { tematico } from '../tema';
 
 /**
  * Marcador en vivo.
@@ -195,7 +196,7 @@ export default function LiveScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   center: {
     flex: 1,
     alignItems: 'center',
@@ -242,4 +243,4 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     textAlign: 'center',
   },
-});
+}));

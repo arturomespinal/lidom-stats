@@ -87,9 +87,93 @@
   --campo-tierra:  58  49  38;   /* #3A3126 */
   --campo-linea:  142 152 166;   /* #8E98A6 */
 
+  /* La serie "del resto" en las gráficas de las fichas: la liga en la curva
+     del jugador, los otros cinco en la carrera por el banderín, las barras
+     sin color. Una marca, no texto: basta 3:1. */
+  --serie:     138 150 169;   /* #8A96A9                              */
+
+  /* La tinta de cada club para TEXTO sobre las superficies (TEAM_STYLES.text
+     apunta aquí). En oscuro, aclarada hasta 4.5:1 sobre la franja. */
+  --club-agu:  242 167  27;   /* #F2A71B 7.1 */
+  --club-tor:  234 106 133;   /* #EA6A85 4.8 */
+  --club-est:   47 203 141;   /* #2FCB8D 6.9 */
+  --club-gig:  236 105 163;   /* #EC69A3 4.9 */
+  --club-esc:  244 106 106;   /* #F46A6A 4.9 */
+  --club-lic:  111 163 245;   /* #6FA3F5 5.7 */
+
   /* Marca. El verde, SOLO cascarón: el punto del logotipo. */
   --brand:       3 218  88;   /* #03DA58 — verde Deportiv             */
   --brand-navy:  9  28  58;   /* #091C3A — navy Deportiv              */
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Pizarra clara (16-nov-2026). El mismo diseño sobre blanco y gris claro,
+   con texto grafito. La elige quien la quiera con el botón de la barra
+   (components/BotonTema.tsx); el modo oscuro es el de siempre y el de
+   arranque. `data-tema="claro"` en <html> lo pone un script en el <head>
+   (app/layout.tsx) antes de pintar, así no hay destello oscuro.
+
+   TODO cambia de lado, también la franja (--ink): un gris claro con texto
+   grafito. Así cada token de texto solo tiene que leerse sobre superficies
+   claras, sin casos a medias. Contraste medido:
+
+     token   --bg   --sunken  --card  --raised  --header  --ink
+     fg      17.3   16.1      19.1    16.4      17.8      15.5
+     fg2     10.9   10.1      12.0    10.3      11.2       9.8
+     dim      6.9    6.4       7.6     6.5       7.1       6.1
+     faint    5.5    5.1       6.1     5.2       5.7       4.9
+     pos      5.6    5.2       6.2     5.3       5.8       5.0
+     neg      5.9    5.5       6.5     5.6       6.0       5.3
+     warn     5.4    5.0       5.9     5.1       5.5       4.8
+     live     5.1    4.8       5.7     4.9       5.3       4.6
+
+   Lo seleccionado se invierte: pastilla grafito con texto claro (16:1). EN
+   VIVO, texto claro sobre el rojo (5.2:1). Las tintas de club se oscurecieron
+   hasta 4.6:1 sobre las seis superficies; la teja sólida (primary y `on`)
+   es la misma en los dos modos.
+   ───────────────────────────────────────────────────────────────────────── */
+:root[data-tema="claro"] {
+  color-scheme: light;
+
+  --bg:        242 244 247;   /* #F2F4F7 */
+  --sunken:    232 236 241;   /* #E8ECF1 */
+  --card:      255 255 255;   /* #FFFFFF */
+  --raised:    235 238 242;   /* #EBEEF2 */
+  --header:    246 247 249;   /* #F6F7F9 */
+  --line:      211 217 225;   /* #D3D9E1 */
+  --line-soft: 230 233 238;   /* #E6E9EE */
+
+  --fg:         13  16  20;   /* #0D1014 */
+  --fg2:        47  55  66;   /* #2F3742 */
+  --dim:        75  85  99;   /* #4B5563 */
+  --faint:      89  99 114;   /* #596372 */
+
+  --accent:     22  26  32;   /* #161A20 — pastilla grafito */
+  --accent-on: 243 245 247;   /* #F3F5F7 */
+
+  --ink:       228 232 238;   /* #E4E8EE — la franja, clara */
+  --ink-fg:     13  16  20;   /* #0D1014 */
+  --ink-dim:    75  85  99;   /* #4B5563 */
+
+  --pos:        19 111  68;   /* #136F44 */
+  --neg:       180  35  59;   /* #B4233B */
+  --warn:      138  90   0;   /* #8A5A00 */
+  --live:      196  43  33;   /* #C42B21 */
+
+  /* El terreno, de día: los del tema claro anterior. */
+  --campo-pasto:  220 233 223;   /* #DCE9DF */
+  --campo-franja: 211 227 215;   /* #D3E3D7 */
+  --campo-tierra: 234 223 203;   /* #EADFCB */
+  --campo-linea:  255 255 255;   /* #FFFFFF */
+
+  --serie:     122 133 148;   /* #7A8594 — 3.2:1 o más */
+
+  --club-agu:  139  93   8;   /* #8B5D08 */
+  --club-tor:  191  46  76;   /* #BF2E4C */
+  --club-est:   13 117  78;   /* #0D754E */
+  --club-gig:  188  41 109;   /* #BC296D */
+  --club-esc:  204  18  18;   /* #CC1212 */
+  --club-lic:   18  96 217;   /* #1260D9 */
 }
 
 * {

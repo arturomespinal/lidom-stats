@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 import { LiveRunners } from '../types';
 import { COLORS } from '../constants';
+import { tematico } from '../tema';
 
 /**
  * El diamante con los corredores.
@@ -14,8 +15,9 @@ import { COLORS } from '../constants';
  * desde detrás del home. Base ocupada = rellena; vacía = solo contorno.
  */
 
-const OCCUPIED = COLORS.warning;
-const EMPTY = COLORS.border;
+// Funciones y no constantes: los colores cambian con el modo (src/tema.ts).
+const OCCUPIED = () => COLORS.warning;
+const EMPTY = () => COLORS.border;
 
 /**
  * El centro de cada base y del home, en puntos dentro del diamante: por donde
@@ -106,8 +108,8 @@ export default function BaseDiamond({
               height: b,
               left: base.left,
               top: base.top,
-              backgroundColor: base.on ? OCCUPIED : 'transparent',
-              borderColor: base.on ? OCCUPIED : EMPTY,
+              backgroundColor: base.on ? OCCUPIED() : 'transparent',
+              borderColor: base.on ? OCCUPIED() : EMPTY(),
             },
           ]}
         />
@@ -130,7 +132,7 @@ export default function BaseDiamond({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   base: {
     position: 'absolute',
     borderWidth: 1.5,
@@ -144,6 +146,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
     borderLeftColor: 'transparent',
     borderRightColor: 'transparent',
-    borderTopColor: EMPTY,
+    borderTopColor: EMPTY(),
   },
-});
+}));

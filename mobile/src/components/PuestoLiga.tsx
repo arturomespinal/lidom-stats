@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { COLORS, FONTS } from '../constants';
 import { valorPuesto } from '../formato';
 import type { PlayerRanking } from '../types';
+import { tematico } from '../tema';
 
 /**
  * El jugador contra la liga: una fila por categoría con su valor, una barra y
@@ -41,7 +42,7 @@ export default function PuestoLiga({ ranking }: { ranking: PlayerRanking }) {
               <View
                 style={[
                   styles.relleno,
-                  { width: `${Math.max(lleno, 3)}%`, backgroundColor: podio ? COLORS.accent : '#7A879B' },
+                  { width: `${Math.max(lleno, 3)}%`, backgroundColor: podio ? COLORS.accent : COLORS.serie },
                 ]}
               />
             </View>
@@ -59,7 +60,7 @@ export default function PuestoLiga({ ranking }: { ranking: PlayerRanking }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     paddingHorizontal: 16,
@@ -101,4 +102,4 @@ const styles = StyleSheet.create({
     fontSize: 20,
     color: COLORS.textSupport,
   },
-});
+}));

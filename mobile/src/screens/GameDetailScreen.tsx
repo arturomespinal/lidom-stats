@@ -31,6 +31,7 @@ import Comparativa from '../components/Comparativa';
 import Heroe from '../components/Heroe';
 import { Aparecer } from '../components/Movimiento';
 import { Bloque } from '../components/Esqueleto';
+import { estiloBarra, tematico } from '../tema';
 
 /**
  * Detalle de un juego: relato, cuadro por entradas, boxscore y alineaciones.
@@ -68,12 +69,12 @@ export default function GameDetailScreen({ route }: Props) {
   const scrollY = useRef(0);
   const inicioContenido = useRef(0);
 
-  // La cabecera es oscura: la barra de estado va en claro mientras esta
-  // pantalla tiene el foco, igual que en las fichas.
+  // La barra de estado sigue al modo (src/tema.ts): la franja de la cabecera
+  // es grafito en el oscuro y gris claro en el claro.
   useFocusEffect(
     useCallback(() => {
-      setStatusBarStyle('light');
-      return () => setStatusBarStyle('light');
+      setStatusBarStyle(estiloBarra());
+      return () => setStatusBarStyle(estiloBarra());
     }, []),
   );
 
@@ -382,7 +383,7 @@ function LadoHeroe({ lado }: { lado: LiveGameDetail['home'] }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   page: { flex: 1, backgroundColor: COLORS.bgPage },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
@@ -446,4 +447,4 @@ const styles = StyleSheet.create({
     borderColor: COLORS.border,
     borderRadius: 12,
   },
-});
+}));

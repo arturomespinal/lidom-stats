@@ -9,7 +9,7 @@ import { useAncho } from "./useAncho";
 
 const ALTO = 190;
 const M = { arriba: 22, abajo: 24 };
-const GRIS = "#9AA6B8";
+const GRIS = "rgb(var(--serie))";
 
 /**
  * El diferencial de carreras de cada temporada, de la más vieja a la más

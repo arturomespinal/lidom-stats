@@ -5,6 +5,7 @@ import { LiveGameState, LiveTeamLine } from '../types';
 import BaseDiamond from './BaseDiamond';
 import StatusBadge from './StatusBadge';
 import TeamBadge from './TeamBadge';
+import { tematico } from '../tema';
 
 function StatusPill({ state }: { state: LiveGameState }) {
   // Las entradas extra van en la etiqueta: "FINAL (10)".
@@ -271,7 +272,7 @@ export default function LiveScoreboard({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   card: {
     backgroundColor: COLORS.bgCard,
     borderColor: COLORS.border,
@@ -391,4 +392,4 @@ const styles = StyleSheet.create({
   decisions: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   decision: { color: COLORS.textSupport, fontSize: 11 },
   decisionLabel: { color: COLORS.textSecondary },
-});
+}));

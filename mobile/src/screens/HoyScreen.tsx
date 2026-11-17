@@ -20,6 +20,7 @@ import {
   TarjetaDestacado,
   TarjetaJuego,
 } from '../components/Jornada';
+import { tematico } from '../tema';
 
 type Props = NativeStackScreenProps<LiveStackParamList, 'Portada'>;
 
@@ -263,7 +264,7 @@ function EsqueletoHoy() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   atenuado: { opacity: 0.5 },
   encabezado: { paddingHorizontal: 16, paddingTop: 16, paddingBottom: 12, gap: 2 },
@@ -338,4 +339,4 @@ const styles = StyleSheet.create({
   },
   botonTexto: { fontSize: 14, fontWeight: '600', color: COLORS.textPrimary },
   presionado: { backgroundColor: COLORS.bgRaised },
-});
+}));

@@ -76,7 +76,7 @@ function Primero({ lider, stat, etiqueta }: { lider: LiderHistorico; stat: strin
           {valorHistorico(stat, lider.value)}
         </span>
       </div>
-      <div className="mt-3 border-t border-white/15 pt-3">
+      <div className="mt-3 border-t border-ink-fg/15 pt-3">
         <Equipos codigos={lider.teams} variante="solid" />
       </div>
     </div>

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
+import BotonTema from "@/components/BotonTema";
 import PlayerSearch from "@/components/PlayerSearch";
 import { etiquetaTemporada } from "@/lib/formato";
 
@@ -80,7 +81,10 @@ export default function Navbar({ season, barraInferior = true }: Props) {
           {/* Logotipo. El punto verde es la ÚNICA pieza de marca que entra a la
               interfaz, y va pegado al nombre — ver la nota en globals.css sobre
               por qué el verde de Deportiv no baja al contenido. */}
-          <Link href={`/${consulta}`} className="mr-4 flex shrink-0 items-baseline gap-1.5">
+          {/* En el teléfono la fila lleva logotipo, buscador y el botón de modo
+              (components/BotonTema.tsx): el margen y el buscador se aprietan
+              para que quepan los tres en 390 px. */}
+          <Link href={`/${consulta}`} className="mr-1 flex shrink-0 items-baseline gap-1.5 sm:mr-4">
             <span className="font-cond font-bold text-[26px] leading-none tracking-[0.06em] text-fg">DEPORTIV</span>
             <span className="h-1.5 w-1.5 self-center rounded-full bg-brand" aria-hidden="true" />
           </Link>
@@ -96,6 +100,7 @@ export default function Navbar({ season, barraInferior = true }: Props) {
               que sirva de índice: el buscador es la puerta a las fichas. */}
           <div className="ml-auto flex min-w-0 items-center gap-2 pl-2">
             <PlayerSearch />
+            <BotonTema />
             {season && (
               <span className="num hidden rounded bg-header px-2 py-1 text-xs text-dim sm:inline">
                 {etiquetaTemporada(season)}

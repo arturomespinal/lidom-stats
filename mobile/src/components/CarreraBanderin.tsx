@@ -4,11 +4,13 @@ import Svg, { Circle, Line, Polyline, Text as SvgText } from 'react-native-svg';
 import { COLORS, TEAM_STYLES } from '../constants';
 import { marcasRedondas } from '../formato';
 import type { RaceSeries } from '../types';
+import { tematico } from '../tema';
 
 const ALTO = 220;
 const M = { izq: 30, der: 60, arriba: 16, abajo: 24 };
 // 3.0:1 sobre blanco: el mínimo para una marca gráfica. Contexto, no dato.
-const RESTO = '#8A96A9';
+// Función: el gris cambia con el modo (src/tema.ts).
+const RESTO = () => COLORS.serie;
 
 function signo(n: number): string {
   return n > 0 ? `+${n}` : n < 0 ? `−${Math.abs(n)}` : '0';
@@ -69,7 +71,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
           <Text style={styles.leyendaTexto}>{equipo}</Text>
         </View>
         <View style={styles.leyendaItem}>
-          <View style={[styles.muestra, { height: 2, backgroundColor: RESTO }]} />
+          <View style={[styles.muestra, { height: 2, backgroundColor: RESTO() }]} />
           <Text style={styles.leyendaTexto}>Resto de la liga</Text>
         </View>
       </View>
@@ -90,7 +92,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
                   x2={M.izq + pw}
                   y1={Y(t)}
                   y2={Y(t)}
-                  stroke={t === 0 ? '#9AA6B8' : COLORS.borderSoft}
+                  stroke={t === 0 ? COLORS.serie : COLORS.borderSoft}
                   strokeWidth={1}
                 />
                 <SvgText x={M.izq - 6} y={Y(t) + 3.5} fontSize={10} fill={COLORS.textSecondary} textAnchor="end">
@@ -108,7 +110,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
                 key={c.team_code}
                 points={c.series.map((v, i) => `${X(i)},${Y(v)}`).join(' ')}
                 fill="none"
-                stroke={c.team_code === equipo ? tinta : RESTO}
+                stroke={c.team_code === equipo ? tinta : RESTO()}
                 strokeWidth={c.team_code === equipo ? 3 : 1.5}
                 strokeLinejoin="round"
               />
@@ -140,7 +142,7 @@ export default function CarreraBanderin({ carrera, equipo }: { carrera: RaceSeri
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     padding: 12,
@@ -154,4 +156,4 @@ const styles = StyleSheet.create({
   leyendaItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   muestra: { width: 16 },
   leyendaTexto: { fontSize: 11, color: COLORS.textSupport },
-});
+}));

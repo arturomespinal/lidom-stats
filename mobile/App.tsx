@@ -1,7 +1,7 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Text, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
-import { DarkTheme, NavigationContainer } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, NavigationContainer, type NavigationState } from '@react-navigation/native';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -21,7 +21,9 @@ import TeamScreen from './src/screens/TeamScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import RecordsScreen from './src/screens/RecordsScreen';
+import BotonTema from './src/components/BotonTema';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
+import { cargarTema, estiloBarra, tematico, temaActual, useTema } from './src/tema';
 
 // La pantalla de arranque se queda hasta que Barlow Condensed esté cargada. Sin
 // esto, la primera pantalla aparece un instante con la fuente del sistema y
@@ -34,8 +36,11 @@ const Tab = createBottomTabNavigator();
 const LiveStack = createNativeStackNavigator<LiveStackParamList>();
 const Pila = createNativeStackNavigator<PilaParamList>();
 
-/** Cabecera común a todas las pilas. */
-const OPCIONES_PILA = {
+/**
+ * Cabecera común a todas las pilas. Estas opciones y el tema de navegación
+ * van en `tematico()` (src/tema.ts): un objeto por modo.
+ */
+const OPCIONES_PILA = tematico(() => ({
   headerStyle: { backgroundColor: COLORS.bgCard },
   headerTintColor: COLORS.textPrimary,
   headerTitleStyle: { fontWeight: '700' as const, fontSize: 15 },
@@ -44,7 +49,7 @@ const OPCIONES_PILA = {
   // Solo el chevron. Con el texto, iOS 26 dibuja una cápsula gris que pesa
   // más que el propio título.
   headerBackButtonDisplayMode: 'minimal' as const,
-};
+}));
 
 /**
  * Las fichas abren con la cabecera oscura (components/Heroe.tsx), así que la
@@ -52,21 +57,21 @@ const OPCIONES_PILA = {
  * queda sobre la franja y el nombre grande de la ficha hace de título. El
  * `title` se sigue poniendo —lo usa el lector de pantalla—; solo no se dibuja.
  */
-const OPCIONES_FICHA = {
+const OPCIONES_FICHA = tematico(() => ({
   headerStyle: { backgroundColor: COLORS.ink },
   headerTintColor: COLORS.inkFg,
   headerTitle: () => null,
-};
+}));
 
 /**
  * El detalle de juego también abre con la franja oscura, pero conserva el
  * título ("AGU vs LIC") en blanco: el marcador se va al desplazar, y el
  * título es lo único que queda diciendo qué juego es.
  */
-const OPCIONES_JUEGO = {
+const OPCIONES_JUEGO = tematico(() => ({
   headerStyle: { backgroundColor: COLORS.ink },
   headerTintColor: COLORS.inkFg,
-};
+}));
 
 /**
  * Cada pestaña es una PILA, no una pantalla suelta.
@@ -95,7 +100,7 @@ function HoyTab() {
         // with the same name nested inside one another").
         name="Portada"
         component={HoyScreen}
-        options={{ headerTitle: () => <Logotipo /> }}
+        options={OPCIONES_RAIZ}
       />
       <LiveStack.Screen name="LiveList" component={LiveScreen} options={{ title: 'En vivo' }} />
       <LiveStack.Screen name="Calendario" component={CalendarioScreen} options={{ title: 'Calendario' }} />
@@ -139,11 +144,20 @@ function HoyTab() {
  * misma función para que no haya cuatro copias de la misma pila que un día
  * dejen de coincidir.
  */
+/**
+ * La raíz de cada pestaña: el logotipo y, a la derecha, el botón de modo
+ * claro u oscuro (components/BotonTema.tsx), como en la barra de la web.
+ */
+const OPCIONES_RAIZ = {
+  headerTitle: () => <Logotipo />,
+  headerRight: () => <BotonTema />,
+};
+
 function crearPila(Raiz: React.ComponentType) {
   return function PilaConFichas() {
     return (
       <Pila.Navigator screenOptions={OPCIONES_PILA}>
-        <Pila.Screen name="Raiz" component={Raiz} options={{ headerTitle: () => <Logotipo /> }} />
+        <Pila.Screen name="Raiz" component={Raiz} options={OPCIONES_RAIZ} />
         <Pila.Screen
           name="Juego"
           component={JuegoScreen}
@@ -177,22 +191,25 @@ const BuscarTab = crearPila(SearchScreen);
 
 /**
  * El tema de navegación sale de COLORS, así que sigue a la paleta sola. Parte
- * de `DarkTheme` porque el look "Pizarra" es oscuro: eso le dice a la
- * navegación (y por ella al sistema) que las barras y los menús nativos van
- * en oscuro.
+ * de `DarkTheme` en el modo oscuro y de `DefaultTheme` en el claro: eso le
+ * dice a la navegación (y por ella al sistema) de qué lado van las barras y
+ * los menús nativos.
  */
-const TemaDeportiv = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: COLORS.bgPage,
-    card: COLORS.bgCard,
-    text: COLORS.textPrimary,
-    border: COLORS.border,
-    primary: COLORS.accent,
-    notification: COLORS.accent,
-  },
-};
+const TemaDeportiv = tematico(() => {
+  const base = temaActual() === 'claro' ? DefaultTheme : DarkTheme;
+  return {
+    ...base,
+    colors: {
+      ...base.colors,
+      background: COLORS.bgPage,
+      card: COLORS.bgCard,
+      text: COLORS.textPrimary,
+      border: COLORS.border,
+      primary: COLORS.accent,
+      notification: COLORS.accent,
+    },
+  };
+});
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -229,17 +246,39 @@ export default function App() {
     BarlowCondensed_700Bold: require('@expo-google-fonts/barlow-condensed/700Bold/BarlowCondensed_700Bold.ttf'),
   });
 
+  // El modo guardado (src/tema.ts) se lee antes de pintar nada: así quien
+  // eligió el claro no ve un instante la app en oscuro.
+  const [temaListo, setTemaListo] = useState(false);
+  useEffect(() => {
+    cargarTema().finally(() => setTemaListo(true));
+  }, []);
+  const tema = useTema();
+
+  // Al cambiar de modo el árbol se vuelve a montar (`key={tema}`) para que
+  // cada pantalla lea los estilos del modo nuevo. La navegación no se pierde:
+  // el estado se guarda en cada cambio y el árbol nuevo arranca desde él, en
+  // la misma pestaña y la misma ficha.
+  const estadoNavegacion = useRef<NavigationState | undefined>(undefined);
+
+  const fuentesResueltas = fuentesListas || !!errorFuentes;
   useEffect(() => {
     // Si la fuente falla, la app arranca igual con la del sistema: un título
     // en Roboto es mejor que una pantalla de arranque que no se va nunca.
-    if (fuentesListas || errorFuentes) SplashScreen.hideAsync().catch(() => {});
-  }, [fuentesListas, errorFuentes]);
+    if (fuentesResueltas && temaListo) SplashScreen.hideAsync().catch(() => {});
+  }, [fuentesResueltas, temaListo]);
 
-  if (!fuentesListas && !errorFuentes) return null;
+  if (!fuentesResueltas || !temaListo) return null;
 
   return (
-    <NavigationContainer theme={TemaDeportiv}>
-      <StatusBar style="light" />
+    <NavigationContainer
+      key={tema}
+      theme={TemaDeportiv}
+      initialState={estadoNavegacion.current}
+      onStateChange={(estado) => {
+        estadoNavegacion.current = estado;
+      }}
+    >
+      <StatusBar style={estiloBarra()} />
       <Tab.Navigator
         screenOptions={({ route }) => ({
           // La cabecera la pone cada pila (ver HoyTab). El logotipo va en la

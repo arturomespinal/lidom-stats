@@ -128,7 +128,7 @@ export function CifraHeroe({
  */
 export function FilaCifras({ titulo, children }: { titulo?: string; children: ReactNode }) {
   return (
-    <div className="mt-6 border-t border-white/15 pt-3 sm:w-[58%]">
+    <div className="mt-6 border-t border-ink-fg/15 pt-3 sm:w-[58%]">
       {titulo && (
         <div className="mb-1.5 text-[11px] uppercase tracking-[0.08em] text-ink-dim">
           {titulo}

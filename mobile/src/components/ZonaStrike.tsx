@@ -3,6 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import Svg, { Circle, G, Line, Polygon, Rect, Text as SvgText } from 'react-native-svg';
 import { COLORS } from '../constants';
 import { AtBat, PitchLine } from '../types';
+import { tematico } from '../tema';
 
 /**
  * La zona de strike con los lanzamientos del turno, vista del receptor (como
@@ -32,11 +33,14 @@ const x = (px: number) => ((px - X_MIN) / (X_MAX - X_MIN)) * ANCHO;
 const y = (pz: number) => ALTO - ((pz - Z_MIN) / (Z_MAX - Z_MIN)) * ALTO;
 const recorta = (v: number, a: number, b: number) => Math.max(a, Math.min(b, v));
 
-const ESTILO: Record<PitchLine['kind'], { fill: string; stroke: string; texto: string; nombre: string }> = {
-  strike: { fill: COLORS.accent, stroke: COLORS.accent, texto: COLORS.accentOn, nombre: 'Strike' },
-  bola: { fill: COLORS.bgCard, stroke: COLORS.accent, texto: COLORS.textPrimary, nombre: 'Bola' },
-  en_juego: { fill: COLORS.warning, stroke: COLORS.warning, texto: COLORS.inkFg, nombre: 'En juego' },
-};
+// Por modo (src/tema.ts). El número sobre el ocre de "en juego" va en
+// accentOn: el inkFg de antes era texto claro sobre amarillo (1.9:1).
+const ESTILO: Record<PitchLine['kind'], { fill: string; stroke: string; texto: string; nombre: string }> =
+  tematico(() => ({
+    strike: { fill: COLORS.accent, stroke: COLORS.accent, texto: COLORS.accentOn, nombre: 'Strike' },
+    bola: { fill: COLORS.bgCard, stroke: COLORS.accent, texto: COLORS.textPrimary, nombre: 'Bola' },
+    en_juego: { fill: COLORS.warning, stroke: COLORS.warning, texto: COLORS.accentOn, nombre: 'En juego' },
+  }));
 
 export default function ZonaStrike({ turno }: { turno: AtBat }) {
   const zx0 = x(-MEDIO_PLATO);
@@ -161,7 +165,7 @@ export default function ZonaStrike({ turno }: { turno: AtBat }) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   caja: { gap: 12 },
   zona: { alignSelf: 'center', alignItems: 'center' },
   leyenda: { flexDirection: 'row', gap: 12, marginTop: 6 },
@@ -192,4 +196,4 @@ const styles = StyleSheet.create({
     fontVariant: ['tabular-nums'],
   },
   resultado: { color: COLORS.textPrimary, fontSize: 12, fontWeight: '600', marginTop: 4 },
-});
+}));

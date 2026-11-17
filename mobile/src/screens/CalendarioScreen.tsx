@@ -11,6 +11,7 @@ import Pestanas from '../components/Pestanas';
 import Seccion from '../components/Seccion';
 import EmptyState from '../components/EmptyState';
 import { Bloque } from '../components/Esqueleto';
+import { tematico } from '../tema';
 
 type Props = NativeStackScreenProps<LiveStackParamList, 'Calendario'>;
 
@@ -139,7 +140,7 @@ export default function CalendarioScreen({ route, navigation }: Props) {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   atenuado: { opacity: 0.5 },
   resumen: {
@@ -185,4 +186,4 @@ const styles = StyleSheet.create({
   juegos: { fontSize: 10, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
   textoActivo: { color: COLORS.accentOn },
   subActivo: { color: COLORS.accentOn },
-});
+}));

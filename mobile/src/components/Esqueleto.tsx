@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { AccessibilityInfo, Animated, DimensionValue, StyleSheet, View } from 'react-native';
 import { COLORS } from '../constants';
+import { tematico } from '../tema';
 
 /**
  * Un bloque gris del tamaño de lo que va a llegar.
@@ -87,7 +88,7 @@ export function EsqueletoFicha() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   tarjeta: {
     backgroundColor: COLORS.bgCard,
@@ -96,4 +97,4 @@ const styles = StyleSheet.create({
     borderBottomColor: COLORS.border,
   },
   fila: { flexDirection: 'row', alignItems: 'center', gap: 16 },
-});
+}));

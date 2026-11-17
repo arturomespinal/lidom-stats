@@ -4,6 +4,7 @@ import { COLORS } from '../constants';
 import { BullpenArm, TeamDetail } from '../types';
 import TeamBadge from './TeamBadge';
 import { useFichas } from '../navigation';
+import { tematico } from '../tema';
 
 /**
  * Quién está en el terreno, quién ya lanzó y quién queda disponible.
@@ -161,7 +162,7 @@ export default function Lineups({
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   block: { marginBottom: 20 },
   teamHeader: {
     flexDirection: 'row',
@@ -237,4 +238,4 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: COLORS.bgCard,
   },
-});
+}));

@@ -17,6 +17,7 @@ import { useFichas } from '../navigation';
 import type { HistoricoHit, PlayerSearchHit, ResumenHistorico } from '../types';
 import TeamBadge from '../components/TeamBadge';
 import { Tocable } from '../components/Movimiento';
+import { tematico, temaActual } from '../tema';
 
 /**
  * Lo que la lista muestra, y la consulta a la que corresponde.
@@ -132,6 +133,8 @@ export default function SearchScreen() {
           autoCapitalize="words"
           returnKeyType="search"
           clearButtonMode="while-editing"
+          // El teclado de iOS sigue al modo de la app, no al del sistema.
+          keyboardAppearance={temaActual() === 'claro' ? 'light' : 'dark'}
           accessibilityLabel="Buscar jugador por nombre"
         />
       </View>
@@ -233,7 +236,7 @@ export default function SearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   pagina: { flex: 1, backgroundColor: COLORS.bgPage },
   barra: {
     flexDirection: 'row',
@@ -299,7 +302,7 @@ const styles = StyleSheet.create({
   // Barlow Condensed sin fontWeight (ver FONTS).
   tarjetaValor: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 32, lineHeight: 34, paddingTop: 4, color: COLORS.textPrimary },
   tarjetaNombre: { fontSize: 12, color: COLORS.textSupport },
-});
+}));
 
 /**
  * La pantalla vacía del buscador: los dueños de los récords de todos los

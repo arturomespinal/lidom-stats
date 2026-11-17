@@ -6,6 +6,7 @@ import { AtBat, LiveGameDetail, LiveSituation, PlayLine } from '../types';
 import Campo, { altoCampo, posicionesCampo } from './Campo';
 import { useReducirMovimiento } from './Movimiento';
 import ZonaStrike from './ZonaStrike';
+import { tematico } from '../tema';
 
 /**
  * Lo que está pasando ahora mismo, en la pantalla de un juego: la media
@@ -332,7 +333,7 @@ function Franja({ jugada, titulo, reducir }: { jugada: PlayLine; titulo: string;
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   tarjeta: {
     marginHorizontal: 16,
     // La cabecera oscura termina a ras: el aire lo pone la tarjeta.
@@ -430,4 +431,4 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 14,
   },
-});
+}));

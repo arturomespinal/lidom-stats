@@ -20,6 +20,7 @@ import EmptyState from '../components/EmptyState';
 import SelectorTemporada from '../components/SelectorTemporada';
 import { etiquetaTemporada, useTemporada } from '../temporada';
 import TeamBadge from '../components/TeamBadge';
+import { tematico } from '../tema';
 
 type SortKey = 'era' | 'whip' | 'strikeouts_per_nine' | 'strikeouts' | 'innings_pitched' | 'wins' | 'saves' | 'walks_per_nine';
 
@@ -198,7 +199,7 @@ export default function PitchingScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const styles = tematico(() => StyleSheet.create({
   atenuado: { opacity: 0.5 },
   center: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   chipsScroll: { backgroundColor: COLORS.bgHeader, maxHeight: 52, flexGrow: 0, flexShrink: 0 },
@@ -240,4 +241,4 @@ const styles = StyleSheet.create({
   primaryVal: { color: COLORS.accent, fontSize: 28, fontFamily: FONTS.display, textTransform: 'uppercase', fontVariant: ['tabular-nums'] },
   primaryKey: { color: COLORS.textSecondary, fontSize: 10, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
   sep: { height: 1, backgroundColor: COLORS.border },
-});
+}));

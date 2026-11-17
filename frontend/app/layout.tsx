@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
+import { SCRIPT_TEMA } from "@/lib/tema";
 
 /**
  * Dos familias con papeles distintos.
@@ -41,7 +42,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="es">
+    // suppressHydrationWarning: el script del <head> pone data-tema en <html>
+    // antes de hidratar, y React vería un atributo que el servidor no mandó.
+    <html lang="es" suppressHydrationWarning>
+      <head>
+        {/* El modo claro, si la persona lo eligió, antes de pintar (lib/tema.ts).
+            El único dangerouslySetInnerHTML de la web: una constante nuestra. */}
+        <script dangerouslySetInnerHTML={{ __html: SCRIPT_TEMA }} />
+      </head>
       <body
         // El relleno de abajo, solo en el teléfono, es el alto de la barra
         // de secciones fija al pie (components/Navbar.tsx).

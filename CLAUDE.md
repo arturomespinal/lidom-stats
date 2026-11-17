@@ -561,8 +561,10 @@ tiene pesos de verdad y minúsculas, y eso da las reglas:
   franja), las pestañas con subrayado de 44 px, y la jugada que entra en una
   franja con corte en diagonal. El pie de las tarjetas de juego (estadio y
   "Ver el juego ›") es una raya fina, no una franja rellena.
-- **El móvil es oscuro de punta a punta**: `DarkTheme` en la navegación,
-  barra de estado clara en todas las pantallas y `userInterfaceStyle: dark`.
+- **El móvil arranca oscuro de punta a punta**: `DarkTheme` en la
+  navegación, barra de estado clara y `userInterfaceStyle: dark`. Quien elige
+  el modo claro (ver "El modo claro") pasa a `DefaultTheme` y barra oscura;
+  `userInterfaceStyle` sigue en `dark` porque la app no sigue al sistema.
 
 ### Fuente única por plataforma
 
@@ -572,6 +574,79 @@ tiene pesos de verdad y minúsculas, y eso da las reglas:
 |-----------|-------|------|
 | Web | `frontend/app/globals.css` + `tailwind.config.ts` | Variables CSS con **canales RGB** (`--card: 22 26 32`), expuestas como `rgb(var(--card) / <alpha-value>)`. Se usan por nombre: `bg-card`, `text-dim`, `bg-accent`. |
 | Móvil | `mobile/src/constants.ts` | `COLORS`, `ALPHA` y `FONTS`, con los mismos valores. |
+
+Con el modo claro, "los mismos valores" es por modo: cada token tiene uno en
+el oscuro y otro en el claro, iguales en las dos plataformas.
+
+### El modo claro: "Pizarra clara" (16-nov-2026)
+
+Arturo pidió que cada persona elija entre oscuro y claro. Se eligió **Pizarra
+clara**: el mismo diseño con superficies blancas y gris claro y texto
+grafito, y **el oscuro como modo de arranque** (no sigue al sistema: quien no
+toca el botón ve la pizarra de siempre).
+
+| Token (web / móvil) | Claro | Para qué |
+|---|---|---|
+| `bg`, `sunken`, `card`, `raised`, `header` | `#F2F4F7`, `#E8ECF1`, `#FFFFFF`, `#EBEEF2`, `#F6F7F9` | Superficies |
+| `line`, `line-soft` | `#D3D9E1`, `#E6E9EE` | Bordes |
+| `fg`, `fg2`, `dim`, `faint` | `#0D1014`, `#2F3742`, `#4B5563`, `#596372` | Texto |
+| `accent` / `accent-on` | `#161A20` / `#F3F5F7` | Lo seleccionado se rellena de grafito con texto claro: el espejo del oscuro |
+| `ink`, `ink-fg`, `ink-dim` | `#E4E8EE`, `#0D1014`, `#4B5563` | La franja es gris claro, no grafito |
+| `pos`, `neg`, `warn`, `live` | `#136F44`, `#B4233B`, `#8A5A00`, `#C42B21` | Semánticos, oscurecidos para fondo claro |
+| `serie` | `#7A8594` (oscuro `#8A96A9`) | El gris de las series de comparación: "resto de la liga", el diferencial negativo, el puesto fuera del podio |
+
+- **Contraste medido**: todo token de texto pasa 4.6:1 sobre las seis
+  superficies claras. La tabla está en `globals.css`, junto al bloque
+  `:root[data-tema="claro"]`.
+- **La tinta del club también cambia** (`text` de `TEAM_STYLES`): sobre claro,
+  AGU `#8B5D08`, TOR `#BF2E4C`, EST `#0D754E`, GIG `#BC296D`, ESC `#CC1212`,
+  LIC `#1260D9`. El `primary`, el `tint` y el `on` de la teja no cambian: la
+  teja es la misma en los dos modos.
+- **El botón**: un sol o una luna, el modo AL QUE lleva. En la web va en la
+  barra de arriba, junto al buscador (`components/BotonTema.tsx`); en el
+  móvil, a la derecha del logotipo en la raíz de cada pestaña
+  (`src/components/BotonTema.tsx`). 44 px de lado en los dos.
+- **La web** guarda el modo en `localStorage` (`deportiv-tema`) y lo pone como
+  `data-tema="claro"` en `<html>`. Un script en línea en el `<head>`
+  (`SCRIPT_TEMA`, `lib/tema.ts`) lo lee **antes de pintar**: sin él, quien
+  eligió el claro vería un destello oscuro en cada carga. Por eso `<html>`
+  lleva `suppressHydrationWarning`: el atributo lo pone ese script, no React.
+  Es el único `dangerouslySetInnerHTML` de la web y su contenido es una
+  constante (ver la sección de seguridad). Los colores son variables CSS, así
+  que el cambio no vuelve a renderizar nada.
+- **Lo que en la web estaba en hex dentro de un SVG** (el gris de la liga en la
+  curva, las barras del diferencial, el banderín, el puesto) pasó a
+  `rgb(var(--serie))`; `TEAM_STYLES.text` es `rgb(var(--club-xxx))`.
+- **El móvil** guarda el modo con AsyncStorage (`src/tema.ts`). `App.tsx`
+  espera a leerlo, junto con la fuente, antes de quitar la pantalla de
+  arranque.
+
+#### Cómo cambia el móvil sin tocar cada componente
+
+Los estilos de React Native se escriben a nivel de archivo,
+`const styles = StyleSheet.create({ … COLORS.bgCard … })`, y eso se evalúa
+**una vez**, al cargar. `tematico(fabrica)` (`src/tema.ts`) envuelve cada uno
+en un Proxy que fabrica el objeto la primera vez que se lee en cada modo y lo
+guarda: `styles.card` da siempre el del modo actual. `COLORS`, `ALPHA`,
+`TEAM_STYLES`, las opciones de las pilas y el tema de navegación son lo mismo.
+Al cambiar de modo, `App.tsx` vuelve a montar el árbol (`key={tema}` en el
+`NavigationContainer`) y le pasa el estado de navegación guardado en cada
+cambio (`initialState`/`onStateChange`): se queda en la misma pestaña y la
+misma ficha, y cada pantalla se pinta con los objetos nuevos. Las pantallas
+vuelven a pedir sus datos; es un toque, no algo que se haga a menudo.
+
+- **Regla para lo nuevo**: un `StyleSheet.create` va dentro de
+  `tematico(() => StyleSheet.create({…}))`. Un color suelto a nivel de
+  archivo (`const GRIS = COLORS.x`) se queda con el modo en que cargó: va como
+  función (`const GRIS = () => COLORS.x`), dentro del componente o en
+  `tematico()`. Ningún hex a mano.
+- **El número sobre el ocre de "en juego"** en la zona de strike iba en
+  `inkFg`, texto claro sobre amarillo (1.9:1). Va en `accentOn` en los dos
+  modos.
+- **Se probó** con la app exportada a web (react-native-web instalado solo en
+  una copia de prueba, no en el repo): Hoy, posiciones, la ficha de equipo y
+  el detalle de juego en los dos modos, el cambio sin perder la pestaña y el
+  modo recordado al recargar.
 
 ### Comprobado y pendiente
 
@@ -2080,7 +2155,10 @@ de la API.
 - **Lo que se revisó y estaba bien:** ningún secreto en el árbol ni en el
   historial de git; `.env`, la base, DuckDB y Parquet ignorados; el SQL
   dinámico solo interpola listas cerradas (`sort_by`, dirección) y el resto
-  va con parámetros; la web no usa `dangerouslySetInnerHTML`; el flujo de
+  va con parámetros; la web usa `dangerouslySetInnerHTML` una sola vez, para
+  el script del modo claro (`SCRIPT_TEMA` en `lib/tema.ts`), y su contenido
+  es una constante del código, sin nada que venga del usuario ni de la API
+  (cabe en el `'unsafe-inline'` que ya tenía la CSP); el flujo de
   Actions tiene `permissions: contents: read`; el servicio de systemd corre
   sin privilegios y solo escribe en `data/`.
 - **Probado de punta a punta**: `next build` y `next start` contra la API en

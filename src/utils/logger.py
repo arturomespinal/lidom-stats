@@ -1,6 +1,7 @@
 # Configuración centralizada de logging usando Loguru.
 # Loguru > logging estándar: sintaxis simple, colores, rotación de archivos.
 from loguru import logger
+import os
 import sys
 
 
@@ -22,7 +23,11 @@ def setup_logger(log_level: str = "DEBUG") -> None:
         colorize=True,
     )
     
-    # Handler para archivo con rotación diaria
+    # Handler para archivo con rotación diaria. En el servidor no: los
+    # registros van a journald y el disco del servicio es de solo lectura
+    # fuera de data/ (LIDOM_LOG_ARCHIVO=0 en deportiv-ingesta.service).
+    if os.environ.get("LIDOM_LOG_ARCHIVO", "1") == "0":
+        return
     logger.add(
         "logs/lidom_{time:YYYY-MM-DD}.log",
         level="INFO",

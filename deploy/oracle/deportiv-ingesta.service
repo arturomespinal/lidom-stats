@@ -1,0 +1,38 @@
+# La ingesta diaria: la temporada en curso entera y sus tablas planas. Lo
+# dispara deportiv-ingesta.timer; ver `ingesta-diaria` en main.py.
+#
+# Es la red de seguridad del motor en vivo: recoge los juegos que el motor no
+# vio terminar (la API reiniciada a mitad de un juego, un juego movido, un
+# boxscore que la MLB corrigió después).
+
+[Unit]
+Description=Ingesta diaria de Deportiv (temporada en curso)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=deportiv
+Group=deportiv
+WorkingDirectory=/opt/deportiv/lidom-stats
+Environment=TZ=America/Santo_Domingo
+Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONDONTWRITEBYTECODE=1
+# Sin archivo de registro: todo va a journald (journalctl -u deportiv-ingesta).
+Environment=LIDOM_LOG_ARCHIVO=0
+ExecStart=/opt/deportiv/venv/bin/python main.py ingesta-diaria
+Nice=10
+# Una ingesta colgada (la MLB API sin responder) no se queda para siempre.
+TimeoutStartSec=30min
+
+NoNewPrivileges=true
+PrivateTmp=true
+PrivateDevices=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/deportiv/lidom-stats/data
+ProtectKernelTunables=true
+ProtectKernelModules=true
+ProtectControlGroups=true
+RestrictSUIDSGID=true
+LockPersonality=true

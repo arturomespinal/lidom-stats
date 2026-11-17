@@ -730,6 +730,10 @@ check("resolver_fecha: hoy fuera de temporada → la última jornada",
       resolver_fecha(_date(2026, 3, 1), _fechas, temporadas=_temps), _date(2025, 12, 23))
 check("resolver_fecha: un día elegido fuera de temporada → ese día",
       resolver_fecha(_date(2026, 3, 1), _fechas, explicita=True, temporadas=_temps), _date(2026, 3, 1))
+from src.jornada import temporada_actual as _temp  # noqa: E402
+check("temporada_actual: noviembre, enero, septiembre y agosto",
+      [_temp(_date(2026, 11, 16)), _temp(_date(2027, 1, 20)), _temp(_date(2026, 9, 1)), _temp(_date(2026, 8, 31))],
+      [2026, 2026, 2026, 2025])
 _d15 = call("/day?date=2026-11-15")
 if any(g["status"] == "suspended" for g in _d15["games"]):  # solo con la 2026-27 cargada
     check("la franja cuenta el juego suspendido, como la jornada",

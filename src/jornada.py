@@ -47,6 +47,18 @@ def hoy_rd(ahora: Optional[datetime] = None) -> date:
     return (ahora or datetime.now(timezone.utc)).astimezone(RD).date()
 
 
+def temporada_actual(hoy: Optional[date] = None) -> int:
+    """La temporada en curso o la última jugada, en la hora de RD.
+
+    LIDOM arranca a mediados de octubre y termina a fines de enero (febrero
+    con la Serie del Caribe). Desde septiembre ya cuenta la que viene: el
+    calendario de la nueva se publica antes del primer juego. Es el año en que
+    EMPIEZA la campaña, como la nombra la MLB API (2026 = 2026-27).
+    """
+    d = hoy or hoy_rd()
+    return d.year if d.month >= 9 else d.year - 1
+
+
 def etiqueta_fecha(d: date) -> str:
     """date(2025, 10, 16) → "Jue 16 oct"."""
     return f"{DIAS[d.weekday()]} {d.day} {MESES[d.month - 1]}"

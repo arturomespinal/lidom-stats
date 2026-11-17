@@ -227,7 +227,7 @@ la 2015-16. No cambiar esa clave.
 | `orquestacion/analitica.py` | El Parquet y los modelos de dbt como assets de Dagster; las pruebas de dbt, como checks |
 | `requirements-analitica.txt` | pyarrow, DuckDB y dbt, aparte: la API en producción no los necesita |
 | `verify_analitica.py` | La capa analítica contra una base sintética con las dos fuentes, dañada a propósito, y contra la real |
-| `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo diario y la guía (`GUIA.md`) |
+| `deploy/oracle/` | Despliegue en Oracle Cloud: instalador, servicios de systemd, Caddy, respaldo e ingesta diarios y la guía (`GUIA.md`) |
 
 Las trece suites corren sin red y se encadenan con `&&`: salen con código 0 solo
 si todo pasa.
@@ -579,10 +579,9 @@ tiene pesos de verdad y minúsculas, y eso da las reglas:
   errores de consola ni de CSP) y en el iPhone de Arturo con Expo Go (16-nov):
   la letra carga, las cifras grandes no se recortan arriba, el código gigante
   queda dentro del plano y la barra de estado es clara en todas las pantallas.
-- **La pantalla de arranque sigue clara**: el ícono (`assets/splash-icon.png`)
-  trae su propio fondo de papel, y el splash usa ese color (`#E6E3EA`) para
-  que no se vea un cuadrado. De ahí a la app oscura hay un salto. El arreglo
-  pide un ícono nuevo con fondo grafito y el splash en `#0D1014`.
+- **La pantalla de arranque es oscura** desde el 16-nov: el logotipo sobre
+  `#0D1014` (ver "La pantalla de arranque"). Solo se ve en un build, no en
+  Expo Go.
 
 ### Un mínimo explícito MANDA sobre el calculado
 
@@ -1002,19 +1001,24 @@ No borrar `index.js` pensando que sobra.
 
 ### La pantalla de arranque
 
-`app.json` usa el plugin `expo-splash-screen` con `assets/splash-icon.png`
-sobre **`#E6E3EA`**, el mismo color que el ícono adaptativo de Android.
+`app.json` usa el plugin `expo-splash-screen` con
+`assets/splash-logotipo.png` sobre **`#0D1014`**, el fondo de la app (desde el
+16-nov-2026). Es el logotipo de la cabecera —DEPORTIV en Barlow Condensed 700
+con el punto verde `#03DA58`— dibujado sobre fondo transparente, 1200×400, y
+se pinta a 200 pt de ancho. Así el arranque y la primera pantalla son del
+mismo grafito y no hay salto de claro a oscuro.
 
-El ícono **no es transparente**: trae su propio fondo de papel gris lila. Por
-eso el fondo del splash tiene que ser ese color y no otro. Sobre el navy que
-tuvo un día (`#06152B`), la imagen se veía como un cuadrado claro recortado en
-medio de la pantalla oscura. Con el papel, se funde, y la transición hacia la
-app clara es suave.
+Antes era `assets/splash-icon.png` sobre `#E6E3EA`: la ilustración del
+bateador trae su propio fondo de papel, y el splash tenía que ser de ese color
+para que no se viera un cuadrado claro recortado. Sobre grafito no sirve (el
+bateador es navy y se pierde), por eso el arranque usa el logotipo y no el
+ícono. **El ícono del teléfono (`icon.png`, `adaptive-icon.png`) sigue siendo
+el bateador**: es otra pieza.
 
 El paquete `expo-splash-screen` tiene que estar en `package.json`. En Expo Go
-su ausencia no se nota —ahí la pantalla de arranque nunca aparece—, pero un
-build de desarrollo o de producción falla al resolver el plugin. `App.tsx` la
-retiene hasta que carga Bebas Neue.
+su ausencia no se nota —ahí la pantalla de arranque nunca aparece, y tampoco
+se ve este logotipo—, pero un build de desarrollo o de producción falla al
+resolver el plugin. `App.tsx` la retiene hasta que cargan las dos fuentes.
 
 ### Pantalla en vivo
 
@@ -2430,6 +2434,29 @@ paso en `GUIA.md`.
   pasa la cuenta a Pay As You Go con un presupuesto de 1 USD con alerta.
 - Todas las dependencias tienen paquete precompilado para ARM y Python 3.12
   (el de Ubuntu 24.04): en el servidor no se compila nada.
+
+**La ingesta diaria (16-nov-2026).** `deportiv-ingesta.timer` corre
+`python main.py ingesta-diaria` cada madrugada a las 4:00 de RD, de octubre a
+febrero, media hora antes del respaldo. Es la red de seguridad del motor en
+vivo, que solo ingesta los juegos que ve terminar: recoge los que no vio (la
+API reiniciada a mitad de un juego), los juegos movidos (`_purgar_fantasmas`)
+y los boxscores que la MLB corrigió después, y pone al día las tablas planas.
+
+- Pide el calendario **sin filtro de tipo** (`game_type=None`): regular,
+  round robin y final en una sola llamada. Con `ingest-games` y su "R" por
+  defecto, la postemporada quedaba fuera; y pedir "P" aparte haría que
+  `_upsert_season` tomara las fechas del round robin como inicio y fin.
+- La temporada sale de `temporada_actual()`, que se mudó de
+  `orquestacion/temporadas.py` a `src/jornada.py`: el servidor no tiene
+  Dagster. La orquestación la importa de ahí.
+- El servicio va endurecido como el de la API (solo escribe en `data/`) y con
+  `LIDOM_LOG_ARCHIVO=0`: `setup_logger()` y `main.py` no tocan `logs/`, todo
+  va a journald (`journalctl -u deportiv-ingesta`).
+- Lo instalan `instalar.sh` y `actualizar.sh` (este último activa los
+  temporizadores, por si alguno es nuevo). A mano:
+  `sudo systemctl start deportiv-ingesta`.
+- El schedule `cada_madrugada` de Dagster hace lo mismo en la PC; en el
+  servidor no corre Dagster, así que es este temporizador.
 
 **La jornada es la de RD, no la del reloj de la máquina.** El poller pedía
 los juegos de `date.today()`, que en la PC de Arturo es la fecha de RD y en

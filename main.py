@@ -8,7 +8,8 @@ from src.models import flat_models  # noqa: F401
 from src.models import hist_models  # noqa: F401
 from src.models.database import init_db
 
-os.makedirs("logs", exist_ok=True)
+if os.environ.get("LIDOM_LOG_ARCHIVO", "1") != "0":
+    os.makedirs("logs", exist_ok=True)
 os.makedirs("data", exist_ok=True)
 
 USO = """\
@@ -21,6 +22,9 @@ Modos:
       --refresh                   Re-procesa juegos ya ingestados
   ingest-game <gamePk>            Un solo juego: su calendario y su boxscore
                                   (lo mismo que hace el motor en vivo al final)
+  ingesta-diaria                  La temporada en curso entera (regular, round
+                                  robin y final) y sus tablas planas. La corre
+                                  el servidor cada madrugada (deploy/oracle).
   ingest-historia [desde] [hasta] DIGIMETRICS (estadisticas.lidom.com) → capa
                                   histórica hist_*. Por defecto 1951-2019.
       --smoke                     Solo 1990-91, para probar (~35 pedidos)
@@ -93,6 +97,23 @@ def main():
         if not summary["ingested"]:
             logger.warning(f"El juego no se ingestó: {summary}")
             sys.exit(1)
+
+    # ── La red de seguridad del motor en vivo ────────────────────────────────
+    # El motor ingesta cada juego que ve terminar. Esto recoge lo que no vio
+    # (la API reiniciada a mitad de un juego, un juego movido, un boxscore que
+    # la MLB corrigió después) y pone al día las tablas planas. Sin filtro de
+    # tipo: la ingesta por temporada pide por defecto solo la regular, y el
+    # round robin y la final quedarían fuera.
+    elif mode == "ingesta-diaria":
+        from src.jornada import temporada_actual
+        from src.pipeline.boxscore_ingestor import BoxscoreIngestor
+        from src.pipeline.mlb_ingestor import MLBIngestor
+        temporada = str(temporada_actual())
+        logger.info(f"Ingesta diaria de la temporada {temporada}")
+        juegos = BoxscoreIngestor().ingest(season=temporada, game_type=None)
+        logger.success(f"✅ Juegos: {juegos}")
+        planas = MLBIngestor().ingest(season=temporada)
+        logger.success(f"✅ Tablas planas: {planas}")
 
     # ── DIGIMETRICS → capa histórica ─────────────────────────────────────────
     elif mode == "ingest-historia":

@@ -33,8 +33,12 @@ main() {
 
   # Por si cambiaron los servicios.
   install -m 644 "$AQUI/deportiv-api.service" "$AQUI/deportiv-respaldo.service" \
-    "$AQUI/deportiv-respaldo.timer" /etc/systemd/system/
+    "$AQUI/deportiv-respaldo.timer" "$AQUI/deportiv-ingesta.service" \
+    "$AQUI/deportiv-ingesta.timer" /etc/systemd/system/
   systemctl daemon-reload
+  # Los temporizadores, por si alguno es nuevo (la ingesta diaria llegó
+  # después de la primera instalación). Activar uno ya activo no hace nada.
+  systemctl enable --now --quiet deportiv-respaldo.timer deportiv-ingesta.timer
   systemctl restart deportiv-api
 
   for _ in $(seq 1 30); do

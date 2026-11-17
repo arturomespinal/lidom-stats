@@ -19,6 +19,7 @@ Los archivos de esta carpeta:
 - `actualizar.sh` trae lo último de GitHub y reinicia la API.
 - `correr.sh` corre `main.py` en el servidor (por ejemplo `ingest 2026`).
 - `respaldo.py` y `deportiv-respaldo.*` hacen una copia diaria de la base a las 4:30 a. m. de RD y conservan 14.
+- `deportiv-ingesta.*` trae cada madrugada (4:00 a. m. de RD, de octubre a febrero) la temporada en curso entera: lo que el motor en vivo no vio terminar.
 - `deportiv-api.service` es la API como servicio: un solo worker, solo en 127.0.0.1, con el sistema de archivos en solo lectura salvo `data/`.
 - `Caddyfile` es el HTTPS delante de la API.
 
@@ -240,6 +241,9 @@ Todo en el servidor (`ssh -i … ubuntu@IP`):
 | Ver si está corriendo | `systemctl status deportiv-api` |
 | Reiniciar | `sudo systemctl restart deportiv-api` |
 | Correr `main.py` | `sudo bash /opt/deportiv/lidom-stats/deploy/oracle/correr.sh ingest 2026` |
+| La ingesta diaria, ahora | `sudo systemctl start deportiv-ingesta` (tarda unos minutos) |
+| Qué hizo la última ingesta diaria | `journalctl -u deportiv-ingesta -n 40 --no-pager` |
+| Cuándo toca la próxima | `systemctl list-timers deportiv-*` |
 | Estado del motor en vivo | ver abajo |
 
 El estado completo del motor en vivo pide la clave de diagnóstico. Así no sale
@@ -254,7 +258,10 @@ reinicia. Si la API no vuelve a levantar, lo dice y deja escrito cómo volver al
 código anterior.
 
 **Durante la temporada no hay que hacer nada a mano**: al terminar cada juego,
-el motor lo ingesta y pone al día Posiciones, Bateo y Pitcheo. La 2026-27
+el motor lo ingesta y pone al día Posiciones, Bateo y Pitcheo. Y cada
+madrugada (4:00 de RD, de octubre a febrero) la ingesta diaria
+(`deportiv-ingesta.timer`) trae la temporada entera: lo que el motor no vio
+terminar, juegos movidos y boxscores que la MLB corrigió. La 2026-27
 aparece en el selector cuando termina el primer juego; para que aparezca
 antes, `correr.sh ingest 2026`.
 

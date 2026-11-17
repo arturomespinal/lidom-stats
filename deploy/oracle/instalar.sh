@@ -155,11 +155,12 @@ chmod 640 "$ENV_FILE"
 
 paso "Servicios de systemd"
 install -m 644 "$AQUI/deportiv-api.service" "$AQUI/deportiv-respaldo.service" \
-  "$AQUI/deportiv-respaldo.timer" /etc/systemd/system/
+  "$AQUI/deportiv-respaldo.timer" "$AQUI/deportiv-ingesta.service" \
+  "$AQUI/deportiv-ingesta.timer" /etc/systemd/system/
 systemctl daemon-reload
-systemctl enable --quiet deportiv-api deportiv-respaldo.timer
+systemctl enable --quiet deportiv-api deportiv-respaldo.timer deportiv-ingesta.timer
 systemctl restart deportiv-api
-systemctl start deportiv-respaldo.timer
+systemctl start deportiv-respaldo.timer deportiv-ingesta.timer
 
 # ── Cortafuegos de la máquina ───────────────────────────────────────────────
 # Las imágenes de Ubuntu de Oracle traen iptables que rechaza todo menos SSH.

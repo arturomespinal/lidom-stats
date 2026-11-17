@@ -7,26 +7,17 @@ La clave es el año en que EMPIEZA la campaña, como la nombra la MLB API:
 
 from __future__ import annotations
 
-from datetime import date
 from typing import Optional
 
 from dagster import StaticPartitionsDefinition
 
-from src.jornada import hoy_rd
+# La regla vive en src/jornada.py: la usa también la ingesta diaria del
+# servidor (`python main.py ingesta-diaria`), que no tiene Dagster.
+from src.jornada import temporada_actual  # noqa: F401
+
 
 # La MLB API tiene LIDOM desde la 2012-13. Antes, la capa histórica.
 PRIMERA = 2012
-
-
-def temporada_actual(hoy: Optional[date] = None) -> int:
-    """La temporada en curso o la última jugada, en la hora de RD.
-
-    LIDOM arranca a mediados de octubre y termina a fines de enero (febrero
-    con la Serie del Caribe). Desde septiembre ya cuenta la que viene: el
-    calendario de la nueva se publica antes del primer juego.
-    """
-    d = hoy or hoy_rd()
-    return d.year if d.month >= 9 else d.year - 1
 
 
 def claves(hasta: Optional[int] = None) -> list[str]:

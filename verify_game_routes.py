@@ -950,6 +950,17 @@ check("efectividad: gana la más baja",
       fp["era"]["better"], None if fp["era"]["a"] == fp["era"]["b"] else ("a" if fp["era"]["a"] < fp["era"]["b"] else "b"))
 check("las entradas en notación de béisbol", fp["outs"]["a_text"], f"{fp['outs']['a'] // 3}.{fp['outs']['a'] % 3}")
 check("con muestras de 40+ entradas, sin nota de muestra chica", cmp_p["note"], None)
+check("dos lanzadores con cifras: comparable", cmp_p["comparable"], True)
+
+# Un lanzador contra un bateador: no hay papel común. Antes salía una tabla
+# de rayas de un lado (Sauryn Lao contra Jansel Luis, 16-nov-2026).
+cmp_x = call(f"/players/compare?a={l1}&b={pid}")
+nombre_l1 = cmp_x["players"][0]["full_name"]
+check("lanzador contra bateador: sin papel común", cmp_x["roles"], [])
+check("y no es comparable", cmp_x["comparable"], False)
+check("la nota dice a quién le faltan cifras", cmp_x["note"], f"{nombre_l1} no tiene cifras de bateo.")
+check("sin titular", cmp_x["headline"], None)
+check("el lanzador conserva su teja (su último equipo)", cmp_x["players"][0]["team_code"] is not None, True)
 
 print("  errores esperados:")
 check("el mismo jugador dos veces → 400", c.get(f"/players/compare?a={pid}&b={pid}").status_code, 400)

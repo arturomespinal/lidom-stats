@@ -200,7 +200,7 @@ la 2015-16. No cambiar esa clave.
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 362 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 368 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -1695,8 +1695,15 @@ todo en la URL: se comparte y el atrás deshace), móvil `CompararScreen`
   castigaría al que jugó más). Los renglones de volumen (juegos,
   apariciones, aperturas) se muestran sin barras: `decides: false`.
 - **El papel por defecto**: pitcheo si los dos son lanzadores
-  (`es_lanzador`), si no bateo. El selector Bateo/Pitcheo solo aparece si
-  los dos tienen cifras en los dos papeles (`roles`).
+  (`es_lanzador`), si no bateo; y si en ese no tienen cifras los dos pero sí
+  en el otro, el otro. El selector Bateo/Pitcheo aparece si hay otro papel
+  en que los dos tienen cifras (`roles`).
+- **Un lanzador contra un bateador** no tiene papel común: `comparable:
+  false` y `note` dice a quién le faltan cifras ("Sauryn Lao no tiene cifras
+  de bateo."); los clientes muestran eso en vez de la tabla. Antes salía una
+  tabla de rayas de un lado, que se leía como un error (16-nov, en el
+  iPhone). El que no tiene filas en ese papel conserva la teja de su último
+  equipo (`ultimo_equipo`).
 - **Las temporadas**: "Carrera" y las que jugaron los dos en ese papel
   (`seasons_in_common`), de la más nueva a la más vieja. Al cambiar a un
   jugador se sueltan papel y temporada.

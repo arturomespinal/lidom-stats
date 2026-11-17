@@ -240,7 +240,8 @@ export default function CompararScreen({ route, navigation }: Props) {
 
       {cmp && a && b && (
         <View style={{ opacity: estado === 'cargando' ? 0.6 : 1 }}>
-          {cmp.roles.length > 1 && (
+          {/* El papel se elige si hay otro en que los dos tienen cifras. */}
+          {cmp.roles.some(r => r !== cmp.role) && (
             <View style={styles.filaPastillas}>
               {cmp.roles.map(r => (
                 <Pastilla
@@ -271,14 +272,26 @@ export default function CompararScreen({ route, navigation }: Props) {
               titulo={cmp.role === 'batting' ? 'Bateo' : 'Pitcheo'}
               nota={cmp.season_label}
               titular={cmp.headline}
-              sub={cmp.note ?? (cmp.season === 'career' ? 'Carrera completa, con los años anteriores a 2012-13 si los tiene.' : undefined)}
+              sub={
+                cmp.comparable === false
+                  ? undefined
+                  : cmp.note ?? (cmp.season === 'career' ? 'Carrera completa, con los años anteriores a 2012-13 si los tiene.' : undefined)
+              }
             />
           </View>
-          <View style={styles.tabla}>
-            {cmp.rows.map(f => (
-              <Renglon key={f.key} f={f} nombres={[cmp.players[0].full_name, cmp.players[1].full_name]} />
-            ))}
-          </View>
+          {cmp.comparable !== false ? (
+            <View style={styles.tabla}>
+              {cmp.rows.map(f => (
+                <Renglon key={f.key} f={f} nombres={[cmp.players[0].full_name, cmp.players[1].full_name]} />
+              ))}
+            </View>
+          ) : (
+            // Un lanzador contra un bateador: no hay renglones que comparar.
+            // Antes salía una tabla de rayas de un lado (16-nov-2026).
+            <View style={styles.aviso}>
+              <Text style={styles.avisoTexto}>{cmp.note} Compara jugadores del mismo papel.</Text>
+            </View>
+          )}
         </View>
       )}
     </ScrollView>
@@ -349,6 +362,16 @@ const styles = tematico(() => StyleSheet.create({
   pastillaTextoActiva: { color: COLORS.accentOn },
 
   seccion: { marginTop: -12 },
+  aviso: {
+    marginHorizontal: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 28,
+    backgroundColor: COLORS.bgCard,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    borderRadius: 16,
+  },
+  avisoTexto: { color: COLORS.textSecondary, fontSize: 14, lineHeight: 20, textAlign: 'center' },
   tabla: {
     marginHorizontal: 16,
     paddingHorizontal: 14,

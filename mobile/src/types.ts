@@ -1086,7 +1086,13 @@ export interface Comparacion {
   seasons_in_common: string[];
   players: [JugadorComparado, JugadorComparado];
   rows: RenglonComparado[];
+  /**
+   * false si a uno de los dos le faltan cifras en este papel (un lanzador
+   * contra un bateador): en vez de la tabla va `note`. Puede faltar si el
+   * servidor es anterior a la entrega 88: falta cuenta como comparable.
+   */
+  comparable?: boolean;
   headline: string | null;
-  /** 'Ojo: Fulano tiene solo 23 AP.' */
+  /** 'Ojo: Fulano tiene solo 23 AP.' o 'Sauryn Lao no tiene cifras de bateo.' */
   note: string | null;
 }

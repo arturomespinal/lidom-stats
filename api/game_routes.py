@@ -434,8 +434,11 @@ def compare_players(
             "has_history": historia is not None,
         })
 
-    rol = role or ("pitching" if datos[0]["is_pitcher"] and datos[1]["is_pitcher"] else "batting")
     roles = [r for r in ("batting", "pitching") if datos[0][r] and datos[1][r]]
+    # Sin papel pedido: pitcheo si los dos son lanzadores, si no bateo; y si
+    # en ese no tienen cifras los dos pero sí en el otro, el otro.
+    preferido = "pitching" if datos[0]["is_pitcher"] and datos[1]["is_pitcher"] else "batting"
+    rol = role or (preferido if preferido in roles or not roles else roles[0])
     comunes = sorted(
         comparar.temporadas_de(datos[0][rol]) & comparar.temporadas_de(datos[1][rol]), reverse=True
     )
@@ -448,7 +451,9 @@ def compare_players(
         jugadores.append({
             "player_id": d["bio"]["player_id"],
             "full_name": d["bio"]["full_name"],
-            "team_code": comparar.equipo_principal(filas, rol),
+            # Sin filas en este papel (un lanzador en bateo), la teja de su
+            # último equipo: el nombre solo, sin teja, se ve como un error.
+            "team_code": comparar.equipo_principal(filas, rol) or comparar.ultimo_equipo(d["batting"] + d["pitching"]),
             "teams": sorted({f["team_code"] for f in filas}),
             "age": comparar.edad_para(d["bio"].get("birth_date"), season),
             "volume": comparar.volumen(l, rol),
@@ -467,7 +472,10 @@ def compare_players(
         "players": jugadores,
         "rows": filas,
         "headline": comparar.titular(*nombres, filas),
-        "note": comparar.nota_muestra(nombres, (lineas[0], lineas[1]), rol),
+        # false si a uno de los dos le faltan cifras en este papel: los
+        # clientes muestran `note` en vez de una tabla de rayas.
+        "comparable": lineas[0] is not None and lineas[1] is not None,
+        "note": comparar.nota(nombres, (lineas[0], lineas[1]), rol),
     }
 
 

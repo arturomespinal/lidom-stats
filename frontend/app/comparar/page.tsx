@@ -88,8 +88,8 @@ export default async function CompararPage(props: Props) {
         {cmp && (
           <>
             <div className="space-y-3">
-              {/* El papel solo se elige si los dos tienen cifras en los dos. */}
-              {cmp.roles.length > 1 && (
+              {/* El papel se elige si hay otro en que los dos tienen cifras. */}
+              {cmp.roles.some((r) => r !== cmp.role) && (
                 <nav aria-label="Bateo o pitcheo" className="flex gap-2">
                   {cmp.roles.map((r) => (
                     <Link key={r} href={enlace({ rol: r, temporada: null })} className={pastilla(r === cmp.role)} aria-current={r === cmp.role ? "page" : undefined}>
@@ -118,9 +118,20 @@ export default async function CompararPage(props: Props) {
                 titulo={cmp.role === "batting" ? "Bateo" : "Pitcheo"}
                 nota={cmp.season_label}
                 titular={cmp.headline}
-                sub={cmp.note ?? (cmp.season === "career" ? "Carrera completa, con los años anteriores a 2012-13 si los tiene." : undefined)}
+                sub={
+                  cmp.comparable === false
+                    ? undefined
+                    : cmp.note ?? (cmp.season === "career" ? "Carrera completa, con los años anteriores a 2012-13 si los tiene." : undefined)
+                }
               />
-              <TablaComparacion cmp={cmp} />
+              {cmp.comparable !== false ? (
+                <TablaComparacion cmp={cmp} />
+              ) : (
+                // Un lanzador contra un bateador: no hay renglones que comparar.
+                <p className="rounded-xl border border-line bg-card px-4 py-8 text-center text-sm text-dim">
+                  {cmp.note} Compara jugadores del mismo papel.
+                </p>
+              )}
             </section>
           </>
         )}

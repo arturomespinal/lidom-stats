@@ -165,8 +165,23 @@ def titular(nombre_a: str, nombre_b: str, filas: list[dict]) -> str | None:
     return f"{nombre} sale arriba en {gana} de {len(comparables)}."
 
 
-def nota_muestra(nombres: tuple[str, str], lineas: tuple[dict | None, dict | None], rol: str) -> str | None:
-    """"Ojo: Fulano tiene solo 23 AP." Con muestras chicas, el titular engaña."""
+def nota(nombres: tuple[str, str], lineas: tuple[dict | None, dict | None], rol: str) -> str | None:
+    """
+    Lo que hay que saber antes de leer la tabla:
+
+    - Si a uno (o a los dos) le faltan cifras en este papel: "Sauryn Lao no
+      tiene cifras de bateo." Un lanzador contra un bateador no se compara
+      renglón por renglón; una tabla de rayas de un lado parecía un error
+      (Sauryn Lao contra Jansel Luis, 16-nov-2026).
+    - Si no, con muestras chicas: "Ojo: Fulano tiene solo 23 AP." Ahí el
+      titular engaña.
+    """
+    papel = "bateo" if rol == "batting" else "pitcheo"
+    sin = [n for n, l in zip(nombres, lineas) if l is None]
+    if len(sin) == 2:
+        return f"Ninguno de los dos tiene cifras de {papel}."
+    if sin:
+        return f"{sin[0]} no tiene cifras de {papel}."
     chicos = [(n, l) for n, l in zip(nombres, lineas) if muestra_chica(l, rol)]
     if not chicos:
         return None
@@ -176,6 +191,14 @@ def nota_muestra(nombres: tuple[str, str], lineas: tuple[dict | None, dict | Non
 
 def temporadas_de(filas: Iterable[dict]) -> set[str]:
     return {f["season_id"] for f in filas}
+
+
+def ultimo_equipo(filas: list[dict]) -> str | None:
+    """El equipo de su temporada más reciente (el de más juegos si fueron dos)."""
+    if not filas:
+        return None
+    ultima = max(f["season_id"] for f in filas)
+    return max((f for f in filas if f["season_id"] == ultima), key=lambda f: f.get("games") or 0)["team_code"]
 
 
 def equipo_principal(filas: list[dict], rol: str) -> str | None:

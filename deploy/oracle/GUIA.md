@@ -255,7 +255,9 @@ curl -s -H "X-Clave-Diagnostico: $(sudo sed -n 's/^LIDOM_CLAVE_DIAGNOSTICO=//p' 
 
 `actualizar.sh` hace `git pull`, instala dependencias nuevas si las hay y
 reinicia. Si la API no vuelve a levantar, lo dice y deja escrito cómo volver al
-código anterior.
+código anterior. Si el pull trae una versión nueva del propio
+`actualizar.sh`, avisa ("actualizar.sh cambió con el pull…") y sigue con
+esa: basta correrlo una vez.
 
 **Durante la temporada no hay que hacer nada a mano**: al terminar cada juego,
 el motor lo ingesta y pone al día Posiciones, Bateo y Pitcheo. Y cada

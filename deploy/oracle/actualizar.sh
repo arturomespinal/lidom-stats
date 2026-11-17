@@ -6,6 +6,13 @@
 # Todo va dentro de main(): el git pull puede cambiar este mismo archivo, y
 # bash lee los scripts a medida que avanza. Con la función, bash ya leyó todo
 # antes de que el pull lo toque.
+#
+# La contra: lo que sigue al pull sería el de la versión VIEJA. Por eso, si el
+# pull trae un actualizar.sh distinto, el script se vuelve a lanzar con la
+# versión nueva (exec) y sigue desde ahí. Sin esto, la primera actualización
+# tras la ingesta diaria no instaló su temporizador (16-nov-2026): había que
+# correrlo dos veces. DEPORTIV_ANTES lleva el commit de partida a la segunda
+# corrida, para que diga qué cambió, y evita que se relance otra vez.
 
 set -euo pipefail
 
@@ -17,10 +24,16 @@ main() {
 
   [[ $EUID -eq 0 ]] || { echo "Córrelo con sudo." >&2; exit 1; }
 
-  local antes despues
-  antes=$(sudo -u "$USUARIO" -H git -C "$REPO" rev-parse --short HEAD)
+  local antes despues relanzado=${DEPORTIV_ANTES:+si}
+  antes=${DEPORTIV_ANTES:-$(sudo -u "$USUARIO" -H git -C "$REPO" rev-parse --short HEAD)}
   sudo -u "$USUARIO" -H git -C "$REPO" pull --ff-only --quiet
   despues=$(sudo -u "$USUARIO" -H git -C "$REPO" rev-parse --short HEAD)
+
+  if [[ -z $relanzado && $antes != "$despues" ]] &&
+    ! sudo -u "$USUARIO" -H git -C "$REPO" diff --quiet "$antes" "$despues" -- deploy/oracle/actualizar.sh; then
+    echo "actualizar.sh cambió con el pull: sigo con la versión nueva."
+    exec env DEPORTIV_ANTES="$antes" bash "$AQUI/actualizar.sh" "$@"
+  fi
 
   if [[ $antes == "$despues" ]]; then
     echo "Ya estaba al día ($antes). Reinicio igual."

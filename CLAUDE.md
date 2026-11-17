@@ -2533,6 +2533,17 @@ y los boxscores que la MLB corrigió después, y pone al día las tablas planas.
 - Lo instalan `instalar.sh` y `actualizar.sh` (este último activa los
   temporizadores, por si alguno es nuevo). A mano:
   `sudo systemctl start deportiv-ingesta`.
+- **`actualizar.sh` se relanza si el pull lo cambia.** Va entero dentro de
+  `main()` para que el `git pull` no le cambie el archivo a bash a mitad de
+  lectura; pero entonces lo que corre después del pull es la versión VIEJA.
+  La primera actualización tras la ingesta diaria trajo el código y no
+  instaló el temporizador (`Unit deportiv-ingesta.service not found`): hubo
+  que correrlo dos veces. Ahora, si `git diff antes..después` toca el script,
+  hace `exec` de la versión nueva con `DEPORTIV_ANTES` (el commit de
+  partida, para el resumen de cambios, y la marca de que ya se relanzó).
+  Probado con un servidor simulado (usuario `deportiv`, origen local,
+  `systemctl` y `curl` de mentira): se relanza cuando cambia, no cuando no,
+  y no entra en bucle.
 - El schedule `cada_madrugada` de Dagster hace lo mismo en la PC; en el
   servidor no corre Dagster, así que es este temporizador.
 

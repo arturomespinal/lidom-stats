@@ -2,6 +2,7 @@ import { API_BASE, DEFAULT_SEASON } from './config';
 import {
   BattingRow,
   Calendario,
+  Comparacion,
   Gamelog,
   GrupoHistorico,
   HistoricoHit,
@@ -16,6 +17,7 @@ import {
   PlayerProfile,
   PlayerSearchHit,
   ResumenHistorico,
+  RolComparacion,
   StandingRow,
   TeamProfile,
   WinProbResponse,
@@ -146,6 +148,22 @@ export async function fetchTeamProfile(
  * `signal` deja cancelar la búsqueda anterior — sin eso la respuesta lenta de
  * "mun" puede llegar después de la de "munguia" y pisarla.
  */
+/**
+ * Dos jugadores lado a lado (GET /players/compare). Sin papel, el servidor
+ * elige (pitcheo si los dos son lanzadores); sin temporada, la carrera.
+ */
+export async function fetchComparacion(
+  a: string,
+  b: string,
+  rol?: RolComparacion,
+  temporada?: string,
+): Promise<Comparacion | null> {
+  const params = [`a=${encodeURIComponent(a)}`, `b=${encodeURIComponent(b)}`];
+  if (rol) params.push(`role=${rol}`);
+  if (temporada) params.push(`season=${encodeURIComponent(temporada)}`);
+  return get<Comparacion>(`/players/compare?${params.join('&')}`);
+}
+
 export interface ResultadoBusqueda {
   jugadores: PlayerSearchHit[];
   /** Los que solo están en DIGIMETRICS (antes de 2012-13, sin enlace). */
@@ -207,8 +225,14 @@ export async function fetchMiembroHistorico(id: number): Promise<MiembroHistoric
  * La jornada de una fecha (YYYY-MM-DD) o, sin fecha, la de hoy en RD. Fuera de
  * temporada el servidor devuelve la última jornada con `is_requested: false`.
  */
-export async function fetchDay(date?: string, signal?: AbortSignal): Promise<Jornada | null> {
-  return get<Jornada>(date ? `/day?date=${date}` : '/day', signal);
+export async function fetchDay(
+  date?: string,
+  signal?: AbortSignal,
+  favorito?: string | null,
+): Promise<Jornada | null> {
+  // Con equipo favorito (src/favorito.ts), el servidor elige su juego como destacado.
+  const params = [date && `date=${date}`, favorito && `favorito=${favorito}`].filter(Boolean).join('&');
+  return get<Jornada>(params ? `/day?${params}` : '/day', signal);
 }
 
 /** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */

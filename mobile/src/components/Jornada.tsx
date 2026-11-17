@@ -16,6 +16,8 @@ import WinProbBand from './WinProbBand';
 import { Tocable } from './Movimiento';
 import { useFichas } from '../navigation';
 import { tematico } from '../tema';
+import { useFavorito } from '../favorito';
+import { Ionicons } from '@expo/vector-icons';
 
 /*
  * Las piezas de la portada "Hoy". Todo lo que dice algo —qué juego se
@@ -99,6 +101,8 @@ function FilaEquipo({
   temporada?: string;
 }) {
   const nav = useFichas();
+  // El equipo favorito (src/favorito.ts) lleva una estrella junto al nombre.
+  const favorito = useFavorito() === lado.code;
   return (
     <View style={[styles.filaEquipo, grande && styles.filaEquipoGrande]}>
       <Pressable
@@ -112,6 +116,9 @@ function FilaEquipo({
         <Text style={[styles.equipo, grande && styles.equipoGrande, perdio && styles.apagado]} numberOfLines={1}>
           {grande ? lado.name : lado.short_name}
         </Text>
+        {favorito && (
+          <Ionicons name="star" size={13} color={COLORS.textPrimary} accessibilityLabel="tu equipo" />
+        )}
       </Pressable>
       {lado.runs != null && (
         <Text style={[styles.carreras, grande && styles.carrerasGrande, perdio && styles.apagado]}>
@@ -467,10 +474,11 @@ const styles = tematico(() => StyleSheet.create({
 
   filaEquipo: { flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 40 },
   // Teja + nombre: lo tocable de la fila. Ocupa lo que deja el marcador.
-  equipoTocable: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 10, minHeight: 40 },
+  equipoTocable: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8, minHeight: 40 },
   equipoPresionado: { opacity: 0.6 },
   filaEquipoGrande: { minHeight: 52 },
-  equipo: { flex: 1, fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
+  // flexShrink y no flex: así la estrella del favorito va pegada al nombre.
+  equipo: { flexShrink: 1, fontSize: 15, fontWeight: '600', color: COLORS.textPrimary },
   equipoGrande: { fontSize: 17 },
   carreras: {
     fontFamily: FONTS.display, textTransform: 'uppercase',

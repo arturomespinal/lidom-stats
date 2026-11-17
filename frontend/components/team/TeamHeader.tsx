@@ -1,3 +1,4 @@
+import BotonFavorito from "@/components/BotonFavorito";
 import Heroe, { CifraHeroe, ColumnaHeroe, FilaCifras, NombreHeroe } from "@/components/ficha/Heroe";
 import type { TeamProfile } from "@/lib/types";
 import { TEAM_STYLES } from "@/lib/constants";
@@ -12,7 +13,14 @@ import { conSigno, pct3 } from "@/lib/formato";
  * puesto y la distancia ("1ro · 5 juegos de ventaja") los compone el
  * servidor (src/banderin.py).
  */
-export default function TeamHeader({ equipo }: { equipo: TeamProfile }) {
+export default function TeamHeader({
+  equipo,
+  favorito,
+}: {
+  equipo: TeamProfile;
+  /** El equipo favorito de quien mira (su cookie), para la estrella. */
+  favorito: string | null;
+}) {
   const code = equipo.team_code;
   const color = TEAM_STYLES[code]?.primary ?? "#56637A";
   const actual = equipo.history.find((f) => f.season_id === equipo.season_id);
@@ -30,6 +38,9 @@ export default function TeamHeader({ equipo }: { equipo: TeamProfile }) {
           {[equipo.city, equipo.founded_year && `desde ${equipo.founded_year}`].filter(Boolean).join(" · ")}
         </p>
         <NombreHeroe>{equipo.team_name}</NombreHeroe>
+        <div className="pt-1">
+          <BotonFavorito code={code} nombre={equipo.team_name} inicial={favorito} />
+        </div>
       </ColumnaHeroe>
 
       {actual && (

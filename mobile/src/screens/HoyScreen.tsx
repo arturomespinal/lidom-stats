@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { fetchDay } from '../api';
+import { useFavorito } from '../favorito';
 import { COLORS, FONTS } from '../constants';
 import type { LiveStackParamList } from '../navigation';
 import type { Jornada, JuegoJornada } from '../types';
@@ -53,10 +54,14 @@ export default function HoyScreen({ navigation, route }: Props) {
   const scroll = useRef<ScrollViewInstance>(null);
   const hayDato = useRef(false);
 
+  // Con equipo favorito el servidor pone su juego de destacado; al cambiarlo
+  // (la estrella de la ficha del equipo) la jornada se vuelve a pedir.
+  const favorito = useFavorito();
+
   const cargar = useCallback(async (silencioso = false) => {
     const n = ++pedido.current;
     if (!silencioso) setEstado('cargando');
-    const j = await fetchDay(fecha);
+    const j = await fetchDay(fecha, undefined, favorito);
     if (n !== pedido.current) return;
     if (!j) {
       // Un fallo de red no borra lo que ya se mostraba.
@@ -66,7 +71,7 @@ export default function HoyScreen({ navigation, route }: Props) {
     hayDato.current = true;
     setJornada(j);
     setEstado('listo');
-  }, [fecha]);
+  }, [fecha, favorito]);
 
   useEffect(() => {
     cargar();
@@ -124,7 +129,12 @@ export default function HoyScreen({ navigation, route }: Props) {
   const destacado = jornada.featured
     ? jornada.games.find(g => g.game_id === jornada.featured!.game_id)
     : undefined;
-  const resto = jornada.games.filter(g => g !== destacado);
+  // Los juegos del favorito, primero. `sort` es estable: el resto, por hora.
+  const delFavorito = (g: (typeof jornada.games)[number]) =>
+    !!favorito && (g.home.code === favorito || g.away.code === favorito);
+  const resto = jornada.games
+    .filter(g => g !== destacado)
+    .sort((x, y) => Number(delFavorito(y)) - Number(delFavorito(x)));
   const titulo = jornada.is_today ? 'Hoy' : jornada.label;
   // Un día sin juegos llega vacío y se dice. Solo "hoy" fuera de temporada
   // llega cambiado por la jornada anterior más cercana (`is_requested` en

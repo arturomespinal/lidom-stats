@@ -45,6 +45,12 @@ export type FichasParamList = {
   Historico: { idMiembro: number; nombre?: string };
   /** Récords de todos los tiempos de una categoría. Se abre desde Buscar. */
   Records: { grupo: GrupoHistorico; stat: string };
+  /**
+   * Dos jugadores lado a lado (GET /players/compare). Se abre desde la ficha
+   * de un jugador con `a` puesto; el otro se elige en la pantalla. Los
+   * nombres viajan para pintar la cabecera antes de la respuesta.
+   */
+  Comparar: { a?: string; nombreA?: string; b?: string; nombreB?: string };
 };
 
 export type LiveStackParamList = FichasParamList & {

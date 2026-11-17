@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Navbar from "@/components/Navbar";
 import { pct3 } from "@/lib/formato";
 import TeamHeader from "@/components/team/TeamHeader";
+import { leerFavorito } from "@/lib/favoritoServidor";
 import { SelectorOpciones } from "@/components/SelectorTemporada";
 import Seccion from "@/components/ficha/Seccion";
 import UltimosDiez from "@/components/ficha/UltimosDiez";
@@ -43,7 +44,7 @@ export default async function TeamPage(props: Props) {
   return (
     <>
       <Navbar season={searchParams.season} />
-      <TeamHeader equipo={equipo} />
+      <TeamHeader equipo={equipo} favorito={await leerFavorito()} />
       {/* Cada opción lleva el récord de esa campaña: se elige sabiendo qué
           se va a ver. */}
       <SelectorOpciones

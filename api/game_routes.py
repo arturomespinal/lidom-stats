@@ -50,7 +50,9 @@ from src.contexto import (
     puesto_en_la_liga,
     titular_puesto,
 )
+from src import comparar
 from src.boxscore import equipo_detalle
+from src.comparar import CARRERA
 from src.jornada import entradas as entradas_nb
 from src.jornada import (
     armar_juego,
@@ -359,9 +361,8 @@ def search_players(
     }
 
 
-@router.get("/players/{player_id}", tags=["Jugadores"])
-def get_player_profile(player_id: str):
-    """Perfil biográfico + temporadas agregadas desde las vistas."""
+def _datos_del_jugador(player_id: str) -> tuple[dict, list[dict], list[dict]]:
+    """La biografía (con lateralidad y edad) y sus filas de bateo y pitcheo. 404 si no existe."""
     players = query_db(
         """
         SELECT player_id, full_name, birth_date, bats, throws, nationality,
@@ -392,13 +393,93 @@ def get_player_profile(player_id: str):
         """,
         {"pid": player_id},
     )
-
-    # La edad y los totales se componen aquí, no en el cliente. Promediar los
-    # promedios de cada temporada da un número plausible y equivocado —ver la
-    # cabecera de src/carrera.py— y tenerlo mal en dos plataformas distintas,
-    # cada una a su manera, es peor que tenerlo mal en una.
     bio = anotar_lateralidad(players[0])
     bio["age"] = edad(bio.get("birth_date"))
+    return bio, batting, pitching
+
+
+@router.get("/players/compare", tags=["Jugadores"])
+def compare_players(
+    a: str = Query(..., min_length=1, max_length=80, description="player_id del primero"),
+    b: str = Query(..., min_length=1, max_length=80, description="player_id del segundo"),
+    role: str | None = Query(None, pattern="^(batting|pitching)$",
+                             description="Por defecto, pitcheo si los dos son lanzadores; si no, bateo"),
+    season: str = Query(CARRERA, pattern=r"^(career|\d{4}-\d{2})$",
+                        description="'career' o una temporada, '2025-26'"),
+):
+    """
+    Dos jugadores lado a lado: la carrera completa o una temporada, en bateo o
+    en pitcheo. Cada renglón trae los dos valores, su texto y quién gana
+    (`better`: "a", "b" o null). Ver src/comparar.py.
+
+    Va antes de /players/{player_id}, como /players/search: si no, "compare"
+    entraría como un player_id.
+    """
+    if a == b:
+        raise HTTPException(400, "Elige dos jugadores distintos")
+    datos = []
+    for pid in (a, b):
+        bio, batting, pitching = _datos_del_jugador(pid)
+        # Los años anteriores a 2012-13 (DIGIMETRICS), si jugó entonces: la
+        # carrera de la comparación es la COMPLETA, como en su ficha.
+        with engine.connect() as conn:
+            historia = historia_de_jugador(conn, pid, batting, pitching)
+        viejas_b = historia["batting"] if historia else []
+        viejas_p = historia["pitching"] if historia else []
+        datos.append({
+            "bio": bio,
+            "batting": viejas_b + batting,
+            "pitching": viejas_p + pitching,
+            "is_pitcher": es_lanzador(batting, pitching),
+            "has_history": historia is not None,
+        })
+
+    rol = role or ("pitching" if datos[0]["is_pitcher"] and datos[1]["is_pitcher"] else "batting")
+    roles = [r for r in ("batting", "pitching") if datos[0][r] and datos[1][r]]
+    comunes = sorted(
+        comparar.temporadas_de(datos[0][rol]) & comparar.temporadas_de(datos[1][rol]), reverse=True
+    )
+
+    lineas, jugadores = [], []
+    for d in datos:
+        filas = d[rol] if season == CARRERA else [f for f in d[rol] if f["season_id"] == season]
+        l = comparar.linea(filas, rol)
+        lineas.append(l)
+        jugadores.append({
+            "player_id": d["bio"]["player_id"],
+            "full_name": d["bio"]["full_name"],
+            "team_code": comparar.equipo_principal(filas, rol),
+            "teams": sorted({f["team_code"] for f in filas}),
+            "age": comparar.edad_para(d["bio"].get("birth_date"), season),
+            "volume": comparar.volumen(l, rol),
+            "is_pitcher": d["is_pitcher"],
+            "has_history": d["has_history"],
+        })
+
+    filas = comparar.renglones(lineas[0], lineas[1], rol)
+    nombres = (jugadores[0]["full_name"], jugadores[1]["full_name"])
+    return {
+        "role": rol,
+        "season": season,
+        "season_label": "Carrera" if season == CARRERA else season,
+        "roles": roles,
+        "seasons_in_common": comunes,
+        "players": jugadores,
+        "rows": filas,
+        "headline": comparar.titular(*nombres, filas),
+        "note": comparar.nota_muestra(nombres, (lineas[0], lineas[1]), rol),
+    }
+
+
+@router.get("/players/{player_id}", tags=["Jugadores"])
+def get_player_profile(player_id: str):
+    """Perfil biográfico + temporadas agregadas desde las vistas."""
+    # La edad y los totales se componen en el servidor, no en el cliente.
+    # Promediar los promedios de cada temporada da un número plausible y
+    # equivocado —ver la cabecera de src/carrera.py— y tenerlo mal en dos
+    # plataformas distintas, cada una a su manera, es peor que tenerlo mal en
+    # una.
+    bio, batting, pitching = _datos_del_jugador(player_id)
 
     lanzador = es_lanzador(batting, pitching)
     with engine.connect() as conn:
@@ -1250,6 +1331,10 @@ def get_day(
         None, alias="date",
         description="YYYY-MM-DD. Por defecto, hoy en República Dominicana.",
     ),
+    favorito: str | None = Query(
+        None, pattern="^[A-Z]{3}$",
+        description="Código del equipo favorito: si juega, su juego es el destacado.",
+    ),
 ):
     """
     La jornada de una fecha: los juegos, el destacado con su titular, las
@@ -1309,8 +1394,15 @@ def get_day(
     bateo = query_db(_SQL_BATEO_DIA.format(filtro=filtro), {"d": dia.isoformat()})
     pitcheo = query_db(_SQL_PITCHEO_DIA.format(filtro=filtro), {"d": dia.isoformat()})
 
-    # El destacado y su frase.
-    elegido = destacado(juegos)
+    # El destacado y su frase. Con equipo favorito (lo guarda cada persona
+    # en su dispositivo), su juego, si juega: es el que viene a mirar. Entre
+    # sus juegos (un doble juego) manda el mismo criterio de siempre. Un
+    # código que no es de la liga se ignora.
+    suyos = (
+        [j for j in juegos if favorito in (j["home"]["code"], j["away"]["code"])]
+        if favorito in LIDOM_TEAMS_BY_CODE else []
+    )
+    elegido = destacado(suyos) or destacado(juegos)
     featured = None
     if elegido:
         headline, win_prob = _titular_y_franja(elegido, bateo, pitcheo)

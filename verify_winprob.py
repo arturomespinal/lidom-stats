@@ -65,9 +65,13 @@ err = sum(abs(real.get(k, 0) / nr * 100 - sim.get(k, 0) / M * 100) for k in rang
 check("error total de la distribución (puntos sobre 200)", round(err, 1), 0.0, tol=12.0)
 
 print("\n━━━ la ventaja de local sale de los datos, no del aire ━━━")
+# Sobre las temporadas con que se calibró (hasta la 2025-26): la base sigue
+# creciendo con la temporada en curso, y con ella esta proporción se mueve un
+# poco (0.541 con 70 juegos de la 2026-27, 16-nov-2026). Lo que se comprueba
+# es que la constante salió de los datos, no que la 2026-27 la repita.
 loc, tot = con.execute(
     "SELECT SUM(home_score>away_score), COUNT(*) FROM games "
-    "WHERE status='final' AND home_score IS NOT NULL"
+    "WHERE status='final' AND home_score IS NOT NULL AND season_id <= '2025-26'"
 ).fetchone()
 check("el local gana en la base", round(loc / tot, 3), REAL_LOCAL, tol=0.002)
 inicio = prob_gana_local_cached(Estado(1, True, 0, (False, False, False), 0), sims=20_000)

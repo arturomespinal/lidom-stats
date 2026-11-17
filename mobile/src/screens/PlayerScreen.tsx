@@ -29,6 +29,7 @@ import CurvaCarrera from '../components/CurvaCarrera';
 import Trayectoria from '../components/Trayectoria';
 import JuegoAJuego from '../components/JuegoAJuego';
 import { estiloBarra, tematico } from '../tema';
+import BotonFranja from '../components/BotonFranja';
 
 type Props = NativeStackScreenProps<FichasParamList, 'Jugador'>;
 type Rol = 'bateo' | 'pitcheo';
@@ -312,6 +313,13 @@ export default function PlayerScreen({ route, navigation }: Props) {
                   .join(' · ')}
               </Text>
             )}
+            {/* A comparar, con este jugador ya puesto a la izquierda. */}
+            <BotonFranja
+              icono="git-compare-outline"
+              texto="Comparar"
+              etiqueta={`Comparar a ${bio.full_name} con otro jugador`}
+              onPress={() => navigation.push('Comparar', { a: bio.player_id, nombreA: bio.full_name })}
+            />
           </View>
           <Monograma nombre={bio.full_name} />
         </View>

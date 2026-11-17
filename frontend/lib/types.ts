@@ -1030,3 +1030,55 @@ export interface Calendario {
   games: number;
   months: MesCalendario[];
 }
+
+/* ── Comparar dos jugadores (GET /players/compare) ───────────────────────────
+   Lo compone el servidor (src/comparar.py): las líneas con las tasas
+   recompuestas, el texto de cada valor y quién gana cada renglón. El cliente
+   dibuja; no decide que en efectividad gana la más baja. */
+
+export type RolComparacion = "batting" | "pitching";
+
+export interface JugadorComparado {
+  player_id: string;
+  full_name: string;
+  /** El equipo de más volumen en lo comparado (la temporada o la carrera). */
+  team_code: string | null;
+  teams: string[];
+  /** La de hoy en la carrera; la de esa temporada si se compara una. */
+  age: number | null;
+  /** "412 AP" o "45.1 IP". null si no tiene cifras en ese papel. */
+  volume: string | null;
+  is_pitcher: boolean;
+  has_history: boolean;
+}
+
+export interface RenglonComparado {
+  key: string;
+  label: string;
+  format: "int" | "rate3" | "dec2" | "pct1" | "ip";
+  /** false en los de volumen (juegos, apariciones): se muestran, no se ganan. */
+  decides: boolean;
+  lower_is_better: boolean;
+  /** Crudos, para el largo de las barras. */
+  a: number | null;
+  b: number | null;
+  a_text: string;
+  b_text: string;
+  better: "a" | "b" | null;
+}
+
+export interface Comparacion {
+  role: RolComparacion;
+  /** "career" o una temporada, "2025-26". */
+  season: string;
+  season_label: string;
+  /** Los papeles en que los dos tienen cifras. */
+  roles: RolComparacion[];
+  /** Las temporadas que jugaron los dos en ese papel, de la más nueva a la más vieja. */
+  seasons_in_common: string[];
+  players: [JugadorComparado, JugadorComparado];
+  rows: RenglonComparado[];
+  headline: string | null;
+  /** "Ojo: Fulano tiene solo 23 AP." */
+  note: string | null;
+}

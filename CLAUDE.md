@@ -194,12 +194,13 @@ la 2015-16. No cambiar esa clave.
 | `src/carrera.py` | Totales de carrera: las tasas se RECOMPONEN, no se promedian |
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
+| `src/comparar.py` | Dos jugadores lado a lado: líneas recompuestas, quién gana cada renglón y el titular |
 | `src/boxscore.py` | El boxscore de un juego terminado desde la base, con la forma del detalle en vivo |
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 333 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 362 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -260,18 +261,19 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /games/{game_id}` | Boxscore completo: las dos alineaciones con líneas de bateo y pitcheo |
 | `GET /games/{game_id}/detail` | La página de un juego terminado: cabecera, titular, figuras y boxscore con la forma del detalle en vivo |
 | `GET /players/search?q=` | Busca por nombre, devuelve `player_id` |
+| `GET /players/compare?a=&b=&role=&season=` | Dos jugadores lado a lado: la carrera o una temporada, bateo o pitcheo; cada renglón con quién gana (ver "Comparar jugadores") |
 | `GET /players/{player_id}` | Perfil biográfico + edad + temporadas + totales de carrera + `context` (contra la liga y curva) |
 | `GET /players/{player_id}/gamelog` | Juego por juego, con resultado del equipo, fecha legible y la línea compuesta de la portada |
 | `GET /leaderboards/batting` | Líderes con calificación por PA |
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
 | `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
 | `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
-| `GET /day?date=` | La jornada: juegos, destacado con titular, figuras y la próxima fecha. Portada Hoy |
+| `GET /day?date=&favorito=` | La jornada: juegos, destacado con titular, figuras y la próxima fecha. Portada Hoy. Con `favorito` (código de equipo), su juego es el destacado |
 | `GET /calendar?season=` | Las jornadas de una temporada como meses con semanas ya armadas (lunes a domingo) |
 
 `season` acepta ambos formatos: `"2025"` o `"2025-26"`. `normalize_season_id()` traduce.
 
-En `/players/search` el orden de declaración importa: la ruta estática va **antes** de `/players/{player_id}`, porque FastAPI resuelve en orden y si no `"search"` entraría como un `player_id`.
+En `/players/search` y `/players/compare` el orden de declaración importa: las rutas estáticas van **antes** de `/players/{player_id}`, porque FastAPI resuelve en orden y si no `"search"` o `"compare"` entrarían como un `player_id`.
 
 ## Reglas críticas
 
@@ -1644,6 +1646,73 @@ Lo que cambia respecto a la web:
 - Escala de las fichas: 28 / 22 / 14 / 11. Sin Bebas en las tablas: sus cifras
   no son tabulares y en una columna alineada a la derecha no cuadran.
 
+## Equipo favorito y comparar jugadores (16-nov-2026)
+
+### El equipo favorito
+
+Cada persona marca su equipo con la estrella "Mi equipo" de la ficha del
+equipo (web `components/BotonFavorito.tsx` en `TeamHeader`; móvil
+`BotonFranja` en `TeamScreen`). Uno solo: marcar otro lo reemplaza. No hay
+cuentas: se guarda en el dispositivo.
+
+- **Hoy**: `GET /day?favorito=LIC` pone su juego de destacado si juega
+  (entre sus juegos, un doble juego, manda el criterio de siempre de
+  `destacado()`). Sus juegos van primero en la lista y su nombre lleva una
+  estrella en las tarjetas. Un código que no es de la liga se ignora; en
+  minúsculas da 422.
+- **Posiciones**: su fila lleva una raya a la izquierda y la estrella. **No
+  se mueve de su puesto**: la tabla es la tabla.
+- **La estrella va en el color del texto**, nunca en un color propio: un
+  color de favorito se confundiría con algún club.
+- **Web: cookie, no localStorage** (`lib/favorito.ts`,
+  `deportiv-favorito`, un año, `SameSite=Lax`, `Secure` en https). La lee el
+  servidor al armar la página (`lib/favoritoServidor.ts`, `cookies()`), así
+  la portada sale ya con el destacado del favorito y sin salto. Al marcar,
+  `router.refresh()`. Es un código de tres letras: no identifica a nadie.
+  `favoritoValido()` descarta lo que no sea de la liga.
+- **Móvil: AsyncStorage** (`src/favorito.ts`), cargado en `App.tsx` junto
+  con el modo, antes de quitar la pantalla de arranque. Cambiarlo no
+  vuelve a montar nada: Hoy, Posiciones y las tarjetas se suscriben con
+  `useFavorito()`, y Hoy vuelve a pedir la jornada.
+
+### Comparar jugadores
+
+Un botón "Comparar" en la cabecera de la ficha de cada jugador abre la
+comparación con ese jugador a la izquierda; el segundo se elige con el
+buscador. Web `app/comparar/page.tsx` (`?a=&b=&rol=bateo|pitcheo&temporada=`,
+todo en la URL: se comparte y el atrás deshace), móvil `CompararScreen`
+(ruta `Comparar` en todas las pilas).
+
+- **Lo compone el servidor** (`GET /players/compare`, `src/comparar.py`):
+  las líneas con las tasas recompuestas sobre los conteos sumados (una
+  temporada con dos equipos suma los dos; la carrera es la COMPLETA, con
+  DIGIMETRICS si jugó antes de 2012-13, como en su ficha), el texto de cada
+  valor, quién gana cada renglón y el titular ("Juan Francisco sale arriba
+  en 7 de 12."). El cliente no decide que en efectividad gana la más baja.
+- **Quién gana se decide a la precisión que se ve**: dos .312 empatan.
+  Ganan los más bajos en efectividad, WHIP, boletos por 9 y ponches por
+  aparición (por aparición, no el total: con volúmenes distintos el total
+  castigaría al que jugó más). Los renglones de volumen (juegos,
+  apariciones, aperturas) se muestran sin barras: `decides: false`.
+- **El papel por defecto**: pitcheo si los dos son lanzadores
+  (`es_lanzador`), si no bateo. El selector Bateo/Pitcheo solo aparece si
+  los dos tienen cifras en los dos papeles (`roles`).
+- **Las temporadas**: "Carrera" y las que jugaron los dos en ese papel
+  (`seasons_in_common`), de la más nueva a la más vieja. Al cambiar a un
+  jugador se sueltan papel y temporada.
+- **Muestra chica**: con menos de 50 AP o 10 entradas, `note` lo dice
+  ("Ojo: Fulano tiene solo 23 AP.") bajo el titular, que si no engaña.
+- **Las barras** como "Equipo contra equipo": el lado dice de quién es, el
+  color dice quién gana (tinta el ganador, gris el otro).
+- **Los históricos sin enlace** (solo DIGIMETRICS, sin `player_id`) no se
+  pueden comparar: el buscador de la comparación no los ofrece.
+- El buscador de la barra (`PlayerSearch`) es el mismo, con `alElegir`: en
+  vez de abrir la ficha entrega el jugador.
+- Suite: `verify_game_routes.py` rehace a mano la línea de una temporada con
+  dos equipos (Eguy Rosario 2025-26), comprueba cada ganador, el titular
+  (incluido el empate: Munguia contra Nunez, 6 a 6), la efectividad de dos
+  lanzadores y que el favorito de cada equipo da su juego de destacado.
+
 ## El rediseño de las fichas (29-sep-2026)
 
 Las fichas de jugador y de equipo se rehicieron en las dos plataformas a partir
@@ -2835,6 +2904,12 @@ Vidal Bruján que está en /stats y en ninguno de sus boxscores, todos leídos
 después de jugados. Va en `FUENTE` (`src/validacion.py`) como el robo de Engel
 Beltre en 2017-18: la diferencia queda fija aunque los totales crezcan cada
 día, y cualquier otra hace fallar la suite y el check de Dagster.
+
+`verify_winprob.py` comprobaba la ventaja de local (`REAL_LOCAL`, 0.543)
+sobre TODOS los juegos de la base, y con 70 juegos de la 2026-27 bajó a
+0.541 y falló (16-nov). Ahora la cuenta es sobre las temporadas con que se
+calibró, hasta la 2025-26: lo que se prueba es que la constante salió de
+los datos, no que la temporada en curso la repita.
 
 `verify_winprob.py` y las tres suites del motor en vivo necesitan `fixtures/`
 (`python capture_gumbo.py && python capture_diffs.py`).

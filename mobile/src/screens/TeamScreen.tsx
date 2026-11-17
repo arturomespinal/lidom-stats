@@ -17,6 +17,8 @@ import Pestanas from '../components/Pestanas';
 import SelectorTemporada from '../components/SelectorTemporada';
 import Seccion from '../components/Seccion';
 import Heroe, { CifraHeroe, FilaCifras } from '../components/Heroe';
+import BotonFranja from '../components/BotonFranja';
+import { fijarFavorito, useFavorito } from '../favorito';
 import { tamanoNombre } from '../components/Ajuste';
 import UltimosDiez from '../components/UltimosDiez';
 import CarreraBanderin from '../components/CarreraBanderin';
@@ -122,6 +124,7 @@ const lineaLanzador = (j: TeamRosterPitcher) =>
  */
 export default function TeamScreen({ route, navigation }: Props) {
   const code = route.params.code.toUpperCase();
+  const esFavorito = useFavorito() === code;
   const [season, setSeason] = useState(route.params.season ?? DEFAULT_SEASON);
   const [equipo, setEquipo] = useState<TeamProfile | null>(null);
   const [estado, setEstado] = useState<'cargando' | 'listo' | 'error'>('cargando');
@@ -239,6 +242,15 @@ export default function TeamScreen({ route, navigation }: Props) {
           >
             {equipo.team_name}
           </Text>
+          {/* La estrella de "mi equipo" (src/favorito.ts): uno solo, marcar
+              otro lo reemplaza. */}
+          <BotonFranja
+            icono={esFavorito ? 'star' : 'star-outline'}
+            texto={esFavorito ? 'Tu equipo' : 'Mi equipo'}
+            etiqueta={esFavorito ? `Quitar a ${equipo.team_name} como tu equipo` : `Marcar a ${equipo.team_name} como tu equipo`}
+            activo={esFavorito}
+            onPress={() => fijarFavorito(esFavorito ? null : code)}
+          />
         </View>
         {actual && (
           <View style={styles.record}>

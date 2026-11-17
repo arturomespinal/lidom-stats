@@ -21,9 +21,11 @@ import TeamScreen from './src/screens/TeamScreen';
 import PlayerScreen from './src/screens/PlayerScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import RecordsScreen from './src/screens/RecordsScreen';
+import CompararScreen from './src/screens/CompararScreen';
 import BotonTema from './src/components/BotonTema';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
 import { cargarTema, estiloBarra, tematico, temaActual, useTema } from './src/tema';
+import { cargarFavorito } from './src/favorito';
 
 // La pantalla de arranque se queda hasta que Barlow Condensed esté cargada. Sin
 // esto, la primera pantalla aparece un instante con la fuente del sistema y
@@ -135,6 +137,7 @@ function HoyTab() {
         options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
       />
       <LiveStack.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
+      <LiveStack.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />
     </LiveStack.Navigator>
   );
 }
@@ -179,6 +182,7 @@ function crearPila(Raiz: React.ComponentType) {
           options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
         />
         <Pila.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
+        <Pila.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />
       </Pila.Navigator>
     );
   };
@@ -250,7 +254,8 @@ export default function App() {
   // eligió el claro no ve un instante la app en oscuro.
   const [temaListo, setTemaListo] = useState(false);
   useEffect(() => {
-    cargarTema().finally(() => setTemaListo(true));
+    // Y el equipo favorito (src/favorito.ts): Hoy lo pide con la jornada.
+    Promise.all([cargarTema(), cargarFavorito()]).finally(() => setTemaListo(true));
   }, []);
   const tema = useTema();
 

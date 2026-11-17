@@ -18,6 +18,8 @@ import TeamBadge from '../components/TeamBadge';
 import SelectorTemporada from '../components/SelectorTemporada';
 import { etiquetaTemporada, useTemporada } from '../temporada';
 import { tematico } from '../tema';
+import { useFavorito } from '../favorito';
+import { Ionicons } from '@expo/vector-icons';
 
 // Funciones y no constantes: los colores cambian con el modo (src/tema.ts).
 const POS = () => COLORS.positive;
@@ -88,6 +90,9 @@ function TeamRow({
   onPress: () => void;
 }) {
   const diff = item.run_differential;
+  // El favorito (src/favorito.ts): raya a la izquierda y estrella junto al
+  // nombre. No se mueve de su puesto: la tabla es la tabla.
+  const esFavorito = useFavorito() === item.team_id;
   const diffColor =
     diff == null ? COLORS.textSecondary : diff >= 0 ? POS() : NEG();
 
@@ -102,10 +107,11 @@ function TeamRow({
       style={({ pressed }) => [
         styles.row,
         !item.playoff_spot && styles.rowOut,
+        esFavorito && styles.rowFavorito,
         pressed && styles.rowPressed,
       ]}
       accessibilityRole="button"
-      accessibilityLabel={`${rank}. ${item.short_name ?? item.team_name}, ${item.wins} ganados, ${item.losses} perdidos. Abrir equipo`}
+      accessibilityLabel={`${rank}. ${item.short_name ?? item.team_name}${esFavorito ? ', tu equipo' : ''}, ${item.wins} ganados, ${item.losses} perdidos. Abrir equipo`}
     >
       <Text
         style={[
@@ -121,9 +127,12 @@ function TeamRow({
             reemplaza a la raya de color del borde de la fila. */}
         <TeamBadge code={item.team_id} size={34} variant="solid" />
         <View style={{ flex: 1 }}>
-          <Text style={styles.teamName} numberOfLines={1}>
-            {item.short_name ?? item.team_name}
-          </Text>
+          <View style={styles.nombreFila}>
+            <Text style={styles.teamName} numberOfLines={1}>
+              {item.short_name ?? item.team_name}
+            </Text>
+            {esFavorito && <Ionicons name="star" size={12} color={COLORS.textPrimary} />}
+          </View>
           {diff != null && (
             <Text style={[styles.diffLabel, { color: diffColor }]}>
               DCAR {fmtDiff(diff)}
@@ -306,6 +315,9 @@ const styles = tematico(() => StyleSheet.create({
   },
   // Quien está fuera se hunde un tono contra el fondo de la página.
   rowOut: { backgroundColor: COLORS.bgPage },
+  // La raya resta su ancho del margen: el contenido no se corre.
+  rowFavorito: { borderLeftWidth: 3, borderLeftColor: COLORS.textPrimary, paddingLeft: 13 },
+  nombreFila: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   rowPressed: { backgroundColor: COLORS.bgRaised },
   rankIn: { color: COLORS.textPrimary, fontSize: 13, fontWeight: '700' },
   rankOut: { color: COLORS.textSecondary, fontSize: 13, fontWeight: '400' },
@@ -318,7 +330,7 @@ const styles = tematico(() => StyleSheet.create({
     marginLeft: 8,
     marginRight: 4,
   },
-  teamName: { color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
+  teamName: { flexShrink: 1, color: COLORS.textPrimary, fontSize: 14, fontWeight: '600' },
   diffLabel: { fontSize: 10, marginTop: 1 },
 
   // Las cifras de la tabla van en la letra de la pizarra, sin fontWeight

@@ -7,6 +7,7 @@ import Seccion from "@/components/ficha/Seccion";
 import Refresco from "@/components/hoy/Refresco";
 import { Figuras, FranjaFechas, Proximos, TarjetaDestacado, TarjetaJuego } from "@/components/hoy/Jornada";
 import { fetchDay } from "@/lib/api";
+import { leerFavorito } from "@/lib/favoritoServidor";
 
 export const metadata: Metadata = { title: "Hoy · Deportiv" };
 
@@ -30,7 +31,10 @@ export default async function HoyPage(props: Props) {
   const searchParams = await props.searchParams;
   const season = searchParams.season;
   const fecha = searchParams.fecha;
-  const jornada = await fetchDay(fecha);
+  // El equipo favorito (su cookie, ver lib/favorito.ts): el servidor pone su
+  // juego de destacado, y aquí va primero en la lista y con su estrella.
+  const favorito = await leerFavorito();
+  const jornada = await fetchDay(fecha, favorito);
 
   if (!jornada) {
     return (
@@ -46,7 +50,12 @@ export default async function HoyPage(props: Props) {
   const destacado = jornada.featured
     ? jornada.games.find((g) => g.game_id === jornada.featured!.game_id)
     : undefined;
-  const resto = jornada.games.filter((g) => g !== destacado);
+  const delFavorito = (g: (typeof jornada.games)[number]) =>
+    !!favorito && (g.home.code === favorito || g.away.code === favorito);
+  // `sort` es estable: fuera del favorito, el orden de siempre (por hora).
+  const resto = jornada.games
+    .filter((g) => g !== destacado)
+    .sort((x, y) => Number(delFavorito(y)) - Number(delFavorito(x)));
   const temporada = jornada.season_id ? ` de la temporada ${jornada.season_id}` : "";
   const sinJuegos = jornada.is_requested && jornada.games.length === 0;
   const nota = !jornada.is_requested
@@ -105,7 +114,7 @@ export default async function HoyPage(props: Props) {
             lista, el destacado dejaba un bloque blanco vacío bajo su franja. */}
         <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
           {destacado && jornada.featured && (
-            <TarjetaDestacado juego={destacado} destacado={jornada.featured} />
+            <TarjetaDestacado juego={destacado} destacado={jornada.featured} favorito={favorito} />
           )}
           {resto.length > 0 && (
             <section>
@@ -115,7 +124,7 @@ export default async function HoyPage(props: Props) {
               />
               <div className="space-y-2">
                 {resto.map((g) => (
-                  <TarjetaJuego key={g.game_id} juego={g} />
+                  <TarjetaJuego key={g.game_id} juego={g} favorito={favorito} />
                 ))}
               </div>
             </section>

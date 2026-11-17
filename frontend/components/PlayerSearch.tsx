@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 
 import TeamBadge from "@/components/TeamBadge";
 import { searchPlayers, type ResultadoBusqueda } from "@/lib/api";
+import type { PlayerSearchHit } from "@/lib/types";
 import { epocaHistorica } from "@/lib/formato";
 
 /**
@@ -22,8 +23,26 @@ import { epocaHistorica } from "@/lib/formato";
  *   con los de una consulta que el usuario ya abandonó.
  * - **El fallo de red no vacía la lista.** Un resultado de hace un segundo es
  *   más útil que un panel en blanco.
+ *
+ * Con `alElegir` no abre la ficha: entrega el jugador elegido (lo usa la
+ * página de comparar, components/comparar/ElegirJugador.tsx). Ahí no salen los
+ * históricos: sin player_id no hay comparación posible.
  */
-export default function PlayerSearch() {
+export default function PlayerSearch({
+  alElegir,
+  placeholder = "Buscar jugador",
+  claseInput = "w-32 focus:w-36 sm:w-40 sm:focus:w-56",
+  clasePanel = "right-0 w-72",
+  autoFocus = false,
+}: {
+  alElegir?: (jugador: PlayerSearchHit) => void;
+  placeholder?: string;
+  /** El ancho de la caja. Por defecto, el de la barra de arriba. */
+  claseInput?: string;
+  /** Dónde y de qué ancho abre el panel de resultados. */
+  clasePanel?: string;
+  autoFocus?: boolean;
+} = {}) {
   const router = useRouter();
   const [q, setQ] = useState("");
   // Los resultados y la consulta a la que pertenecen viajan JUNTOS, en un solo
@@ -76,7 +95,7 @@ export default function PlayerSearch() {
   const visibles = termino.length < 2 ? [] : res.data.jugadores;
   // Los que solo están en DIGIMETRICS (antes de 2012-13): van aparte, debajo,
   // y abren la ficha histórica.
-  const historicos = termino.length < 2 ? [] : res.data.historicos;
+  const historicos = termino.length < 2 || alElegir ? [] : res.data.historicos;
   const total = visibles.length + historicos.length;
   const buscando = termino.length >= 2 && res.q !== termino;
 
@@ -86,13 +105,21 @@ export default function PlayerSearch() {
     router.push(ruta);
   }
 
+  function elegir(h: PlayerSearchHit) {
+    if (!alElegir) return abrir(`/players/${h.player_id}`);
+    setAbierto(false);
+    setQ("");
+    alElegir(h);
+  }
+
   return (
     <div ref={caja} className="relative">
       <input
         type="search"
         value={q}
-        placeholder="Buscar jugador"
-        aria-label="Buscar jugador"
+        placeholder={placeholder}
+        aria-label={placeholder}
+        autoFocus={autoFocus}
         onChange={(e) => {
           setQ(e.target.value);
           setAbierto(true);
@@ -102,18 +129,16 @@ export default function PlayerSearch() {
           if (e.key === "Escape") setAbierto(false);
           // Enter con un solo resultado abre directo: es lo que espera quien
           // escribió el nombre completo.
-          if (e.key === "Enter" && total === 1)
-            abrir(
-              visibles.length
-                ? `/players/${visibles[0].player_id}`
-                : `/historia/jugador/${historicos[0].id_miembro}`
-            );
+          if (e.key === "Enter" && total === 1) {
+            if (visibles.length) elegir(visibles[0]);
+            else abrir(`/historia/jugador/${historicos[0].id_miembro}`);
+          }
         }}
-        className="w-32 rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:w-36 focus:border-fg2 focus:outline-none sm:w-40 sm:focus:w-56"
+        className={`${claseInput} rounded border border-line bg-header px-2.5 py-1.5 text-sm text-fg placeholder:text-faint focus:border-fg2 focus:outline-none`}
       />
 
       {abierto && q.trim().length >= 2 && (
-        <div className="absolute right-0 top-full z-20 mt-1.5 max-h-80 w-72 overflow-y-auto rounded-lg border border-line bg-card shadow-xl">
+        <div className={`absolute ${clasePanel} top-full z-20 mt-1.5 max-h-80 overflow-y-auto rounded-lg border border-line bg-card shadow-xl`}>
           {total === 0 ? (
             <p className="px-3 py-3 text-xs text-dim">
               {buscando ? "Buscando…" : "Sin coincidencias"}
@@ -134,7 +159,7 @@ export default function PlayerSearch() {
               return (
                 <button
                   key={h.player_id}
-                  onClick={() => abrir(`/players/${h.player_id}`)}
+                  onClick={() => elegir(h)}
                   className="flex w-full items-center gap-2 border-b border-line-soft px-3 py-2 text-left last:border-0 hover:bg-raised"
                 >
                   <span className="min-w-0 flex-1">

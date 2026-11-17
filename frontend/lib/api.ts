@@ -1,6 +1,7 @@
 import {
   BattingRow,
   Calendario,
+  Comparacion,
   Gamelog,
   GrupoHistorico,
   HistoricoHit,
@@ -15,6 +16,7 @@ import {
   PlayerProfile,
   PlayerSearchHit,
   ResumenHistorico,
+  RolComparacion,
   StandingRow,
   TeamProfile,
   WinProbResponse,
@@ -156,8 +158,13 @@ export async function fetchWinProb(
  * La jornada de una fecha (YYYY-MM-DD) o, sin fecha, la de hoy en RD. Fuera de
  * temporada el servidor devuelve la última jornada con `is_requested: false`.
  */
-export async function fetchDay(fecha?: string): Promise<Jornada | null> {
-  return apiFetch<Jornada>(fecha ? `/day?date=${encodeURIComponent(fecha)}` : "/day");
+export async function fetchDay(fecha?: string, favorito?: string | null): Promise<Jornada | null> {
+  // Con equipo favorito, el servidor elige su juego como destacado.
+  const params = new URLSearchParams();
+  if (fecha) params.set("date", fecha);
+  if (favorito) params.set("favorito", favorito);
+  const q = params.toString();
+  return apiFetch<Jornada>(q ? `/day?${q}` : "/day");
 }
 
 /** Un juego terminado desde la base: cabecera, titular, figuras y boxscore. */
@@ -189,6 +196,22 @@ export async function fetchPlayerProfile(
   playerId: string
 ): Promise<PlayerProfile | null> {
   return apiFetch<PlayerProfile>(`/players/${encodeURIComponent(playerId)}`);
+}
+
+/**
+ * Dos jugadores lado a lado. Sin papel, el servidor elige (pitcheo si los dos
+ * son lanzadores); sin temporada, la carrera completa.
+ */
+export async function fetchComparacion(
+  a: string,
+  b: string,
+  rol?: RolComparacion,
+  temporada?: string
+): Promise<Comparacion | null> {
+  const params = new URLSearchParams({ a, b });
+  if (rol) params.set("role", rol);
+  if (temporada) params.set("season", temporada);
+  return apiFetch<Comparacion>(`/players/compare?${params}`);
 }
 
 export interface ResultadoBusqueda {

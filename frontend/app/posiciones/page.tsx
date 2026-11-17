@@ -1,4 +1,5 @@
 import { fetchSeasons, fetchStandings } from "@/lib/api";
+import { leerFavorito } from "@/lib/favoritoServidor";
 import { etiquetaTemporada } from "@/lib/formato";
 import { DEFAULT_SEASON } from "@/lib/constants";
 import Navbar from "@/components/Navbar";
@@ -32,7 +33,7 @@ export default async function PosicionesPage(props: Props) {
           <EmptyState />
         ) : (
           <>
-            <StandingsTable data={standings} season={season} />
+            <StandingsTable data={standings} season={season} favorito={await leerFavorito()} />
             {/* Una columna nueva sin explicación es una columna que nadie usa. */}
             <p className="mt-3 text-xs leading-relaxed text-dim">
               <span className="font-bold text-fg">GB</span> — juegos de

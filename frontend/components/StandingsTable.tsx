@@ -2,6 +2,7 @@
 
 import { Fragment } from "react";
 import Link from "next/link";
+import Estrella from "@/components/Estrella";
 import TeamBadge from "@/components/TeamBadge";
 import { StandingRow } from "@/lib/types";
 
@@ -68,10 +69,17 @@ function CutlineRow({ span }: { span: number }) {
 export default function StandingsTable({
   data,
   season,
+  favorito = null,
 }: {
   data: StandingRow[];
   /** Viaja en el enlace a la ficha para no perder la temporada que se mira. */
   season: string;
+  /**
+   * El equipo favorito de quien mira (lib/favorito.ts): su fila lleva una
+   * raya a la izquierda y la estrella junto al nombre. No se mueve de su
+   * puesto: la tabla es la tabla.
+   */
+  favorito?: string | null;
 }) {
   // No se reordena aquí: la API ordena por PCT y calcula playoff_spot sobre ese
   // orden. Reordenar en el cliente correría el corte de equipo en silencio.
@@ -109,7 +117,11 @@ export default function StandingsTable({
                   row.playoff_spot ? "bg-card" : "bg-sunken"
                 }`}
               >
-                <td className="px-2 py-3 text-center text-xs sm:px-3">
+                <td
+                  className={`px-2 py-3 text-center text-xs sm:px-3 ${
+                    row.team_id === favorito ? "shadow-[inset_3px_0_0_rgb(var(--fg))]" : ""
+                  }`}
+                >
                   <span
                     className={
                       row.playoff_spot
@@ -139,6 +151,7 @@ export default function StandingsTable({
                       <span className="font-medium sm:hidden">{row.short_name ?? row.team_name}</span>
                       <span className="hidden font-medium sm:inline">{row.team_name}</span>
                     </Link>
+                    {row.team_id === favorito && <Estrella etiqueta="tu equipo" className="h-3.5 w-3.5 text-fg" />}
                   </div>
                 </td>
                 <td className="hidden px-3 py-3 text-center text-dim tabular-nums sm:table-cell">

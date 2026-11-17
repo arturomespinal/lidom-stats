@@ -882,6 +882,94 @@ if capturas:
 else:
     print("  (sin fixtures/: se saltan las comprobaciones con la caché en vivo)")
 
+print("\n━━━ /players/compare: dos jugadores lado a lado ━━━")
+# Las líneas salen recompuestas en el servidor (src/comparar.py): aquí se
+# rehacen a mano desde las fichas, que ya están validadas arriba.
+gn = "gustavo-nunez-1988-02-08"
+cmp_c = call(f"/players/compare?a={pid}&b={gn}")
+print(f"  {cmp_c['players'][0]['full_name']} vs {cmp_c['players'][1]['full_name']} · "
+      f"{cmp_c['season_label']} · {cmp_c['headline']}")
+check("por defecto, carrera y bateo", (cmp_c["season"], cmp_c["role"]), ("career", "batting"))
+fila = {f["key"]: f for f in cmp_c["rows"]}
+car_gn = (veterano.get("history") or {}).get("career_batting") or veterano["career_batting"]
+check("la carrera de B es la de su ficha (completa, con la historia)", (fila["h"]["b"], fila["pa"]["b"]),
+      (car_gn["h"], car_gn["pa"]))
+check("el AVG de B es el de su ficha", fila["avg"]["b"], car_gn["avg"])
+check("los renglones de volumen no se ganan", (fila["games"]["better"], fila["pa"]["better"], fila["games"]["decides"]),
+      (None, None, False))
+def gana_esperado(f):
+    if not f["decides"] or f["a"] is None or f["b"] is None:
+        return None
+    nd = {"rate3": 3, "pct1": 3, "dec2": 2, "int": 0, "ip": 0}[f["format"]]
+    a_, b_ = round(f["a"], nd), round(f["b"], nd)
+    if a_ == b_:
+        return None
+    return "a" if (a_ > b_) != f["lower_is_better"] else "b"
+check("cada renglón lo gana quien debe (ponches por aparición: el MENOR)",
+      [f["better"] for f in cmp_c["rows"]], [gana_esperado(f) for f in cmp_c["rows"]])
+ga = sum(f["better"] == "a" for f in cmp_c["rows"]); gb = sum(f["better"] == "b" for f in cmp_c["rows"])
+n_comp = sum(1 for f in cmp_c["rows"] if f["decides"] and f["a"] is not None and f["b"] is not None)
+gan = cmp_c["players"][0]["full_name"] if ga > gb else cmp_c["players"][1]["full_name"]
+# Munguia contra Nunez empatan 6 a 6: el titular lo dice como empate.
+check("el titular cuenta bien", cmp_c["headline"],
+      f"Parejos: {ga} renglones cada uno." if ga == gb else f"{gan} sale arriba en {max(ga, gb)} de {n_comp}.")
+check("la temporada de la comparación está entre las comunes",
+      VALIDADA in cmp_c["seasons_in_common"], True)
+
+# Una temporada con DOS equipos: la línea suma los dos y recompone las tasas.
+import sqlite3
+con = sqlite3.connect("data/lidom_stats.db")
+dos = con.execute(
+    "SELECT player_id FROM v_batting_season WHERE season_id = ? GROUP BY player_id "
+    "HAVING COUNT(*) = 2 AND SUM(pa) >= 100 ORDER BY SUM(pa) DESC LIMIT 1", (VALIDADA,)
+).fetchone()[0]
+con.close()
+ficha_dos = call(f"/players/{dos}")
+filas_dos = [f for f in ficha_dos["batting"] if f["season_id"] == VALIDADA]
+cmp_t = call(f"/players/compare?a={dos}&b={pid}&season={VALIDADA}")
+ft = {f["key"]: f for f in cmp_t["rows"]}
+ab2, h2 = sum(f["ab"] for f in filas_dos), sum(f["h"] for f in filas_dos)
+print(f"  {ficha_dos['player']['full_name']} en {VALIDADA}: {len(filas_dos)} equipos, {h2}-{ab2}")
+check("con dos equipos, la temporada suma los dos", ft["h"]["a"], h2)
+check("y el AVG se recompone (H/AB del total), no se promedia", ft["avg"]["a"], round(h2 / ab2, 3))
+check("la teja es la del equipo de más turnos",
+      cmp_t["players"][0]["team_code"], max(filas_dos, key=lambda f: f["pa"])["team_code"])
+check("y lista los dos equipos", cmp_t["players"][0]["teams"], sorted(f["team_code"] for f in filas_dos))
+check("el volumen va bajo el nombre", cmp_t["players"][0]["volume"], f"{sum(f['pa'] for f in filas_dos)} AP")
+
+# Pitcheo: la efectividad la gana la MÁS BAJA.
+con = sqlite3.connect("data/lidom_stats.db")
+l1, l2 = [r[0] for r in con.execute(
+    "SELECT player_id FROM v_pitching_season WHERE season_id = ? GROUP BY player_id "
+    "HAVING SUM(outs) >= 120 ORDER BY SUM(outs) DESC LIMIT 2", (VALIDADA,))]
+con.close()
+cmp_p = call(f"/players/compare?a={l1}&b={l2}&season={VALIDADA}")
+fp = {f["key"]: f for f in cmp_p["rows"]}
+check("dos lanzadores comparan pitcheo por defecto", cmp_p["role"], "pitching")
+check("efectividad: gana la más baja",
+      fp["era"]["better"], None if fp["era"]["a"] == fp["era"]["b"] else ("a" if fp["era"]["a"] < fp["era"]["b"] else "b"))
+check("las entradas en notación de béisbol", fp["outs"]["a_text"], f"{fp['outs']['a'] // 3}.{fp['outs']['a'] % 3}")
+check("con muestras de 40+ entradas, sin nota de muestra chica", cmp_p["note"], None)
+
+print("  errores esperados:")
+check("el mismo jugador dos veces → 400", c.get(f"/players/compare?a={pid}&b={pid}").status_code, 400)
+check("jugador inexistente → 404", c.get(f"/players/compare?a=no-existe&b={pid}").status_code, 404)
+check("temporada mal escrita → 422", c.get(f"/players/compare?a={pid}&b={gn}&season=2025").status_code, 422)
+check("'compare' no se toma por un player_id (sin parámetros → 422, no 404)",
+      c.get("/players/compare").status_code, 422)
+
+print("\n━━━ /day con equipo favorito ━━━")
+dia_f = "2025-10-15"
+base_d = call(f"/day?date={dia_f}")
+codigos = sorted({j[l]["code"] for j in base_d["games"] for l in ("home", "away")})
+for cod in codigos:
+    d = call(f"/day?date={dia_f}&favorito={cod}")
+    jf = next(j for j in d["games"] if j["game_id"] == d["featured"]["game_id"])
+    check(f"favorito {cod}: su juego es el destacado", cod in (jf["home"]["code"], jf["away"]["code"]), True)
+check("un código que no es de la liga se ignora",
+      call(f"/day?date={dia_f}&favorito=XYZ")["featured"]["game_id"], base_d["featured"]["game_id"])
+check("en minúsculas → 422", c.get(f"/day?date={dia_f}&favorito=lic").status_code, 422)
+
 print("\n━━━ los endpoints viejos siguen respondiendo ━━━")
 for path, key in [("/standings?season=2025", "data"), ("/batting?season=2025", "data"),
                   ("/pitching?season=2025", "data"), ("/seasons", "seasons")]:

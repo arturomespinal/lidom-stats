@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import Estrella from "@/components/Estrella";
 import StatusBadge from "@/components/StatusBadge";
 import TeamBadge from "@/components/TeamBadge";
 import WinProbBand from "@/components/game/WinProbBand";
@@ -98,12 +99,15 @@ function FilaEquipo({
   perdio,
   grande = false,
   temporada,
+  favorito,
 }: {
   lado: JuegoJornada["home"];
   gano: boolean;
   perdio: boolean;
   grande?: boolean;
   temporada?: string | null;
+  /** El equipo favorito de quien mira: lleva la estrella junto al nombre. */
+  favorito?: string | null;
 }) {
   return (
     <div className={`flex items-center gap-3 ${grande ? "min-h-[56px]" : "min-h-10"}`}>
@@ -114,12 +118,13 @@ function FilaEquipo({
       >
         <TeamBadge code={lado.code} size={grande ? "md" : "sm"} variant="solid" />
         <span
-          className={`min-w-0 flex-1 truncate font-semibold group-hover:underline ${grande ? "text-lg" : "text-[15px]"} ${
+          className={`min-w-0 truncate font-semibold group-hover:underline ${grande ? "text-lg" : "text-[15px]"} ${
             perdio ? "text-dim" : "text-fg"
           }`}
         >
           {grande ? lado.name : lado.short_name}
         </span>
+        {favorito === lado.code && <Estrella etiqueta="tu equipo" className="h-3.5 w-3.5 text-fg" />}
       </Link>
       {lado.runs != null && (
         <span
@@ -189,6 +194,7 @@ export function TarjetaDestacado({
   etiqueta = "Juego destacado",
   href,
   accion,
+  favorito,
 }: {
   juego: JuegoJornada;
   destacado: Pick<NonNullable<Jornada["featured"]>, "headline" | "win_prob">;
@@ -197,6 +203,7 @@ export function TarjetaDestacado({
   /** A dónde lleva el pie de la tarjeta. Por defecto, `enlaceJuego`. */
   href?: string | null;
   accion?: string;
+  favorito?: string | null;
 }) {
   const wp = destacado.win_prob;
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;
@@ -211,8 +218,8 @@ export function TarjetaDestacado({
         )}
       </div>
       <div className="px-4 pb-1 pt-2">
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} grande temporada={juego.season_id} />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} grande temporada={juego.season_id} />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} grande temporada={juego.season_id} favorito={favorito} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} grande temporada={juego.season_id} favorito={favorito} />
         {juego.status === "scheduled" && juego.time_local && (
           <p className="mt-1 font-cond text-3xl text-fg">{juego.time_local}</p>
         )}
@@ -244,7 +251,7 @@ export function TarjetaDestacado({
  * Una tarjeta chica por juego. "Ver el juego" si hay algo que abrir: el
  * detalle en vivo o, si ya terminó, su página con el boxscore.
  */
-export function TarjetaJuego({ juego }: { juego: JuegoJornada }) {
+export function TarjetaJuego({ juego, favorito }: { juego: JuegoJornada; favorito?: string | null }) {
   const perdio = (code: string) => !!juego.winner && juego.winner !== code;
   const href = enlaceJuego(juego);
   return (
@@ -256,8 +263,8 @@ export function TarjetaJuego({ juego }: { juego: JuegoJornada }) {
         <StatusBadge status={estadoBadge(juego.status)} label={juego.status_label} />
       </div>
       <div className="px-4 pb-3 pt-1">
-        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={juego.season_id} />
-        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={juego.season_id} />
+        <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={juego.season_id} favorito={favorito} />
+        <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={juego.season_id} favorito={favorito} />
       </div>
       {href && (
         <Link href={href} className="block px-4 pb-3 font-cond text-[15px] tracking-[0.04em] text-fg hover:underline">

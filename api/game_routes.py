@@ -52,7 +52,7 @@ from src.contexto import (
     puesto_en_la_liga,
     titular_puesto,
 )
-from src import comparar
+from src import comparar, enfrentamiento
 from src.boxscore import equipo_detalle
 from src.comparar import CARRERA
 from src.jornada import entradas as entradas_nb
@@ -1092,6 +1092,11 @@ def team_profile(
         "race_headline": titular_banderin(serie_propia),
         "standing": posicion,
         "last10": ultimos_diez(juegos_temporada, team),
+        # El récord contra cada uno de los otros cinco: la puerta a cada
+        # enfrentamiento (GET /teams/{code}/h2h/{rival}).
+        "rivals": enfrentamiento.contra_cada_rival(
+            juegos_temporada, team, [c for c in sorted(LIDOM_TEAMS_BY_CODE) if c != team]
+        ),
         "history_headline": titular_historial(historial),
     }
 
@@ -1172,14 +1177,65 @@ def head_to_head(
         params,
     )
 
+    # Quién brilló en esos juegos, de cada lado (src/enfrentamiento.py).
+    ids = [g["game_id"] for g in games]
+    marcas = ", ".join(f":g{i}" for i in range(len(ids)))
+    por_id = {f"g{i}": gid for i, gid in enumerate(ids)}
+    bateo = query_db(
+        f"""
+        SELECT bl.player_id, p.full_name, bl.team_code,
+               'serie' AS season_id,
+               COUNT(*) AS games, COUNT(*) AS games_batted,
+               SUM(bl.plate_appearances) AS pa, SUM(bl.at_bats) AS ab, SUM(bl.hits) AS h,
+               SUM(bl.doubles) AS doubles, SUM(bl.triples) AS triples, SUM(bl.home_runs) AS hr,
+               SUM(bl.runs) AS r, SUM(bl.rbi) AS rbi, SUM(bl.walks) AS bb, SUM(bl.strikeouts) AS so,
+               SUM(bl.stolen_bases) AS sb, SUM(bl.hit_by_pitch) AS hbp, SUM(bl.sacrifice_flies) AS sf
+        FROM batting_lines bl JOIN players p ON p.player_id = bl.player_id
+        WHERE bl.game_id IN ({marcas})
+        GROUP BY bl.player_id, bl.team_code
+        """,
+        por_id,
+    )
+    pitcheo = query_db(
+        f"""
+        SELECT pl.player_id, p.full_name, pl.team_code,
+               'serie' AS season_id,
+               COUNT(*) AS games, SUM(pl.is_starter) AS games_started,
+               SUM(pl.decision = 'W') AS wins, SUM(pl.decision = 'L') AS losses,
+               SUM(pl.decision = 'SV') AS saves,
+               SUM(pl.outs_recorded) AS outs, SUM(pl.hits_allowed) AS h,
+               SUM(pl.earned_runs) AS er, SUM(pl.strikeouts) AS so, SUM(pl.walks_allowed) AS bb
+        FROM pitching_lines pl JOIN players p ON p.player_id = pl.player_id
+        WHERE pl.game_id IN ({marcas})
+        GROUP BY pl.player_id, pl.team_code
+        """,
+        por_id,
+    )
+    n = summary["games_played"]
+
+    def lado(code: str) -> dict:
+        return {
+            "batting": enfrentamiento.destacados_bateo([f for f in bateo if f["team_code"] == code], n),
+            "pitching": enfrentamiento.destacados_pitcheo([f for f in pitcheo if f["team_code"] == code], n),
+        }
+
+    def corto(c: str) -> str:
+        return LIDOM_TEAMS_BY_CODE.get(c, {}).get("short_name", c)
+
     return {
         "team": team,
         "opponent": opponent,
+        "team_name": LIDOM_TEAMS_BY_CODE.get(team, {}).get("full_name", team),
+        "opponent_name": LIDOM_TEAMS_BY_CODE.get(opponent, {}).get("full_name", opponent),
         "season_id": params.get("season_id"),
         "summary": summary,
         "split": {row["side"]: row for row in split},
         "count": len(games),
         "games": games,
+        "headline": enfrentamiento.titular(
+            corto(team), corto(opponent), summary["wins"], summary["losses"], params.get("season_id")
+        ),
+        "leaders": {"team": lado(team), "opponent": lado(opponent)},
     }
 
 

@@ -22,6 +22,7 @@ import { fijarFavorito, useFavorito } from '../favorito';
 import { tamanoNombre } from '../components/Ajuste';
 import UltimosDiez from '../components/UltimosDiez';
 import CarreraBanderin from '../components/CarreraBanderin';
+import ContraRivales from '../components/ContraRivales';
 import BarrasDiferencial from '../components/BarrasDiferencial';
 import { estiloBarra, tematico } from '../tema';
 
@@ -319,6 +320,16 @@ export default function TeamScreen({ route, navigation }: Props) {
               sub="Juegos sobre .500, partido a partido."
             />
             <CarreraBanderin carrera={equipo.race} equipo={code} />
+          </>
+        )}
+
+        {!!equipo.rivals?.length && (
+          <>
+            <Seccion titulo="Contra cada rival" nota={equipo.season_id} sub="Toca uno para ver la serie." />
+            <ContraRivales
+              rivales={equipo.rivals}
+              onRival={rival => navigation.push('Enfrentamiento', { code, rival, season: equipo.season_id })}
+            />
           </>
         )}
 

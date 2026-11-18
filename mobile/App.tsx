@@ -22,6 +22,7 @@ import PlayerScreen from './src/screens/PlayerScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import RecordsScreen from './src/screens/RecordsScreen';
 import CompararScreen from './src/screens/CompararScreen';
+import EnfrentamientoScreen from './src/screens/EnfrentamientoScreen';
 import BotonCompartir from './src/components/BotonCompartir';
 import BotonTema from './src/components/BotonTema';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
@@ -178,6 +179,20 @@ function HoyTab() {
       />
       <LiveStack.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
       <LiveStack.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />
+      <LiveStack.Screen
+        name="Enfrentamiento"
+        component={EnfrentamientoScreen}
+        options={({ route }) => ({
+          title: `${TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} vs ${TEAM_SHORT_NAMES[route.params.rival] ?? route.params.rival}`,
+          headerRight: () => (
+            <BotonCompartir
+              ruta={`/teams/${route.params.code}/vs/${route.params.rival}?season=${route.params.season}`}
+              titulo={`${TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} vs ${TEAM_SHORT_NAMES[route.params.rival] ?? route.params.rival}`}
+              sobreFranja={false}
+            />
+          ),
+        })}
+      />
     </LiveStack.Navigator>
   );
 }
@@ -256,6 +271,20 @@ function crearPila(Raiz: React.ComponentType) {
         />
         <Pila.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
         <Pila.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />
+        <Pila.Screen
+          name="Enfrentamiento"
+          component={EnfrentamientoScreen}
+          options={({ route }) => ({
+            title: `${TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} vs ${TEAM_SHORT_NAMES[route.params.rival] ?? route.params.rival}`,
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/teams/${route.params.code}/vs/${route.params.rival}?season=${route.params.season}`}
+                titulo={`${TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} vs ${TEAM_SHORT_NAMES[route.params.rival] ?? route.params.rival}`}
+                sobreFranja={false}
+              />
+            ),
+          })}
+        />
       </Pila.Navigator>
     );
   };

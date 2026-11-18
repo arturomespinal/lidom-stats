@@ -755,6 +755,8 @@ export interface TeamProfile {
   /** Del más viejo al más nuevo. */
   last10: LastGame[];
   history_headline: string | null;
+  /** El récord contra cada uno de los otros cinco esa temporada; 0-0 si no se han visto. */
+  rivals: { team_code: string; wins: number; losses: number }[];
 }
 
 /* ── Contexto de las fichas (rediseño 29-sep) ─────────────────────────────
@@ -1087,4 +1089,59 @@ export interface Comparacion {
   headline: string | null;
   /** "Ojo: Fulano tiene solo 23 AP." o "Sauryn Lao no tiene cifras de bateo." */
   note: string | null;
+}
+
+/* ── Un equipo contra otro (GET /teams/{code}/h2h/{rival}) ────────────────
+   Lo compone el servidor (src/enfrentamiento.py): el titular de la serie y
+   los destacados, con sus tasas recompuestas. */
+
+export interface DestacadoBateoH2H {
+  player_id: string;
+  full_name: string;
+  pa: number;
+  ab: number;
+  h: number;
+  hr: number;
+  rbi: number;
+  avg: number | null;
+  ops: number | null;
+}
+
+export interface DestacadoPitcheoH2H {
+  player_id: string;
+  full_name: string;
+  outs: number;
+  /** En notación de béisbol: "5.2". */
+  ip: string;
+  er: number;
+  so: number;
+  era: number | null;
+  whip: number | null;
+}
+
+export interface Enfrentamiento {
+  team: string;
+  opponent: string;
+  team_name: string;
+  opponent_name: string;
+  /** null = desde 2012-13 (sin temporada). */
+  season_id: string | null;
+  summary: { games_played: number; wins: number; losses: number; runs_for: number; runs_against: number };
+  /** Del lado de `team`: de local y de visita. */
+  split: Partial<Record<"home" | "away", { side: string; games_played: number; wins: number }>>;
+  count: number;
+  /** Del más reciente al más viejo. */
+  games: {
+    game_id: string;
+    game_date: string;
+    season_id: string;
+    stage: string;
+    away_team_code: string;
+    away_score: number;
+    home_team_code: string;
+    home_score: number;
+  }[];
+  /** "Serie de 2026-27: Licey 3, Escogido 2." */
+  headline: string;
+  leaders: Record<"team" | "opponent", { batting: DestacadoBateoH2H[]; pitching: DestacadoPitcheoH2H[] }>;
 }

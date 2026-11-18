@@ -51,6 +51,8 @@ export type FichasParamList = {
    * nombres viajan para pintar la cabecera antes de la respuesta.
    */
   Comparar: { a?: string; nombreA?: string; b?: string; nombreB?: string };
+  /** Un equipo contra otro en una temporada. Se abre desde "Contra cada rival" en la ficha del equipo. */
+  Enfrentamiento: { code: string; rival: string; season: string };
 };
 
 export type LiveStackParamList = FichasParamList & {

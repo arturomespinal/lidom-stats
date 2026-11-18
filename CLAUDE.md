@@ -195,12 +195,13 @@ la 2015-16. No cambiar esa clave.
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
 | `src/comparar.py` | Dos jugadores lado a lado: líneas recompuestas, quién gana cada renglón y el titular |
+| `src/enfrentamiento.py` | Un equipo contra otro: el récord contra cada rival, el titular de la serie y quién brilló en ella |
 | `src/boxscore.py` | El boxscore de un juego terminado desde la base, con la forma del detalle en vivo |
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 375 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 389 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -267,7 +268,7 @@ y `playoff_games_back`. Ver "La línea de clasificación", más abajo.
 | `GET /leaderboards/batting` | Líderes con calificación por PA |
 | `GET /leaderboards/pitching` | Líderes con calificación por IP |
 | `GET /teams/{code}` | Ficha del equipo: historial, destacados, plantilla + `race`, `standing`, `last10` y titulares |
-| `GET /teams/{code}/h2h/{rival}` | Historial entre dos equipos, con desglose local/visitante |
+| `GET /teams/{code}/h2h/{rival}?season=` | Un equipo contra otro: la serie, local/visitante, los juegos, el titular y los destacados de cada lado (ver "Equipo contra equipo") |
 | `GET /day?date=&favorito=` | La jornada: juegos, destacado con titular, figuras y la próxima fecha. Portada Hoy. Con `favorito` (código de equipo), su juego es el destacado |
 | `GET /calendar?season=` | Las jornadas de una temporada como meses con semanas ya armadas (lunes a domingo) |
 
@@ -1691,6 +1692,37 @@ imagen, título y descripción, no un enlace pelado.
   app, y su chat muestra la tarjeta.
 - Probado con `next build` (webpack, fuentes de Google simuladas) y `next
   start`: las cinco imágenes responden PNG y las páginas llevan sus og:.
+
+## Equipo contra equipo (18-nov-2026)
+
+La ficha de cada equipo tiene la sección "Contra cada rival": el récord de la
+temporada elegida contra cada uno de los otros cinco (`rivals` en
+`GET /teams/{code}`), y cada fila abre el enfrentamiento. Web
+`app/teams/[code]/vs/[rival]?season=` (con su tarjeta para compartir), móvil
+`EnfrentamientoScreen` (ruta `Enfrentamiento` en todas las pilas, con
+`BotonCompartir`). El endpoint `/h2h` existía desde el principio sin pantalla.
+
+- **Lo compone el servidor** (`src/enfrentamiento.py`, funciones puras; la
+  ruta hace el SQL): el récord contra cada rival, el titular ("Serie de
+  2026-27: Licey 3, Escogido 2.", o "empatada: 2-2") y los destacados de cada
+  lado en esos juegos. Sin artículos en el titular: "al Escogido" pero "a las
+  Águilas" pediría saber género y número de cada club.
+- **Un rival sin juegos sale 0-0**, no desaparece: la fila dice que no se han
+  visto. En los clientes va sin enlace ("Sin juegos").
+- **Los destacados recomponen las tasas** de los conteos sumados de la serie
+  (`carrera_bateo`/`carrera_pitcheo`), como en todas partes. Bateo por OPS
+  con 2 apariciones por juego como mínimo (no menos de 5), los tres primeros;
+  pitcheo por efectividad con un out por juego... y no menos de 9 (tres
+  entradas), los dos primeros. Un 2-2 o un relevista de un out con 0.00 no
+  son destacados.
+- El récord, el desglose local/visita y las carreras van **del lado del
+  equipo de la URL**; la página lo dice ("Del lado de Licey").
+- La tarjeta para compartir es la del juego (`TarjetaJuego`) con los
+  ganados y perdidos de la temporada actual y el desglose local/visita como
+  titular.
+- Suite: `verify_game_routes.py` comprueba el titular, los mínimos y el orden
+  de los destacados, rehace a mano el OPS del primer destacado
+  (Cristhian Adames contra Águilas en 2025-26, .914) y que los rivales sumen el récord de la temporada.
 
 ## Equipo favorito y comparar jugadores (16-nov-2026)
 

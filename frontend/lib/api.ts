@@ -2,6 +2,7 @@ import {
   BattingRow,
   Calendario,
   Comparacion,
+  Enfrentamiento,
   Gamelog,
   GrupoHistorico,
   HistoricoHit,
@@ -279,6 +280,17 @@ export async function fetchMiembroHistorico(id: number): Promise<MiembroHistoric
  * vez, y encadenar tres viajes para dibujar una sola vista es justo lo que
  * hace que una ficha tarde en aparecer.
  */
+/** Un equipo contra otro en una temporada. null si no se han enfrentado (404). */
+export async function fetchEnfrentamiento(
+  code: string,
+  rival: string,
+  season: string
+): Promise<Enfrentamiento | null> {
+  return apiFetch<Enfrentamiento>(
+    `/teams/${encodeURIComponent(code)}/h2h/${encodeURIComponent(rival)}?season=${encodeURIComponent(season)}`
+  );
+}
+
 export async function fetchTeamProfile(
   code: string,
   season: string,

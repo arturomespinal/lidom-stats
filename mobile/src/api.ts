@@ -3,6 +3,7 @@ import {
   BattingRow,
   Calendario,
   Comparacion,
+  Enfrentamiento,
   Gamelog,
   GrupoHistorico,
   HistoricoHit,
@@ -132,6 +133,17 @@ export async function fetchPlayerProfile(playerId: string): Promise<PlayerProfil
  * igual que la web — los destacados se calculan sobre la plantilla ENTERA en
  * el servidor, así que recortar la lista no cambia quién lidera.
  */
+/** Un equipo contra otro en una temporada. null si no se han enfrentado (404). */
+export async function fetchEnfrentamiento(
+  code: string,
+  rival: string,
+  season: string,
+): Promise<Enfrentamiento | null> {
+  return get<Enfrentamiento>(
+    `/teams/${encodeURIComponent(code)}/h2h/${encodeURIComponent(rival)}?season=${encodeURIComponent(season)}`,
+  );
+}
+
 export async function fetchTeamProfile(
   code: string,
   season = DEFAULT_SEASON,

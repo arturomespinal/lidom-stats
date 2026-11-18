@@ -365,6 +365,42 @@ check("carreras invertidas coinciden", inv["runs_for"], s["runs_against"])
 check("mismo equipo → 400", c.get("/teams/LIC/h2h/LIC").status_code, 400)
 check("equipo inválido → 400", c.get("/teams/LIC/h2h/XXX").status_code, 400)
 
+# El titular, los destacados y "contra cada rival" (src/enfrentamiento.py,
+# 18-nov-2026).
+check("titular de la serie", h2h["headline"],
+      f"Serie de 2025-26: Licey {s['wins']}, Águilas {s['losses']}." if s["wins"] != s["losses"]
+      else f"Serie de 2025-26 empatada: {s['wins']}-{s['losses']}.")
+check("los nombres completos", (h2h["team_name"], h2h["opponent_name"]), ("Tigres del Licey", "Águilas Cibaeñas"))
+n_h = s["games_played"]
+for quien in ("team", "opponent"):
+    bat = h2h["leaders"][quien]["batting"]
+    pit = h2h["leaders"][quien]["pitching"]
+    check(f"destacados ({quien}): con turnos suficientes", all(b["pa"] >= max(5, 2 * n_h) for b in bat), True)
+    check(f"destacados ({quien}): del mejor OPS al peor", [b["ops"] for b in bat], sorted((b["ops"] for b in bat), reverse=True))
+    check(f"lanzadores ({quien}): de la EFE más baja a la más alta", [p_["era"] for p_ in pit], sorted(p_["era"] for p_ in pit))
+    check(f"lanzadores ({quien}): con outs suficientes", all(p_["outs"] >= max(9, 3 * n_h) for p_ in pit), True)
+# El OPS del primer destacado, rehecho a mano desde las líneas de cada juego.
+b0 = h2h["leaders"]["team"]["batting"][0]
+import sqlite3
+con = sqlite3.connect("data/lidom_stats.db")
+ids_h = [g["game_id"] for g in h2h["games"]]
+fila = con.execute(
+    f"SELECT SUM(at_bats), SUM(hits), SUM(doubles), SUM(triples), SUM(home_runs), SUM(walks), "
+    f"SUM(hit_by_pitch), SUM(sacrifice_flies) FROM batting_lines WHERE player_id = ? AND team_code = 'LIC' "
+    f"AND game_id IN ({','.join('?' * len(ids_h))})", [b0["player_id"], *ids_h]).fetchone()
+ab_, h_, d_, t_, hr_, bb_, hbp_, sf_ = fila
+obp_ = round((h_ + bb_ + hbp_) / (ab_ + bb_ + hbp_ + sf_), 3)
+slg_ = round((h_ + d_ + 2 * t_ + 3 * hr_) / ab_, 3)
+print(f"  {b0['full_name']} contra las Águilas: {h_}-{ab_}, OPS {b0['ops']}")
+check("su OPS se recompone de las líneas (OBP + SLG)", b0["ops"], round(obp_ + slg_, 3))
+riv = {r_["team_code"]: r_ for r_ in call("/teams/LIC?season=2025")["rivals"]}
+check("contra cada rival: los cinco, sin el propio", sorted(riv), ["AGU", "ESC", "EST", "GIG", "TOR"])
+check("contra cada rival: el de Águilas es el del h2h", (riv["AGU"]["wins"], riv["AGU"]["losses"]), (s["wins"], s["losses"]))
+fila_lic = next(f for f in call("/teams/LIC?season=2025")["history"] if f["season_id"] == VALIDADA)
+check("contra cada rival: suma el récord de la temporada",
+      (sum(r_["wins"] for r_ in riv.values()), sum(r_["losses"] for r_ in riv.values())),
+      (fila_lic["wins"], fila_lic["losses"]))
+
 print("\n━━━ Posiciones: GB calculado, no el de la API ━━━")
 sr = call("/standings?season=2025")
 st = sr["data"]

@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 
 import Navbar from "@/components/Navbar";
 import { pct3 } from "@/lib/formato";
+import ContraRivales from "@/components/team/ContraRivales";
 import TeamHeader from "@/components/team/TeamHeader";
 import { leerFavorito } from "@/lib/favoritoServidor";
 import { SelectorOpciones } from "@/components/SelectorTemporada";
@@ -80,6 +81,13 @@ export default async function TeamPage(props: Props) {
               sub="Juegos sobre .500, partido a partido."
             />
             <CarreraBanderin carrera={equipo.race} equipo={codigo} />
+          </section>
+        )}
+
+        {equipo.rivals?.length > 0 && (
+          <section className="max-w-xl">
+            <Seccion titulo="Contra cada rival" nota={equipo.season_id} sub="Toca uno para ver la serie." />
+            <ContraRivales code={codigo} temporada={equipo.season_id} rivales={equipo.rivals} />
           </section>
         )}
 

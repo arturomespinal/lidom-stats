@@ -33,3 +33,10 @@ export const API_BASE =
   process.env.EXPO_PUBLIC_API_URL ?? (ip ? `http://${ip}:${PUERTO_API}` : RESPALDO);
 
 export const DEFAULT_SEASON = '2025';
+
+/**
+ * La web pública, para los enlaces que se comparten desde la app
+ * (components/BotonCompartir.tsx): quien los abre no necesita la app, y
+ * WhatsApp los muestra con su tarjeta (los opengraph-image.tsx de frontend/app).
+ */
+export const WEB_URL = process.env.EXPO_PUBLIC_WEB_URL ?? 'https://deportiv.vercel.app';

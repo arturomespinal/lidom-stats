@@ -22,6 +22,7 @@ import PlayerScreen from './src/screens/PlayerScreen';
 import HistoricoScreen from './src/screens/HistoricoScreen';
 import RecordsScreen from './src/screens/RecordsScreen';
 import CompararScreen from './src/screens/CompararScreen';
+import BotonCompartir from './src/components/BotonCompartir';
 import BotonTema from './src/components/BotonTema';
 import { COLORS, FONTS, TEAM_SHORT_NAMES } from './src/constants';
 import { cargarTema, estiloBarra, tematico, temaActual, useTema } from './src/tema';
@@ -114,27 +115,66 @@ function HoyTab() {
           // Del parámetro y no de la respuesta: así el título está puesto antes
           // del primer fetch y la cabecera no parpadea.
           title: `${route.params.awayCode} vs ${route.params.homeCode}`,
+          headerRight: () => (
+            <BotonCompartir
+              ruta={`/live/${route.params.gamePk}`}
+              titulo={`${route.params.awayCode} vs ${route.params.homeCode}`}
+            />
+          ),
         })}
       />
       <LiveStack.Screen
         name="Juego"
         component={JuegoScreen}
-        options={({ route }) => ({ title: `${route.params.awayCode} vs ${route.params.homeCode}` })}
+        options={({ route }) => ({
+            title: `${route.params.awayCode} vs ${route.params.homeCode}`,
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/juegos/${encodeURIComponent(route.params.gameId)}`}
+                titulo={`${route.params.awayCode} vs ${route.params.homeCode}`}
+                sobreFranja={false}
+              />
+            ),
+          })}
       />
       <LiveStack.Screen
         name="Equipo"
         component={TeamScreen}
-        options={({ route }) => ({ ...OPCIONES_FICHA, title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+        options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code,
+            headerRight: () => (
+              <BotonCompartir ruta={`/teams/${route.params.code}`} titulo={TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} />
+            ),
+          })}
       />
       <LiveStack.Screen
         name="Jugador"
         component={PlayerScreen}
-        options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
+        options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: route.params.nombre ?? 'Jugador',
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/players/${encodeURIComponent(route.params.playerId)}`}
+                titulo={route.params.nombre ?? 'Un jugador de LIDOM'}
+              />
+            ),
+          })}
       />
       <LiveStack.Screen
         name="Historico"
         component={HistoricoScreen}
-        options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
+        options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: route.params.nombre ?? 'Jugador histórico',
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/historia/jugador/${route.params.idMiembro}`}
+                titulo={route.params.nombre ?? 'Un jugador histórico de LIDOM'}
+              />
+            ),
+          })}
       />
       <LiveStack.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
       <LiveStack.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />
@@ -164,22 +204,55 @@ function crearPila(Raiz: React.ComponentType) {
         <Pila.Screen
           name="Juego"
           component={JuegoScreen}
-          options={({ route }) => ({ title: `${route.params.awayCode} vs ${route.params.homeCode}` })}
+          options={({ route }) => ({
+            title: `${route.params.awayCode} vs ${route.params.homeCode}`,
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/juegos/${encodeURIComponent(route.params.gameId)}`}
+                titulo={`${route.params.awayCode} vs ${route.params.homeCode}`}
+                sobreFranja={false}
+              />
+            ),
+          })}
         />
         <Pila.Screen
           name="Equipo"
           component={TeamScreen}
-          options={({ route }) => ({ ...OPCIONES_FICHA, title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code })}
+          options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: TEAM_SHORT_NAMES[route.params.code] ?? route.params.code,
+            headerRight: () => (
+              <BotonCompartir ruta={`/teams/${route.params.code}`} titulo={TEAM_SHORT_NAMES[route.params.code] ?? route.params.code} />
+            ),
+          })}
         />
         <Pila.Screen
           name="Jugador"
           component={PlayerScreen}
-          options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador' })}
+          options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: route.params.nombre ?? 'Jugador',
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/players/${encodeURIComponent(route.params.playerId)}`}
+                titulo={route.params.nombre ?? 'Un jugador de LIDOM'}
+              />
+            ),
+          })}
         />
         <Pila.Screen
           name="Historico"
           component={HistoricoScreen}
-          options={({ route }) => ({ ...OPCIONES_FICHA, title: route.params.nombre ?? 'Jugador histórico' })}
+          options={({ route }) => ({
+            ...OPCIONES_FICHA,
+            title: route.params.nombre ?? 'Jugador histórico',
+            headerRight: () => (
+              <BotonCompartir
+                ruta={`/historia/jugador/${route.params.idMiembro}`}
+                titulo={route.params.nombre ?? 'Un jugador histórico de LIDOM'}
+              />
+            ),
+          })}
         />
         <Pila.Screen name="Records" component={RecordsScreen} options={{ title: 'Récords' }} />
         <Pila.Screen name="Comparar" component={CompararScreen} options={{ title: 'Comparar' }} />

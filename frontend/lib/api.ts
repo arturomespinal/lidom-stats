@@ -118,6 +118,12 @@ export interface LiveStatus {
   patch_ratio: number | null;
 }
 
+/** El estado de un juego que sigue el motor en vivo. null si no lo sigue. */
+export async function fetchLiveGame(gamePk: number): Promise<LiveGameState | null> {
+  const r = await apiFetch<{ data: LiveGameState }>(`/live/games/${gamePk}`);
+  return r?.data ?? null;
+}
+
 export async function fetchLiveStatus(): Promise<LiveStatus | null> {
   return apiFetch<LiveStatus>("/live/status");
 }

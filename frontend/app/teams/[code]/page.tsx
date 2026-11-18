@@ -13,8 +13,9 @@ import BarrasDiferencial from "@/components/ficha/BarrasDiferencial";
 import TeamHistory from "@/components/team/TeamHistory";
 import Leaders from "@/components/team/Leaders";
 import { Batters, Pitchers } from "@/components/team/Roster";
+import { compartir } from "@/lib/metadata";
 import { fetchSeasons, fetchTeamProfile } from "@/lib/api";
-import { DEFAULT_SEASON } from "@/lib/constants";
+import { DEFAULT_SEASON, TEAM_FULL_NAMES } from "@/lib/constants";
 
 interface Props {
   params: Promise<{ code: string }>;
@@ -23,7 +24,8 @@ interface Props {
 
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const { code } = await props.params;
-  return { title: `${code.toUpperCase()} · Deportiv` };
+  const nombre = TEAM_FULL_NAMES[code.toUpperCase()] ?? code.toUpperCase();
+  return compartir(nombre, `${nombre}: récord, líderes, roster y su carrera por el banderín en LIDOM.`);
 }
 
 export default async function TeamPage(props: Props) {

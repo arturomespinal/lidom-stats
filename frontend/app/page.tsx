@@ -7,9 +7,10 @@ import Seccion from "@/components/ficha/Seccion";
 import Refresco from "@/components/hoy/Refresco";
 import { Figuras, FranjaFechas, Proximos, TarjetaDestacado, TarjetaJuego } from "@/components/hoy/Jornada";
 import { fetchDay } from "@/lib/api";
+import { compartir } from "@/lib/metadata";
 import { leerFavorito } from "@/lib/favoritoServidor";
 
-export const metadata: Metadata = { title: "Hoy · Deportiv" };
+export const metadata: Metadata = compartir("Hoy en LIDOM", "Los juegos de hoy: marcadores en vivo, el destacado y las figuras de la jornada.");
 
 // En Next 16 `searchParams` es una promesa. Ver CLAUDE.md.
 interface Props {

@@ -58,6 +58,12 @@ const cabeceras = [
 const nextConfig = {
   // "X-Powered-By: Next.js" no le sirve a nadie más que a quien busca qué atacar.
   poweredByHeader: false,
+  // Las fuentes de las tarjetas para compartir (lib/og/tarjeta.tsx) se leen
+  // del disco en tiempo de ejecución, con una ruta armada: el empaquetador de
+  // Vercel no las vería solo y la imagen fallaría en producción.
+  outputFileTracingIncludes: {
+    "/**": ["./lib/og/fuentes/*.woff"],
+  },
   async headers() {
     return [{ source: "/:path*", headers: cabeceras }];
   },

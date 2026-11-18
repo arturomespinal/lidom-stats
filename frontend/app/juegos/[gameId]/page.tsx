@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Seccion from "@/components/ficha/Seccion";
 import BoxScore from "@/components/game/BoxScore";
 import { Figuras, TarjetaDestacado } from "@/components/hoy/Jornada";
+import { compartir } from "@/lib/metadata";
 import { fetchGame } from "@/lib/api";
 
 // En Next 16 `params` es una promesa. Ver CLAUDE.md.
@@ -18,9 +19,11 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const j = await fetchGame(gameId);
   if (!j) return { title: "Juego no encontrado · Deportiv" };
   const g = j.game;
-  return {
-    title: `${g.away.short_name} ${g.away.runs ?? ""}–${g.home.runs ?? ""} ${g.home.short_name} · ${j.label} · Deportiv`,
-  };
+  const marcador =
+    g.away.runs != null && g.home.runs != null
+      ? `${g.away.short_name} ${g.away.runs}–${g.home.runs} ${g.home.short_name}`
+      : `${g.away.short_name} vs ${g.home.short_name}`;
+  return compartir(`${marcador} · ${j.label}`, j.headline ?? "Marcador, figuras y boxscore del juego.");
 }
 
 /**

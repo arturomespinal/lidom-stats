@@ -9,6 +9,7 @@ import PuestoLiga from "@/components/ficha/PuestoLiga";
 import CurvaCarrera from "@/components/ficha/CurvaCarrera";
 import Trayectoria from "@/components/ficha/Trayectoria";
 import JuegoAJuego from "@/components/ficha/JuegoAJuego";
+import { compartir } from "@/lib/metadata";
 import { fetchGamelog, fetchPlayerProfile } from "@/lib/api";
 import { entradas } from "@/lib/formato";
 
@@ -23,12 +24,12 @@ export async function generateMetadata(props: Props): Promise<Metadata> {
   const { playerId } = await props.params;
   const perfil = await fetchPlayerProfile(playerId);
   if (!perfil) return { title: "Jugador no encontrado · Deportiv" };
-  return {
-    title: `${perfil.player.full_name} · Deportiv`,
-    description: `Estadísticas de ${perfil.player.full_name} en LIDOM: ${
-      perfil.career_batting?.seasons ?? perfil.career_pitching?.seasons ?? 0
-    } temporadas.`,
-  };
+  const temporadas = perfil.career_batting?.seasons ?? perfil.career_pitching?.seasons ?? 0;
+  return compartir(
+    perfil.player.full_name,
+    perfil.context?.curve.headline ??
+      `Estadísticas de ${perfil.player.full_name} en LIDOM: ${temporadas} ${temporadas === 1 ? "temporada" : "temporadas"}.`
+  );
 }
 
 export default async function PlayerPage(props: Props) {

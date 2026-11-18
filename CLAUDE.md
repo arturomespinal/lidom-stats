@@ -1646,6 +1646,43 @@ Lo que cambia respecto a la web:
 - Escala de las fichas: 28 / 22 / 14 / 11. Sin Bebas en las tablas: sus cifras
   no son tabulares y en una columna alineada a la derecha no cuadran.
 
+## Compartir: las tarjetas de los enlaces (18-nov-2026)
+
+Al pegar un enlace de Deportiv en WhatsApp, X o iMessage sale una tarjeta con
+imagen, título y descripción, no un enlace pelado.
+
+- **Las imágenes** (1200×630) son `opengraph-image.tsx` de Next con
+  `ImageResponse`: la portada (`app/opengraph-image.tsx`, la heredan las
+  páginas sin una propia), un juego terminado (`/juegos/[gameId]`: marcador,
+  estado y el titular del servidor), un juego del motor en vivo
+  (`/live/[gamePk]`: el marcador al momento de compartir), un jugador
+  (`context.latest`, las mismas cifras de la cabecera) y un equipo (récord,
+  PCT y puesto). Las piezas comunes están en `lib/og/tarjeta.tsx` y
+  `lib/og/juego.tsx`. Si el dato no existe, la tarjeta de Deportiv.
+- **Siempre en la pizarra oscura**, aunque quien comparte use el claro: la
+  tarjeta se ve en el chat de otra persona. Mismo look: Barlow Condensed y
+  Archivo, tejas con el código escrito, sin escudos ni fotos, el punto verde
+  solo junto al logotipo.
+- **Las fuentes van en el repo** (`lib/og/fuentes/`, woff de Fontsource, con
+  sus licencias OFL al lado): el generador no lee woff2 ni las de
+  `next/font`. Se leen del disco con una ruta armada, así que
+  `next.config.mjs` las incluye a mano en el paquete
+  (`outputFileTracingIncludes`); sin eso fallarían en Vercel. Comprobado en
+  los `.nft.json` del build.
+- **Título y descripción**: `compartir(titulo, descripcion)` en
+  `lib/metadata.ts` pone `<title>`, og: y la tarjeta de X. WhatsApp lee og:,
+  no `<title>`. `metadataBase` sale de `VERCEL_PROJECT_PRODUCTION_URL` (o
+  `NEXT_PUBLIC_SITE_URL`): las imágenes necesitan URL completa.
+- **WhatsApp guarda la tarjeta** la primera vez que ve un enlace: un juego
+  compartido en vivo seguirá mostrando aquel marcador en ese chat.
+- **En el móvil**, un botón de compartir a la derecha de la cabecera del
+  juego (en vivo y terminado), del jugador, del histórico y del equipo
+  (`BotonCompartir`, puesto en `App.tsx`) abre la hoja nativa con el enlace
+  de la WEB (`WEB_URL` en `src/config.ts`): quien lo recibe no necesita la
+  app, y su chat muestra la tarjeta.
+- Probado con `next build` (webpack, fuentes de Google simuladas) y `next
+  start`: las cinco imágenes responden PNG y las páginas llevan sus og:.
+
 ## Equipo favorito y comparar jugadores (16-nov-2026)
 
 ### El equipo favorito

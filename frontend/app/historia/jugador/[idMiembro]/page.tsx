@@ -8,6 +8,7 @@ import Monograma from "@/components/ficha/Monograma";
 import Seccion from "@/components/ficha/Seccion";
 import Trayectoria from "@/components/ficha/Trayectoria";
 import { BattingSeasons, PitchingSeasons } from "@/components/player/SeasonTable";
+import { compartir } from "@/lib/metadata";
 import { fetchMiembroHistorico } from "@/lib/api";
 import { TEAM_STYLES } from "@/lib/constants";
 import { entradas, epocaHistorica, num, pct3 } from "@/lib/formato";
@@ -26,10 +27,7 @@ async function cargar(props: Props) {
 export async function generateMetadata(props: Props): Promise<Metadata> {
   const m = await cargar(props);
   if (!m) return { title: "Jugador no encontrado · Deportiv" };
-  return {
-    title: `${m.player.name} · Historia · Deportiv`,
-    description: `La carrera de ${m.player.name} en LIDOM, temporada por temporada.`,
-  };
+  return compartir(`${m.player.name} · Historia`, `La carrera de ${m.player.name} en LIDOM, temporada por temporada.`);
 }
 
 /**

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Archivo, Barlow_Condensed } from "next/font/google";
 import "./globals.css";
+import { compartir, urlDelSitio } from "@/lib/metadata";
 import { SCRIPT_TEMA } from "@/lib/tema";
 
 /**
@@ -32,8 +33,11 @@ const cond = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
+  // Con URL base, las imágenes de las tarjetas para compartir salen con
+  // dirección completa (lib/metadata.ts, app/**/opengraph-image.tsx).
+  metadataBase: urlDelSitio(),
+  ...compartir("Deportiv", "Béisbol dominicano en números: marcadores en vivo, posiciones y las fichas de LIDOM."),
   title: "Deportiv",
-  description: "Béisbol dominicano en números",
 };
 
 export default function RootLayout({

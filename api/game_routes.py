@@ -1292,6 +1292,28 @@ def _juegos_del_dia(d: str, nombres: dict[str, dict]) -> list[dict]:
     return [armar_juego(f, nombres) for f in filas]
 
 
+def _anotar_series(juegos: list[dict], hasta: str) -> None:
+    """
+    La serie de la temporada entre los dos equipos de cada juego y el récord
+    de cada uno, con los juegos terminados hasta esa fecha
+    (`enfrentamiento.anotar_series`). Va DESPUÉS de superponer la caché en
+    vivo: un juego que acaba de terminar cuenta aunque no esté ingestado.
+    """
+    temporadas = sorted({j["season_id"] for j in juegos if j.get("season_id")})
+    if not temporadas:
+        return
+    marcas = ",".join(f":t{i}" for i in range(len(temporadas)))
+    finales = query_db(
+        f"""
+        SELECT game_id, season_id, away_team_code, home_team_code, away_score, home_score
+          FROM games
+         WHERE status = 'final' AND game_date <= :d AND season_id IN ({marcas})
+        """,
+        {"d": hasta, **{f"t{i}": t for i, t in enumerate(temporadas)}},
+    )
+    enfrentamiento.anotar_series(juegos, finales)
+
+
 def _superponer_en_vivo(juegos: list[dict], dia: str) -> None:
     """
     La base es la verdad histórica, pero durante la jornada se queda atrás:
@@ -1501,6 +1523,7 @@ def get_day(
         # Las decisiones solo existen cuando el juego terminó: con la caché
         # diciendo que va por la 5ta, un "G Esmil Rogers" sería adelantarse.
         j["decisions"] = decisiones.get(j["game_id"]) if j["status"] == "final" else None
+    _anotar_series(juegos, dia.isoformat())
 
     filtro = "g.game_date = :d"
     bateo = query_db(_SQL_BATEO_DIA.format(filtro=filtro), {"d": dia.isoformat()})
@@ -1586,6 +1609,7 @@ def get_game_detail(game_id: str):
     juego["decisions"] = (
         _decisiones(dia).get(game_id) if juego["status"] == "final" else None
     )
+    _anotar_series([juego], dia)
 
     filtro = "g.game_id = :g"
     bateo = query_db(_SQL_BATEO_DIA.format(filtro=filtro), {"g": game_id})

@@ -861,6 +861,16 @@ export interface LadoJornada {
   short_name: string;
   /** null si el juego no ha empezado: 0-0 a las 5 de la tarde sería mentira. */
   runs: number | null;
+  /** Ganados y perdidos en la temporada hasta la fecha de la jornada. */
+  record?: { wins: number; losses: number };
+}
+
+/** La serie de la temporada entre los dos equipos de un juego (src/enfrentamiento.py). */
+export interface SerieJornada {
+  away_wins: number;
+  home_wins: number;
+  /** "Serie: Águilas 3, Licey 2", "Serie empatada 1-1", "Primer duelo de la temporada". */
+  label: string;
 }
 
 export interface PitcherDecision {
@@ -887,6 +897,8 @@ export interface JuegoJornada {
   decisions?: { win?: PitcherDecision; loss?: PitcherDecision; save?: PitcherDecision } | null;
   /** La caché en vivo tiene relato y boxscore para abrir. */
   has_detail?: boolean;
+  /** La serie de la temporada hasta esta jornada; un juego terminado cuenta. */
+  series?: SerieJornada;
   inning?: number | null;
   is_top_inning?: boolean | null;
   outs?: number;

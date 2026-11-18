@@ -119,6 +119,13 @@ function FilaEquipo({
         {favorito && (
           <Ionicons name="star" size={13} color={COLORS.textPrimary} accessibilityLabel="tu equipo" />
         )}
+        {/* El récord solo en el destacado: en la tarjeta chica no cabe junto
+            al marcador. */}
+        {grande && !!lado.record && (
+          <Text style={styles.record} accessibilityLabel={`récord ${lado.record.wins}-${lado.record.losses}`}>
+            {lado.record.wins}-{lado.record.losses}
+          </Text>
+        )}
       </Pressable>
       {lado.runs != null && (
         <Text style={[styles.carreras, grande && styles.carrerasGrande, perdio && styles.apagado]}>
@@ -196,6 +203,9 @@ export function TarjetaDestacado({
   accion?: string;
 }) {
   const wp = destacado.win_prob;
+  const nav = useFichas();
+  const serie = juego.series;
+  const temporadaSerie = juego.season_id ?? temporada;
   return (
     <View style={styles.tarjeta}>
       <View style={styles.cabeza}>
@@ -226,6 +236,19 @@ export function TarjetaDestacado({
         </View>
       )}
       {!!destacado.headline && <Text style={styles.titular}>{destacado.headline}</Text>}
+      {!!serie && !!temporadaSerie && (
+        <Pressable
+          onPress={() =>
+            nav.push('Enfrentamiento', { code: juego.away.code, rival: juego.home.code, season: temporadaSerie })
+          }
+          style={({ pressed }) => [styles.serie, pressed && styles.presionado]}
+          accessibilityRole="link"
+          accessibilityLabel={`${serie.label}. Ver la serie`}
+        >
+          <Text style={styles.serieTexto} numberOfLines={1}>{serie.label}</Text>
+          <Text style={styles.serieAccion}>La serie ›</Text>
+        </Pressable>
+      )}
       {!!juego.decisions && <Decisiones d={juego.decisions} onJugador={onJugador} />}
       <Banda venue={juego.venue} onAbrir={onAbrir} accion={accion} />
     </View>
@@ -292,13 +315,14 @@ export function TarjetaJuego({
       <View style={styles.cuerpoChico}>
         <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={temporada} />
         <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={temporada} />
+        {!!juego.series && <Text style={styles.serieChica} numberOfLines={1}>{juego.series.label}</Text>}
       </View>
       {!!onAbrir && <Text style={styles.abrir}>Ver el juego ›</Text>}
     </>
   );
   const etiqueta =
     `${juego.away.short_name} ${juego.away.runs ?? ''}, ${juego.home.short_name} ${juego.home.runs ?? ''}. ` +
-    `${juego.status_label}.`;
+    `${juego.status_label}.${juego.series ? ` ${juego.series.label}.` : ''}`;
   // Con el lector de pantalla la tarjeta es UN elemento y sus filas no se
   // alcanzan por separado: los dos equipos van como acciones de la tarjeta.
   const acciones = [
@@ -491,6 +515,22 @@ const styles = tematico(() => StyleSheet.create({
   apagado: { color: COLORS.textSecondary },
   marcaGanador: { width: 10, fontSize: 12, color: COLORS.textPrimary },
   hora: { fontFamily: FONTS.display, textTransform: 'uppercase', fontSize: 28, color: COLORS.textPrimary, marginTop: 4 },
+  record: { flexShrink: 0, fontSize: 13, color: COLORS.textSecondary, fontVariant: ['tabular-nums'] },
+  serie: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    minHeight: 44,
+    marginHorizontal: 12,
+    marginTop: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1,
+    borderColor: COLORS.borderSoft,
+    borderRadius: 8,
+  },
+  serieTexto: { flex: 1, fontSize: 14, color: COLORS.textSupport },
+  serieAccion: { color: COLORS.textPrimary, fontFamily: FONTS.displayMedia, textTransform: 'uppercase', fontSize: 15, letterSpacing: 0.6 },
+  serieChica: { marginTop: 2, fontSize: 13, color: COLORS.textSecondary },
 
   franjaWp: { paddingHorizontal: 12, paddingTop: 8 },
   titular: {

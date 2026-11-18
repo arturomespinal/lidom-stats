@@ -195,13 +195,13 @@ la 2015-16. No cambiar esa clave.
 | `src/fichas.py` | Del id de la MLB al slug de la ficha, para el detalle en vivo |
 | `src/contexto.py` | El jugador contra la liga: puestos entre calificados, curva de carrera y sus titulares |
 | `src/comparar.py` | Dos jugadores lado a lado: líneas recompuestas, quién gana cada renglón y el titular |
-| `src/enfrentamiento.py` | Un equipo contra otro: el récord contra cada rival, el titular de la serie y quién brilló en ella |
+| `src/enfrentamiento.py` | Un equipo contra otro: el récord contra cada rival, el titular de la serie, quién brilló en ella, y la serie y el récord de cada juego de Hoy |
 | `src/boxscore.py` | El boxscore de un juego terminado desde la base, con la forma del detalle en vivo |
 | `src/jornada.py` | La jornada de una fecha: destacado, figuras, titular y lo que viene (portada Hoy) |
 | `src/banderin.py` | La temporada de un equipo juego a juego: carrera por el banderín, últimos diez, posición y titulares |
 | `src/playoffs.py` | `PLAYOFF_SPOTS` y la distancia con signo a la línea de clasificación |
 | `verify_boxscore_ingestor.py` | 58 comprobaciones del ingestor contra un boxscore sintético, incluidas la ingesta de un solo juego y los juegos movidos |
-| `verify_game_routes.py` | 389 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
+| `verify_game_routes.py` | 403 comprobaciones de los endpoints contra la base real; las cifras fijas son de la 2025-26 y se piden por su temporada (ver "La suite con la temporada en curso") |
 | `src/validacion.py` | La validación cruzada de las dos capas como funciones: la usan `verify_capas.py` y los checks de Dagster |
 | `verify_capas.py` | Validación cruzada de las dos capas en cada temporada cargada (83 comprobaciones con las 14) |
 | `api/seguridad.py` | Modo producción: límite por IP, CORS por configuración, diagnóstico con clave, cabeceras |
@@ -1720,9 +1720,20 @@ temporada elegida contra cada uno de los otros cinco (`rivals` en
 - La tarjeta para compartir es la del juego (`TarjetaJuego`) con los
   ganados y perdidos de la temporada actual y el desglose local/visita como
   titular.
+- **En Hoy (18-nov-2026)**: cada juego de `/day` (y de `/games/{id}/detail`)
+  trae `series` (la serie de la temporada entre los dos, con su frase corta:
+  "Serie: Águilas 3, Licey 2", "Serie empatada 1-1", "Primer duelo de la
+  temporada") y el `record` de cada equipo, con los finales hasta la fecha
+  de la jornada (`anotar_series`). Un juego terminado cuenta en los dos,
+  aunque la base todavía no lo tenga (la caché en vivo lo cerró). El
+  destacado lleva el récord junto a cada nombre y un botón "La serie ›" al
+  enfrentamiento; las tarjetas chicas, la frase de la serie. Ver "La
+  portada Hoy" para el acomodo en la web.
 - Suite: `verify_game_routes.py` comprueba el titular, los mínimos y el orden
   de los destacados, rehace a mano el OPS del primer destacado
-  (Cristhian Adames contra Águilas en 2025-26, .914) y que los rivales sumen el récord de la temporada.
+  (Cristhian Adames contra Águilas en 2025-26, .914), que los rivales sumen el
+  récord de la temporada, y la serie y los récords de una jornada de Hoy
+  rehechos con SQL aparte.
 
 ## Equipo favorito y comparar jugadores (16-nov-2026)
 
@@ -1941,6 +1952,14 @@ Reglas que no conviene deshacer:
   con `router.refresh()` mientras la pestaña se ve (`components/hoy/Refresco.tsx`).
 - La fecha vive en la URL de la web (`/?fecha=`). Todos los días de la
   franja se abren; uno sin juegos va atenuado.
+- **La web en pantalla ancha va en dos columnas** (18-nov-2026): a la
+  izquierda el destacado, las figuras (dos por fila) y lo que viene; a la
+  derecha la lista de juegos, que ocupa las tres filas de la izquierda, la
+  última de alto `1fr`. Antes figuras y lo que viene iban debajo de las
+  dos columnas, y con un destacado corto (un juego por empezar) quedaba un
+  hueco del alto de la lista (captura de Arturo). En el teléfono, una
+  columna en el orden de siempre. El destacado de un juego por empezar ya
+  no queda vacío: récords y la serie (ver "Equipo contra equipo").
 - **Para saltar lejos está el calendario** (`GET /calendar`; web
   `/calendario?temporada=&activa=`, móvil `screens/CalendarioScreen.tsx`,
   ruta `Calendario` de la pila de Hoy). La franja camina de siete en siete, y

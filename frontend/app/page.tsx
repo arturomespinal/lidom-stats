@@ -110,15 +110,24 @@ export default async function HoyPage(props: Props) {
           </p>
         )}
 
-        {/* El destacado y el resto, lado a lado en pantalla ancha. Cada
-            columna con su alto (`items-start`): estirado hasta el alto de la
-            lista, el destacado dejaba un bloque blanco vacío bajo su franja. */}
-        <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:items-start lg:gap-6">
+        {/* En pantalla ancha, dos columnas: a la izquierda el destacado, las
+            figuras y lo que viene; a la derecha la lista de juegos. Antes las
+            figuras y lo que viene iban debajo de las dos, y con un destacado
+            corto (un juego por empezar) quedaba un hueco del alto de la
+            lista (captura de Arturo, 18-nov-2026).
+
+            La lista ocupa las tres filas de su columna, y la última fila es
+            `1fr`: el alto que la lista tiene de más va a esa fila, debajo de
+            lo último de la izquierda, y no entre el destacado y las figuras.
+            En el teléfono es una sola columna en el orden del código. */}
+        <div className="grid gap-10 lg:grid-cols-[3fr_2fr] lg:grid-rows-[auto_auto_1fr] lg:gap-x-6 lg:gap-y-10">
           {destacado && jornada.featured && (
-            <TarjetaDestacado juego={destacado} destacado={jornada.featured} favorito={favorito} />
+            <div className="lg:col-start-1">
+              <TarjetaDestacado juego={destacado} destacado={jornada.featured} favorito={favorito} />
+            </div>
           )}
           {resto.length > 0 && (
-            <section>
+            <section className="lg:col-start-2 lg:row-span-3 lg:row-start-1 lg:self-start">
               <Seccion
                 titulo={jornada.games.every((g) => g.status === "final") ? "Resultados" : "Juegos"}
                 nota={`${resto.length} más`}
@@ -130,23 +139,21 @@ export default async function HoyPage(props: Props) {
               </div>
             </section>
           )}
+
+          {jornada.figures.length > 0 && (
+            <section className="lg:col-start-1 lg:self-start">
+              <Seccion titulo="Figuras de la jornada" />
+              <Figuras figuras={jornada.figures} angosta={resto.length > 0} />
+            </section>
+          )}
+
+          {prox && (
+            <section className={`lg:col-start-1 lg:self-start ${resto.length > 0 ? "" : "max-w-xl"}`}>
+              <Seccion titulo={tituloProx ?? prox.label} nota={tituloProx === "Mañana" ? prox.label : undefined} />
+              <Proximos juegos={prox.games} />
+            </section>
+          )}
         </div>
-
-        {jornada.figures.length > 0 && (
-          <section>
-            <Seccion
-              titulo="Figuras de la jornada"
-            />
-            <Figuras figuras={jornada.figures} />
-          </section>
-        )}
-
-        {prox && (
-          <section className="max-w-xl">
-            <Seccion titulo={tituloProx ?? prox.label} nota={tituloProx === "Mañana" ? prox.label : undefined} />
-            <Proximos juegos={prox.games} />
-          </section>
-        )}
       </main>
     </>
   );

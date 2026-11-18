@@ -736,6 +736,57 @@ check("un bullpen de principio a fin: nadie llega a 3 entradas, ninguna figura d
 check("sin extras, el titular es la figura del juego", d2["featured"]["headline"],
       "Jonrón y 4 impulsadas de Aderlin Rodríguez.")
 
+# La serie y el récord en cada juego de la jornada (18-nov-2026,
+# enfrentamiento.anotar_series). Un juego terminado cuenta en los dos.
+_inaug = por_id["2025-10-15-ESC-LIC-1"]
+check("jornada inaugural: la serie cuenta el propio juego",
+      (_inaug["series"]["away_wins"], _inaug["series"]["home_wins"], _inaug["series"]["label"]),
+      (0, 1, "Serie: Licey 1, Escogido 0"))
+check("  y el récord también", (_inaug["away"]["record"], _inaug["home"]["record"]),
+      ({"wins": 0, "losses": 1}, {"wins": 1, "losses": 0}))
+# A mitad de temporada, contra la base con SQL aparte: los finales de la
+# temporada hasta esa fecha.
+_dia_med = "2025-12-02"
+_dm = call(f"/day?date={_dia_med}")
+with sqlite3.connect(DEFAULT_DB_URL.removeprefix("sqlite:///")) as _c:
+    _fin = _c.execute(
+        "SELECT away_team_code, home_team_code, away_score, home_score FROM games "
+        "WHERE season_id = ? AND status = 'final' AND game_date <= ?", (VALIDADA, _dm["date"])).fetchall()
+def _gana(eq, rival=None):
+    g = p_ = 0
+    for v, l, cv, cl in _fin:
+        if cv == cl or eq not in (v, l) or (rival and rival not in (v, l)):
+            continue
+        if (eq == v) == (cv > cl):
+            g += 1
+        else:
+            p_ += 1
+    return g, p_
+check(f"jornada del {_dm['date']}: con juegos", len(_dm["games"]) > 0, True)
+for _g in _dm["games"]:
+    _v, _l = _g["away"]["code"], _g["home"]["code"]
+    check(f"  {_v}-{_l}: la serie, rehecha con SQL",
+          (_g["series"]["away_wins"], _g["series"]["home_wins"]), _gana(_v, _l))
+    check(f"  {_v}-{_l}: los récords, rehechos con SQL",
+          ((_g["away"]["record"]["wins"], _g["away"]["record"]["losses"]),
+           (_g["home"]["record"]["wins"], _g["home"]["record"]["losses"])), (_gana(_v), _gana(_l)))
+_sd = call(f"/games/{_dm['games'][0]['game_id']}/detail")["game"]
+check("la página del juego trae la misma serie", _sd["series"], _dm["games"][0]["series"])
+# Las frases, y un juego por empezar que no cuenta (la función pura).
+from src.enfrentamiento import _resumen_serie, anotar_series
+check("frase: va primero el que la lleva", _resumen_serie("Águilas", "Licey", 1, 3), "Serie: Licey 3, Águilas 1")
+check("frase: empatada", _resumen_serie("Águilas", "Licey", 2, 2), "Serie empatada 2-2")
+check("frase: sin juegos", _resumen_serie("Águilas", "Licey", 0, 0), "Primer duelo de la temporada")
+_prog = {"game_id": "x", "season_id": "t", "status": "scheduled",
+         "away": {"code": "AGU", "short_name": "Águilas", "runs": None},
+         "home": {"code": "LIC", "short_name": "Licey", "runs": None}}
+_vivo = {"game_id": "y", "season_id": "t", "status": "final",
+         "away": {"code": "AGU", "short_name": "Águilas", "runs": 5},
+         "home": {"code": "LIC", "short_name": "Licey", "runs": 2}}
+anotar_series([_prog, _vivo], [])
+check("un final que la base aún no tiene cuenta (la caché lo cerró); uno por empezar no",
+      (_prog["series"]["label"], _prog["away"]["record"]), ("Serie: Águilas 1, Licey 0", {"wins": 1, "losses": 0}))
+
 # Un día elegido sin juegos se muestra vacío, con lo que viene (16-nov-2026:
 # antes el servidor lo cambiaba por otra fecha y el toque parecía no hacer caso).
 fuera = call("/day?date=2026-09-29")

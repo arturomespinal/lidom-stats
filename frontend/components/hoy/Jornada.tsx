@@ -125,6 +125,13 @@ function FilaEquipo({
           {grande ? lado.name : lado.short_name}
         </span>
         {favorito === lado.code && <Estrella etiqueta="tu equipo" className="h-3.5 w-3.5 text-fg" />}
+        {/* El récord solo en el destacado: en la tarjeta chica no cabe junto
+            al marcador, y ahí el juego se lee por el nombre. */}
+        {grande && lado.record && (
+          <span className="num shrink-0 text-sm text-dim" aria-label={`récord ${lado.record.wins}-${lado.record.losses}`}>
+            {lado.record.wins}-{lado.record.losses}
+          </span>
+        )}
       </Link>
       {lado.runs != null && (
         <span
@@ -239,6 +246,15 @@ export function TarjetaDestacado({
       {destacado.headline && (
         <p className="px-4 pt-3 text-[15px] font-bold leading-snug text-fg">{destacado.headline}</p>
       )}
+      {juego.series && juego.season_id && (
+        <Link
+          href={`/teams/${juego.away.code}/vs/${juego.home.code}?season=${juego.season_id}`}
+          className="mx-4 mt-3 flex min-h-11 items-center justify-between gap-3 rounded-lg border border-line-soft px-3 text-sm text-fg2 hover:bg-raised"
+        >
+          <span className="min-w-0 truncate">{juego.series.label}</span>
+          <span className="shrink-0 font-cond text-[15px] tracking-[0.04em] text-fg">La serie ›</span>
+        </Link>
+      )}
       <div className="pt-2">{juego.decisions && <Decisiones d={juego.decisions} />}</div>
       <Banda venue={juego.venue} href={href === undefined ? enlaceJuego(juego) : href} accion={accion} />
     </article>
@@ -265,6 +281,14 @@ export function TarjetaJuego({ juego, favorito }: { juego: JuegoJornada; favorit
       <div className="px-4 pb-3 pt-1">
         <FilaEquipo lado={juego.away} gano={juego.winner === juego.away.code} perdio={perdio(juego.away.code)} temporada={juego.season_id} favorito={favorito} />
         <FilaEquipo lado={juego.home} gano={juego.winner === juego.home.code} perdio={perdio(juego.home.code)} temporada={juego.season_id} favorito={favorito} />
+        {juego.series && juego.season_id && (
+          <Link
+            href={`/teams/${juego.away.code}/vs/${juego.home.code}?season=${juego.season_id}`}
+            className="mt-1 block truncate text-[13px] text-dim hover:text-fg hover:underline"
+          >
+            {juego.series.label}
+          </Link>
+        )}
       </div>
       {href && (
         <Link href={href} className="block px-4 pb-3 font-cond text-[15px] tracking-[0.04em] text-fg hover:underline">
@@ -277,9 +301,10 @@ export function TarjetaJuego({ juego, favorito }: { juego: JuegoJornada; favorit
 
 // ── Las figuras ────────────────────────────────────────────────────────────
 
-export function Figuras({ figuras }: { figuras: FiguraJornada[] }) {
+export function Figuras({ figuras, angosta = false }: { figuras: FiguraJornada[]; angosta?: boolean }) {
+  // En la portada van en la columna del destacado: cuatro no caben en fila.
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className={`grid grid-cols-2 gap-2 ${angosta ? "" : "lg:grid-cols-4"}`}>
       {figuras.map((f) => (
         <Link
           key={`${f.kind}-${f.player_id}`}

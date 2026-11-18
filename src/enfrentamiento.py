@@ -96,3 +96,74 @@ def destacados_pitcheo(filas: list[dict], juegos: int) -> list[dict[str, Any]]:
         })
     out.sort(key=lambda d: (d["era"] if d["era"] is not None else 99, -d["outs"], d["full_name"]))
     return out[:TOP_PITCHEO]
+
+
+def _resumen_serie(nombre_visita: str, nombre_local: str, gv: int, gl: int) -> str:
+    """
+    La serie de la temporada en una línea corta, para las tarjetas de un
+    juego: "Serie: Águilas 2, Licey 1", "Serie empatada 1-1" o "Primer duelo
+    de la temporada". Va primero el que la lleva; la temporada no se repite
+    porque la portada ya la dice.
+    """
+    if gv + gl == 0:
+        return "Primer duelo de la temporada"
+    if gv == gl:
+        return f"Serie empatada {gv}-{gl}"
+    if gv > gl:
+        return f"Serie: {nombre_visita} {gv}, {nombre_local} {gl}"
+    return f"Serie: {nombre_local} {gl}, {nombre_visita} {gv}"
+
+
+def anotar_series(juegos: list[dict], finales: Iterable[dict]) -> None:
+    """
+    Añade a cada juego (la forma de `armar_juego`) la serie de la temporada
+    entre sus dos equipos (`series`) y el récord de cada uno (`record` en
+    `away` y `home`), con los juegos terminados de `finales`: los de la base
+    hasta la fecha de la jornada. Lo usan la portada Hoy y la página de un
+    juego.
+
+    Un juego de la lista que ya terminó cuenta aunque la base todavía no lo
+    tenga (la caché en vivo lo dio por final antes de ingestarlo): la serie
+    y el récord de un juego terminado lo incluyen.
+    """
+    por_id = {f["game_id"]: f for f in finales}
+    for j in juegos:
+        if (j["status"] == "final" and j["game_id"] not in por_id
+                and j["away"]["runs"] is not None and j["home"]["runs"] is not None):
+            por_id[j["game_id"]] = {
+                "game_id": j["game_id"], "season_id": j["season_id"],
+                "away_team_code": j["away"]["code"], "home_team_code": j["home"]["code"],
+                "away_score": j["away"]["runs"], "home_score": j["home"]["runs"],
+            }
+    por_temporada: dict[Any, list[dict]] = {}
+    for f in por_id.values():
+        por_temporada.setdefault(f["season_id"], []).append(f)
+
+    for j in juegos:
+        del_ano = por_temporada.get(j["season_id"], [])
+        v, l = j["away"]["code"], j["home"]["code"]
+        serie = contra_cada_rival(del_ano, v, [l])[0]
+        gv, gl = serie["wins"], serie["losses"]
+        j["series"] = {
+            "away_wins": gv,
+            "home_wins": gl,
+            "label": _resumen_serie(j["away"]["short_name"], j["home"]["short_name"], gv, gl),
+        }
+        for lado in ("away", "home"):
+            j[lado]["record"] = _record(del_ano, j[lado]["code"])
+
+
+def _record(juegos: Iterable[dict], equipo: str) -> dict[str, int]:
+    """Ganados y perdidos de un equipo en esos juegos (un empate no cuenta)."""
+    g = p = 0
+    for f in juegos:
+        if f["home_score"] is None or f["away_score"] is None or f["home_score"] == f["away_score"]:
+            continue
+        if equipo == f["home_team_code"]:
+            gano = f["home_score"] > f["away_score"]
+        elif equipo == f["away_team_code"]:
+            gano = f["away_score"] > f["home_score"]
+        else:
+            continue
+        g, p = (g + 1, p) if gano else (g, p + 1)
+    return {"wins": g, "losses": p}

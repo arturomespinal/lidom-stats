@@ -12,10 +12,10 @@ export default async function Imagen() {
   return new ImageResponse(
     (
       <Marco etiqueta="LIDOM">
-        <div style={{ fontFamily: "Barlow", fontWeight: 700, fontSize: 132, lineHeight: 1, color: C.fg }}>
+        <div style={{ fontFamily: "Barlow", fontWeight: 700, fontSize: 110, lineHeight: 1, color: C.fg }}>
           Béisbol dominicano
         </div>
-        <div style={{ fontFamily: "Barlow", fontWeight: 700, fontSize: 132, lineHeight: 1, color: C.dim }}>
+        <div style={{ fontFamily: "Barlow", fontWeight: 700, fontSize: 110, lineHeight: 1, color: C.dim }}>
           en números
         </div>
         <div style={{ display: "flex", marginTop: 48, gap: 18 }}>

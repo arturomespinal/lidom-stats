@@ -9,9 +9,9 @@ export interface LadoTarjeta {
 
 /**
  * La tarjeta de un juego: visitante arriba y local abajo, como el marcador
- * de la página; el que va ganando (o ganó) en blanco y el otro en gris. Abajo
- * el estado ("FINAL", "EN VIVO · Baja del 7mo", "HOY · 7:30 p. m.") y, si
- * el servidor lo escribió, el titular.
+ * de la página: teja, carreras y nombre. El que va ganando (o ganó) en
+ * blanco y el otro en gris. Abajo el estado ("FINAL", "EN VIVO · Baja del
+ * 7mo", "HOY · 7:30 p. m.") y, si el servidor lo escribió, el titular.
  */
 export function TarjetaJuego({
   away,
@@ -33,22 +33,14 @@ export function TarjetaJuego({
     return (
       <div style={{ display: "flex", alignItems: "center", height: 120 }}>
         <Teja code={l.code} lado={92} />
-        <div
-          style={{
-            display: "flex",
-            flex: 1,
-            marginLeft: 32,
-            fontFamily: "Barlow",
-            fontWeight: 600,
-            fontSize: 64,
-            color: atenuado ? C.dim : C.fg,
-          }}
-        >
-          {corto(l.name, 24)}
-        </div>
+        {/* Las carreras junto a la teja y no al borde derecho: WhatsApp en la
+            computadora recorta los lados y el marcador salía cortado. */}
         {hayCarreras && (
           <div
             style={{
+              display: "flex",
+              justifyContent: "flex-end",
+              width: 150,
               fontFamily: "Barlow",
               fontWeight: 700,
               fontSize: 112,
@@ -59,6 +51,19 @@ export function TarjetaJuego({
             {String(l.runs)}
           </div>
         )}
+        <div
+          style={{
+            display: "flex",
+            flex: 1,
+            marginLeft: 36,
+            fontFamily: "Barlow",
+            fontWeight: 600,
+            fontSize: 56,
+            color: atenuado ? C.dim : C.fg,
+          }}
+        >
+          {corto(l.name, 22)}
+        </div>
       </div>
     );
   };

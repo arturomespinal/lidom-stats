@@ -17,6 +17,9 @@ import { TEAM_STYLES } from "@/lib/constants";
  * Siempre en oscuro, aunque quien comparte use el modo claro: la tarjeta se
  * ve en el chat de OTRA persona, y la pizarra oscura es la cara de la marca.
  *
+ * Todo lo que importa va en la franja central (margen de 150 px a los lados):
+ * WhatsApp en la computadora muestra la imagen recortada al centro.
+ *
  * Las fuentes van en el repo (`lib/og/fuentes/`, licencia OFL al lado): el
  * generador de imágenes no lee woff2 ni las de next/font, y bajarlas de
  * Google en cada imagen sería lento y frágil.
@@ -122,7 +125,11 @@ export function Marco({
       }}
     >
       {color && <div style={{ display: "flex", width: 14, height: "100%", backgroundColor: color }} />}
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "52px 64px" }}>
+      {/* Margen de 150 px a los lados: WhatsApp en la computadora recorta la
+          imagen al centro (unos 920 px de ancho) y lo que quede fuera no se
+          ve. Antes el marcador iba pegado a la derecha y salía cortado
+          (18-nov-2026). Todo lo que importa va dentro de esa franja. */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, padding: "52px 150px" }}>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center" }}>
             <div style={{ fontFamily: "Barlow", fontWeight: 700, fontSize: 44, letterSpacing: 4 }}>DEPORTIV</div>

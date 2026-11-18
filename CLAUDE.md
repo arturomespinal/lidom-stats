@@ -1675,6 +1675,15 @@ imagen, título y descripción, no un enlace pelado.
   `NEXT_PUBLIC_SITE_URL`): las imágenes necesitan URL completa.
 - **WhatsApp guarda la tarjeta** la primera vez que ve un enlace: un juego
   compartido en vivo seguirá mostrando aquel marcador en ese chat.
+- **WhatsApp en la computadora recorta la imagen al centro** (unos 920 px de
+  los 1200). En la primera versión el marcador iba pegado a la derecha y
+  salía cortado ("1" del 12, el 6 fuera). Ahora el marco deja 150 px a cada
+  lado y las carreras van junto a la teja: teja, carreras, nombre. Todo lo
+  que importa cabe en la franja central.
+- Un enlace que WhatsApp vio ANTES de las tarjetas se queda con su vista
+  vacía: con `?v=2` al final lo vuelve a pedir (pasó el 18-nov con el
+  primer enlace de prueba). `curl -A "WhatsApp/2.24.1 A"` muestra lo que
+  recibe su lector.
 - **En el móvil**, un botón de compartir a la derecha de la cabecera del
   juego (en vivo y terminado), del jugador, del histórico y del equipo
   (`BotonCompartir`, puesto en `App.tsx`) abre la hoja nativa con el enlace

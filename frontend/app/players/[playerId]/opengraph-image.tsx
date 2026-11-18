@@ -49,11 +49,11 @@ export default async function Imagen({ params }: { params: Promise<{ playerId: s
             {ctx?.role === "pitching" ? "LANZADOR" : "BATEADOR"}
           </div>
         </div>
-        <div style={{ display: "flex", fontFamily: "Barlow", fontWeight: 700, fontSize: 112, lineHeight: 1.05, marginTop: 18 }}>
-          {corto(perfil.player.full_name, 22)}
+        <div style={{ display: "flex", fontFamily: "Barlow", fontWeight: 700, fontSize: 96, lineHeight: 1.05, marginTop: 18 }}>
+          {corto(perfil.player.full_name, 20)}
         </div>
         {cifras.length > 0 && (
-          <div style={{ display: "flex", gap: 64, marginTop: 36 }}>
+          <div style={{ display: "flex", gap: 52, marginTop: 36 }}>
             {cifras.map((c) => (
               <Cifra key={c.etiqueta} valor={c.valor} etiqueta={c.etiqueta} />
             ))}

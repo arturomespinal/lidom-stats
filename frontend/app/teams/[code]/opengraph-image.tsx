@@ -21,13 +21,13 @@ export default async function Imagen({ params }: { params: Promise<{ code: strin
     (
       <Marco etiqueta={`LIDOM · ${e.season_id}`} color={TEAM_STYLES[code].primary}>
         <div style={{ display: "flex", alignItems: "center" }}>
-          <Teja code={code} lado={120} />
-          <div style={{ display: "flex", marginLeft: 36, fontFamily: "Barlow", fontWeight: 700, fontSize: 96, lineHeight: 1 }}>
+          <Teja code={code} lado={104} />
+          <div style={{ display: "flex", marginLeft: 32, fontFamily: "Barlow", fontWeight: 700, fontSize: 80, lineHeight: 1 }}>
             {e.team_name}
           </div>
         </div>
         {actual && (
-          <div style={{ display: "flex", gap: 72, marginTop: 52 }}>
+          <div style={{ display: "flex", gap: 64, marginTop: 48 }}>
             <Cifra valor={`${actual.wins}-${actual.losses}`} etiqueta="G-P" />
             <Cifra valor={pct3(actual.win_pct)} etiqueta="PCT" />
             {e.standing && <Cifra valor={e.standing.label.split(" · ")[0]} etiqueta="Puesto" />}
